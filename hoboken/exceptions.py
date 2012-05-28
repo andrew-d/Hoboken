@@ -14,3 +14,11 @@ class InvalidMatchTypeException(HobokenException):
       - A custom object that provides a match() callable.
     """
     pass
+
+
+class NotDecoratedException(HobokenException):
+    """
+    Exception raised when trying to use conditions, or other decorators, on a
+    function that hasn't been decorated with a route.
+    """
+    pass
