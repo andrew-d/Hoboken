@@ -1,5 +1,6 @@
 # Project-specific ignores.
 venv/
+tmp/
 
 # Parts below taken from GitHub's gitignores repository: https://github.com/github/gitignore
 *.py[cod]

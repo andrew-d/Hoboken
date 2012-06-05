@@ -1,1 +1,6 @@
+# Requirements for the application
 WebOb==1.2
+
+# Testing help
+Mock
+nose
