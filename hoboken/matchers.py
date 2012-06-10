@@ -30,16 +30,18 @@ class RegexMatcher(object):
     """
 
     def __init__(self, regex, keys):
+        # We handle regexes and string patterns for regexes here.
         if isinstance(regex, RegexType):
             self.re = regex
         elif isinstance(regex, BaseStringType):
             try:
-                self.re = re.compile(regex, flags)
+                self.re = re.compile(regex)
             except re.error:
                 raise TypeError("Parameter 'regex' is not a valid regex")
         else:
             raise TypeError("Parameter 'regex' is not a valid regex")
 
+        # Save keys.
         self.keys = keys
 
     def match(self, webr):
@@ -47,18 +49,21 @@ class RegexMatcher(object):
         if match:
             matches = match.groups()
 
-            # Create lists for our captures / splat.
-            webr.route_params["captures"] = []
+            # Create lists for our splat parameter.
             webr.route_params["splat"] = []
 
             # Merge in the captures.
             for k, v in zip(self.keys, matches):
+                # If the key already exists and is a list, we append.  Otherwise,
+                # we simply overwrite the parameter if the value is non-None.
                 if k in webr.route_params and isinstance(webr.route_params[k], list):
                     webr.route_params[k].append(v)
-                else:
+                elif v:
                     webr.route_params[k] = v
+
+            # We save all captures in the special parameter "_captures".
+            webr.route_params["_captures"] = list(matches)
 
             return True
         else:
             return False
-
