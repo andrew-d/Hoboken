@@ -54,6 +54,11 @@ class RegexMatcher(object):
 
             # Merge in the captures.
             for k, v in zip(self.keys, matches):
+                # If we have no key, then we do nothing.  This occurs, for example,
+                # when we are passed a regex with an unnamed group.
+                if k is None:
+                    continue
+
                 # If the key already exists and is a list, we append.  Otherwise,
                 # we simply overwrite the parameter if the value is non-None.
                 if k in webr.route_params and isinstance(webr.route_params[k], list):
@@ -64,6 +69,7 @@ class RegexMatcher(object):
             # We save all captures in the special parameter "_captures".
             webr.route_params["_captures"] = list(matches)
 
+            # Success!
             return True
         else:
             return False
