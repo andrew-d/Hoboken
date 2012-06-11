@@ -4,6 +4,7 @@ from __future__ import with_statement, absolute_import
 # Stdlib dependencies
 import re
 import urllib
+import logging
 #from functools import wraps
 
 # External dependencies
@@ -12,6 +13,7 @@ from webob.exc import HTTPMethodNotAllowed, HTTPNotFound
 
 # In-package dependencies
 from .exceptions import *
+from .matchers import *
 from .compat import *
 
 
@@ -24,18 +26,46 @@ class WebRequest(Request):
     """
     def __init__(self, *args, **kwargs):
         super(WebRequest, self).__init__(*args, **kwargs)
-        self.route_params = {}
+
+        self.reinitialize()
 
     def reinitialize(self):
         # Reinitialize ourself.  For now, just clear route parameters.
         self.route_params = {}
 
 
+class HobokenMetaclass(type):
+    """
+    This class does "black magic" to create an instance of HobokenApplication
+    by dynamically adding methods to the class that handle each of the methods
+    that are listed in SUPPORTED_METHODS.
+    """
+
+    def __new__(klass, name, bases, attrs):
+        # This function gets around Python's scoping of lambdas.
+        def lambda_factory(method):
+            return lambda self, match: self._decorate_and_route(method, match)
+
+        # Grab the SUPPORTED_METHODS constant and use this to dynamically add methods.
+        for method in attrs['SUPPORTED_METHODS']:
+            new_func = lambda_factory(method)
+            new_func.__name__ = method.lower()
+            attrs[method.lower()] = new_func
+
+        # Call the base's __new__ now with our modified attributes.
+        return super(HobokenMetaclass, klass).__new__(klass, name, bases, attrs)
+
+
 class HobokenApplication(object):
+    __metaclass__ = HobokenMetaclass
+
+    # These are the supported HTTP methods.  They can be overridden in
+    # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
 
-    def __init__(self, name):
+    def __init__(self, name, debug=False):
         self.name = name
+        self.debug = debug
 
         # Routes array. We split this by method, both for speed and simplicity.
         # Format: List of tuples of the form (matcher, function)
@@ -43,6 +73,20 @@ class HobokenApplication(object):
 
         for m in self.SUPPORTED_METHODS:
             self.routes[m] = []
+
+        # Create logger.
+        self.logger = logging.getLogger("hoboken.applications." + self.name)
+
+        # Configure logger.
+        formatter = logging.Formatter('[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s')
+        handler = logging.StreamHandler()
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+        if self.debug:
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            self.logger.setLevel(logging.WARN)
 
     def add_route(self, method, match, func):
         # Methods are uppercase.
@@ -91,8 +135,13 @@ class HobokenApplication(object):
 
                     # If the encoded version is unchanged, then we match both
                     # the bare version, along with the encoded version.
+                    # Otherwise, we just escape the quoted version (so our
+                    # generated regex doesn't do funny things with it), and
+                    # return that.
                     if encoded == char:
                         encoded = "(?:" + re.escape(char) + "|" + re.escape("%" + hex(ord(char))[2:]) + ")"
+                    else:
+                        encoded = re.escape(char)
 
                     return encoded
 
@@ -107,8 +156,13 @@ class HobokenApplication(object):
             self.routes[method].append((RegexMatcher(match_regex, keys), func))
 
         elif isinstance(match, RegexType):
-            # match is a regex, so we just add it as-is.
-            self.routes[method].append((RegexMatcher(match), func))
+            # match is a regex, so we extract any named groups.
+            keys = [None] * match.groups
+            for name, index in match.groupindex.iteritems():
+                keys[index] = name
+
+            # Append the route with these keys.
+            self.routes[method].append((RegexMatcher(match, keys), func))
 
         elif hasattr(match, "match") and iscallable(getattr(match, "match")):
             # Don't know what type it is, but it has a callable "match"
@@ -125,27 +179,6 @@ class HobokenApplication(object):
             return func
         return internal_decorator
 
-    def get(self, match):
-        return self._decorate_and_route("GET", match)
-
-    def post(self, match):
-        return self._decorate_and_route("POST", match)
-
-    def put(self, match):
-        return self._decorate_and_route("PUT", match)
-
-    def delete(self, match):
-        return self._decorate_and_route("DELETE", match)
-
-    def head(self, match):
-        return self._decorate_and_route("HEAD", match)
-
-    def options(self, match):
-        return self._decorate_and_route("OPTIONS", match)
-
-    def patch(self, match):
-        return self._decorate_and_route("PATCH", match)
-
     def wsgi_entrypoint(self, environ, start_response):
         # Create our request object.
         req = WebRequest(environ)
@@ -153,7 +186,7 @@ class HobokenApplication(object):
         # Check for valid method.
         if req.method not in self.SUPPORTED_METHODS:
             # Send "invalid method" exception.
-            exc = HTTPMethodNotAllowed(location=environ.path)
+            exc = HTTPMethodNotAllowed(location=req.path)
             resp = req.get_response(exc)
             return resp(environ, start_response)
 
@@ -202,3 +235,15 @@ class HobokenApplication(object):
 
     def __call__(self, environ, start_response):
         return self.wsgi_entrypoint(environ, start_response)
+
+    def test_server(self, port=8000):
+        """
+        This method lets you start a test server for development purposes.
+        Note: There is deliberately no option to set the address to listen on.
+              The server will always listen on 'localhost', and should never
+              be used in production.
+        """
+
+        from wsgiref.simple_server import make_server
+        httpd = make_server('localhost', port, self)
+        httpd.serve_forever()
