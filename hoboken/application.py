@@ -128,6 +128,7 @@ class HobokenApplication(object):
             # First we encode special characters.  The helper function will
             # return a regex that matches that character and any modifications.
             def encode_character(char):
+                char = char.group(0)
                 if char == ' ':
                     return "(?: |" + encode_character("+") + ")"
                 else:
