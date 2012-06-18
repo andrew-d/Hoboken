@@ -68,7 +68,8 @@ class HobokenApplication(object):
         self.debug = debug
 
         # Routes array. We split this by method, both for speed and simplicity.
-        # Format: List of tuples of the form (matcher, function)
+        # Format: List of tuples of the form (matcher, conditions, function)
+        # Note: "conditions" is an array of conditions
         self.routes = {}
 
         for m in self.SUPPORTED_METHODS:
@@ -193,6 +194,8 @@ class HobokenApplication(object):
 
         # Create response.
         resp = Response()
+
+        # TODO: Call 'before' filters.
 
         # For each route of the specified type, try to match it.
         matched = False

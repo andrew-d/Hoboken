@@ -149,6 +149,9 @@ def test_dot_outside_param():
 
 
 # TODO: Tests involving $, +, ' ', and more . magic.
+# More TODO: Tests involving various encodings of spaces (" ", %20, +)
+#            Tests involving ampersands
+#            Tests involving URL encoding
 
 def test_invalid_route():
     """TODO: Test routes that don't match, in various interesting configurations"""
