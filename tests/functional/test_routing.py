@@ -148,7 +148,81 @@ def test_dot_outside_param():
     assert_equal(code, 404)
 
 
-# TODO: Tests involving $, +, ' ', and more . magic.
+def test_dollar_sign():
+    app = HobokenApplication("test_dollar_sign")
+    app.add_route("GET", "/test$/", body_func)
+
+    code, body = call_app(app, "/test$/")
+
+    assert_equal(code, 200)
+    assert_equal(body, "request body")
+
+    code, body = call_app(app, "/test/")
+
+    assert_equal(code, 404)
+
+
+def test_plus_character():
+    app = HobokenApplication("test_plus_character")
+    app.add_route("GET", "/te+st/", body_func)
+
+    code, body = call_app(app, "/te%2Bst/")
+
+    assert_equal(code, 200)
+    assert_equal(body, "request body")
+
+    code, body = call_app(app, "/test/")
+
+    assert_equal(code, 404)
+
+
+def test_space_character():
+    def echo_func(req, resp):
+        return req.route_params["foo"]
+
+    app = HobokenApplication("test_space_character")
+    app.add_route("GET", "/:foo", echo_func)
+
+    code, body = call_app(app, "/te+st")
+
+    assert_equal(code, 200)
+    assert_equal(body, "te st")
+
+
+def test_brackets_characters():
+    app = HobokenApplication("test_brackets_characters")
+    app.add_route("GET", "/te(st)/", body_func)
+
+    code, body = call_app(app, "/te(st)/")
+
+    assert_equal(code, 200)
+    assert_equal(body, "request body")
+
+    code, body = call_app(app, "/test/")
+
+    assert_equal(code, 404)
+
+
+def test_space_characters():
+    app = HobokenApplication("test_space_characters")
+    app.add_route("GET", "/path with spaces", body_func)
+
+    code, body = call_app(app, "/path+with+spaces")
+
+    assert_equal(code, 200)
+    assert_equal(body, "request body")
+
+    code, body = call_app(app, "/path%20with%20spaces")
+
+    assert_equal(code, 200)
+    assert_equal(body, "request body")
+
+    code, body = call_app(app, "/badpath")
+
+    assert_equal(code, 404)
+
+
+# TODO: Tests involving +, ' ', and more . magic.
 # More TODO: Tests involving various encodings of spaces (" ", %20, +)
 #            Tests involving ampersands
 #            Tests involving URL encoding
