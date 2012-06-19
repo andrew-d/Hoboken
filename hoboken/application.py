@@ -129,7 +129,6 @@ class HobokenApplication(object):
             # First we encode special characters.  The helper function will
             # return a regex that matches that character and any modifications.
             def encode_character(char):
-                char = char.group(0)
                 if char == ' ':
                     return "(?: |" + encode_character("+") + ")"
                 else:
@@ -147,9 +146,14 @@ class HobokenApplication(object):
 
                     return encoded
 
+            # Wrapper function that simply passes through to encode_character() with the
+            # match's content.
+            def encode_character_wrapper(match):
+                return encode_character(match.group(0))
+
             # Encode everything that's not in the set:
             #   [?%\/:*] + all alphanumeric characters + underscore.
-            encoded_match = re.sub(r"[^?%\\/:*\w]", encode_character, match)
+            encoded_match = re.sub(r"[^?%\\/:*\w]", encode_character_wrapper, match)
 
             # Now, replace parameters or splats with their matching regex.
             match_regex = re.sub(r"((:\w+)|\*)", convert_match, encoded_match)
