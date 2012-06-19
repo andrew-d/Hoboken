@@ -35,3 +35,4 @@ else:
 
 # Cross-Python stuff.
 RegexType = type(re.compile(""))
+RegexMatchType = type(re.compile(".*").match("asdf"))
