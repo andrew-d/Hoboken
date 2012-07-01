@@ -205,7 +205,11 @@ class HobokenApplication(object):
         filter_tuple = self._make_route(match, func)
         self.before_fiiters.append(filter_tuple)
 
-    def before(self, match):
+    def before(self, match=None):
+        # If the match isn't provided, we match anything.
+        if match is None:
+            match = re.compile(".*")
+
         def internal_decorator(func):
             self.add_before_filter(match, func)
             return func
@@ -215,7 +219,11 @@ class HobokenApplication(object):
         filter_tuple = self._make_route(match, func)
         self.after_fiiters.append(filter_tuple)
 
-    def after(self, match):
+    def after(self, match=None):
+        # If the match isn't provided, we match anything.
+        if match is None:
+            match = re.compile(".*")
+
         def internal_decorator(func):
             self.add_after_filter(match, func)
             return func
