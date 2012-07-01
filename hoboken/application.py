@@ -89,6 +89,32 @@ class HobokenApplication(object):
         else:
             self.logger.setLevel(logging.WARN)
 
+    def _encode_character(self, char):
+        """
+        This function will encode a given character as a regex that will match
+        it in either regular or encoded form.
+        """
+        encode_char = lambda c: re.escape("%" + hex(ord(c))[2:])
+
+        # Was trying to use urllib.quote here, but it tries to encode too much for
+        # my liking.  Just using a regex.
+        if re.match(r"[;/?:@&=+$,\[\]]", char):
+            encoded = encode_char(char)
+        else:
+            encoded = char
+
+        # If the encoded version is unchanged, then we match both
+        # the bare version, along with the encoded version.
+        if encoded == char:
+            encoded = "(?:" + re.escape(char) + "|" + encode_char(char) + ")"
+
+        # Specifically for the space charcter, we match everything, and also plus characters.
+        if char == ' ':
+            encoded = "(?:" + encoded + "|" + self._encode_character("+") + ")"
+
+        return encoded
+
+
     def add_route(self, method, match, func):
         # Methods are uppercase.
         method = method.upper()
@@ -126,30 +152,10 @@ class HobokenApplication(object):
                     keys.append(match.group(0)[1:])
                     return r"([^/?#]+)"
 
-            # First we encode special characters.  The helper function will
-            # return a regex that matches that character and any modifications.
-            def encode_character(char):
-                if char == ' ':
-                    return "(?: |" + encode_character("+") + ")"
-                else:
-                    encoded = urllib.quote(char)
-
-                    # If the encoded version is unchanged, then we match both
-                    # the bare version, along with the encoded version.
-                    # Otherwise, we just escape the quoted version (so our
-                    # generated regex doesn't do funny things with it), and
-                    # return that.
-                    if encoded == char:
-                        encoded = "(?:" + re.escape(char) + "|" + re.escape("%" + hex(ord(char))[2:]) + ")"
-                    else:
-                        encoded = re.escape(char)
-
-                    return encoded
-
             # Wrapper function that simply passes through to encode_character() with the
             # match's content.
             def encode_character_wrapper(match):
-                return encode_character(match.group(0))
+                return self._encode_character(match.group(0))
 
             # Encode everything that's not in the set:
             #   [?%\/:*] + all alphanumeric characters + underscore.

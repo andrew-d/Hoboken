@@ -113,7 +113,7 @@ def test_mixed_params():
 
     code, body = call_app(app, "/two/foo/bar")
 
-    assert_equal(code, 200)
+    assert_equal(code, 200, "calling the application should work")
 
 
 def test_dot_in_param():
@@ -125,14 +125,14 @@ def test_dot_in_param():
 
     code, body = call_app(app, "/test@foo.com/john")
 
-    assert_equal(code, 200)
-    assert_equal(body, "test@foo.com")
+    assert_equal(code, 200, "calling a complex param with dots should work")
+    assert_equal(body, "test@foo.com", "calling a complex param with dots should work")
 
 
 def test_dot_outside_param():
     def test_func(req, resp):
-        assert_equal(req.route_params["one"], "foo")
-        assert_equal(req.route_params["two"], "bar")
+        assert_equal(req.route_params["one"], "foo", "route param 1 should match")
+        assert_equal(req.route_params["two"], "bar", "route param 2 should match")
         return "works"
 
     app = HobokenApplication("test_dot_outside_param")
@@ -140,12 +140,12 @@ def test_dot_outside_param():
 
     code, body = call_app(app, "/foo.bar")
 
-    assert_equal(code, 200)
-    assert_equal(body, "works")
+    assert_equal(code, 200, "calling a dot-seperated param path should work")
+    assert_equal(body, "works", "calling a dot-seperated param path should work")
 
     code, body = call_app(app, "/foo1bar")
 
-    assert_equal(code, 404)
+    assert_equal(code, 404, "a bad path should not match")
 
 
 def test_dollar_sign():
@@ -154,12 +154,12 @@ def test_dollar_sign():
 
     code, body = call_app(app, "/test$/")
 
-    assert_equal(code, 200)
-    assert_equal(body, "request body")
+    assert_equal(code, 200, "calling a path with a dollar sign should work")
+    assert_equal(body, "request body", "calling a path with a dollar sign should work")
 
     code, body = call_app(app, "/test/")
 
-    assert_equal(code, 404)
+    assert_equal(code, 404, "a bad path should not match")
 
 
 def test_plus_character():
@@ -168,12 +168,12 @@ def test_plus_character():
 
     code, body = call_app(app, "/te%2Bst/")
 
-    assert_equal(code, 200)
-    assert_equal(body, "request body")
+    assert_equal(code, 200, "calling a path with pluses using a hex encoding should work")
+    assert_equal(body, "request body", "calling a path with pluses using a hex encoding should work")
 
     code, body = call_app(app, "/test/")
 
-    assert_equal(code, 404)
+    assert_equal(code, 404, "a bad path should not match")
 
 
 def test_space_character():
@@ -185,8 +185,8 @@ def test_space_character():
 
     code, body = call_app(app, "/te+st")
 
-    assert_equal(code, 200)
-    assert_equal(body, "te st")
+    assert_equal(code, 200, "calling a param path with spaces should work")
+    assert_equal(body, "te st", "parameters should decode pluses to spaces")
 
 
 def test_brackets_characters():
@@ -195,12 +195,12 @@ def test_brackets_characters():
 
     code, body = call_app(app, "/te(st)/")
 
-    assert_equal(code, 200)
-    assert_equal(body, "request body")
+    assert_equal(code, 200, "calling a path with brackets should work")
+    assert_equal(body, "request body", "calling a path with brackets should work")
 
     code, body = call_app(app, "/test/")
 
-    assert_equal(code, 404)
+    assert_equal(code, 404, "a bad path should not match")
 
 
 def test_space_characters():
@@ -209,17 +209,21 @@ def test_space_characters():
 
     code, body = call_app(app, "/path+with+spaces")
 
-    assert_equal(code, 200)
-    assert_equal(body, "request body")
+    assert_equal(code, 200,
+                    "calling a path with spaces using plus characters should work")
+    assert_equal(body, "request body",
+                    "calling a path with spaces using plus characters should work")
 
     code, body = call_app(app, "/path%20with%20spaces")
 
-    assert_equal(code, 200)
-    assert_equal(body, "request body")
+    assert_equal(code, 200,
+                "calling a path with spaces using hex-encoded spaces should work")
+    assert_equal(body, "request body",
+                "calling a path with spaces using hex-encoded spaces should work")
 
     code, body = call_app(app, "/badpath")
 
-    assert_equal(code, 404)
+    assert_equal(code, 404, "bad paths should not match")
 
 
 # TODO: Tests involving +, ' ', and more . magic.
