@@ -75,6 +75,11 @@ class HobokenApplication(object):
         for m in self.SUPPORTED_METHODS:
             self.routes[m] = []
 
+        # Before and after filter arrays.  These are in the same format as
+        # the routes[] array, above.
+        self.before_filters = []
+        self.after_filters = []
+
         # Create logger.
         self.logger = logging.getLogger("hoboken.applications." + self.name)
 
@@ -86,8 +91,10 @@ class HobokenApplication(object):
 
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
+            handler.setLevel(logging.DEBUG)
         else:
             self.logger.setLevel(logging.WARN)
+            handler.setLevel(logging.WARN)
 
     def _encode_character(self, char):
         """
@@ -114,15 +121,7 @@ class HobokenApplication(object):
 
         return encoded
 
-
-    def add_route(self, method, match, func):
-        # Methods are uppercase.
-        method = method.upper()
-
-        # Check for valid method.
-        if not method in self.SUPPORTED_METHODS:
-            raise HobokenException("Invalid method type given: %s" % (method,))
-
+    def _make_route(self, match, func):
         # Determine match type.
         if isinstance(match, BaseStringType):
             # Param/splat style.  We need to extract the splats, the named
@@ -165,7 +164,7 @@ class HobokenApplication(object):
             match_regex = re.sub(r"((:\w+)|\*)", convert_match, encoded_match)
 
             # Done - add the route.
-            self.routes[method].append((RegexMatcher(match_regex, keys), func))
+            return (RegexMatcher(match_regex, keys), [], func)
 
         elif isinstance(match, RegexType):
             # match is a regex, so we extract any named groups.
@@ -174,16 +173,27 @@ class HobokenApplication(object):
                 keys[index] = name
 
             # Append the route with these keys.
-            self.routes[method].append((RegexMatcher(match, keys), func))
+           return (RegexMatcher(match, keys), [], func)
 
         elif hasattr(match, "match") and iscallable(getattr(match, "match")):
             # Don't know what type it is, but it has a callable "match"
             # attribute, so we use that.
-            self.routes[method].append((match, func))
+            return (match, [], func)
 
         else:
             # Unknown type!
             raise InvalidMatchTypeException("Unknown type: %r" % (match,))
+
+    def add_route(self, method, match, func):
+        # Methods are uppercase.
+        method = method.upper()
+
+        # Check for valid method.
+        if not method in self.SUPPORTED_METHODS:
+            raise HobokenException("Invalid method type given: %s" % (method,))
+
+        route_tuple = self._make_route(match, func)
+        self.routes[method].append(route_tuple)
 
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
@@ -191,12 +201,56 @@ class HobokenApplication(object):
             return func
         return internal_decorator
 
+    def add_before_filter(self, match, func):
+        filter_tuple = self._make_route(match, func)
+        self.before_fiiters.append(filter_tuple)
+
+    def before(self, match):
+        def internal_decorator(func):
+            self.add_before_filter(match, func)
+            return func
+        return internal_decorator
+
+    def add_after_filter(self, match, func):
+        filter_tuple = self._make_route(match, func)
+        self.after_fiiters.append(filter_tuple)
+
+    def after(self, match):
+        def internal_decorator(func):
+            self.add_after_filter(match, func)
+            return func
+        return internal_decorator
+
+    def _process_route(self, req, resp, route_tuple):
+        matcher, conditions, func = route_tuple
+
+        if not matcher.match(req):
+            return False
+
+        try:
+            for cond in conditions:
+                if not cond(req):
+                    raise ContinueRoutingException
+
+            ret = func(req, resp)
+            if ret is not None:
+                resp.body = ret
+
+        except ContinueRoutingException:
+            req.reinitialize()
+            return False
+
+        return True
+
     def wsgi_entrypoint(self, environ, start_response):
         # Create our request object.
         req = WebRequest(environ)
+        self.logger.debug("%s %s", req.method, req.url)
 
         # Check for valid method.
         if req.method not in self.SUPPORTED_METHODS:
+            self.logger.warn("Called with invalid method: %r", req.method)
+
             # Send "invalid method" exception.
             exc = HTTPMethodNotAllowed(location=req.path)
             resp = req.get_response(exc)
@@ -205,40 +259,27 @@ class HobokenApplication(object):
         # Create response.
         resp = Response()
 
-        # TODO: Call 'before' filters.
-
-        # For each route of the specified type, try to match it.
         matched = False
-        for matcher, func in self.routes[req.method]:
-            if matcher.match(req):
-                matched = True
+        try:
+            for filt_tuple in self.before_filters:
+                # Call this filter.
+                self._process_route(req, resp, filt_tuple)
 
-                try:
-                    ret = func(req, resp)
+            # For each route of the specified type, try to match it.
+            for route_tuple in self.routes[req.method]:
+                if self._process_route(req, resp, route_tuple):
+                    matched = True
+                    break
 
-                    # If we have a non-None return value, we set the body of
-                    # the response to this value.
-                    if ret is not None:
-                        resp.body = ret
-                except ContinueRoutingException:
-                    # Reinitialize the request, which clears our route params.
-                    matched = False
-                    req.reinitialize()
+        except HaltRoutingException as halt:
+            # TODO: check if the exception specifies a status code or
+            # body, and then set these on the request
+            pass
 
-                except HaltRoutingException:
-                    # TODO: Halt routing.
-                    pass
-
-                else:
-                    # The 'else' clause is executed when NO exception has been
-                    # raised.  This signifies that all has gone right, and thus
-                    # we should continue to process "after()" calls, and so on.
-
-                    # TODO: Fill me in.
-                    pass
-
-                # Stop processing this request - we're done.
-                break
+        finally:
+            for filt_tuple in self.after_filters:
+                # Call our after filter.
+                self.process_route(req, resp, filt_tuple)
 
         if not matched:
             # Return a 404 request.
