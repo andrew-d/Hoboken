@@ -285,8 +285,8 @@ class HobokenApplication(object):
             pass
 
         finally:
+            # Call our after filters
             for filt_tuple in self.after_filters:
-                # Call our after filter.
                 self.process_route(req, resp, filt_tuple)
 
         if not matched:
