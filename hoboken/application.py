@@ -287,6 +287,12 @@ class HobokenApplication(object):
             # TODO: check if the exception specifies a status code or
             # body, and then set these on the request
             pass
+            
+        except Exception as e:
+            # TODO: Output a 500 error.
+            # Also, check if the exception has other information attached,
+            # like a code/body.
+            # TODO: Handle other HTTPExceptions from webob?
 
         finally:
             # Call our after filters
@@ -294,14 +300,23 @@ class HobokenApplication(object):
                 self.process_route(req, resp, filt_tuple)
 
         if not matched:
-            # Return a 404 request.
-            exc = HTTPNotFound(location=req.path)
-            resp = req.get_response(exc)
+            resp = self.on_route_missing(req)
 
         return resp(environ, start_response)
 
     def __call__(self, environ, start_response):
         return self.wsgi_entrypoint(environ, start_response)
+        
+    def on_route_missing(self, req):
+        """
+        This function is called when a route to handle a request is not found.
+        It should return a Response that will then be sent to the requestor.
+        Override this function to provide custom not-found logic.
+        """
+        # By default, return a 404 request.
+        exc = HTTPNotFound(location=req.path)
+        resp = req.get_response(exc)
+        return resp
 
     def test_server(self, port=8000):
         """
