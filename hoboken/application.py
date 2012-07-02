@@ -197,7 +197,11 @@ class HobokenApplication(object):
 
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
+            # Add the route.
             self.add_route(method, match, func)
+            
+            # Mark this function as a route.
+            func.func_dict['hoboken.route'] = True
             return func
         return internal_decorator
 
@@ -310,3 +314,20 @@ class HobokenApplication(object):
         from wsgiref.simple_server import make_server
         httpd = make_server('localhost', port, self)
         httpd.serve_forever()
+
+
+
+
+# TODO:
+# def hoboken_wrapper(func):
+#     def add_condition(condition):
+#         print "Adding condition: %r" % (condition,)
+# 
+#     if 'hoboken.conditions' in func.func_dict:
+#         for c in func.func_dict['hoboken.conditions']:
+#             add_condition(c)
+# 
+#         del func.func_dict['hoboken.conditions']
+# 
+#     func.func_dict['hoboken.add_condition'] = add_condition
+#     func.func_dict['hoboken.wrapped'] = True
