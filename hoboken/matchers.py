@@ -77,3 +77,6 @@ class RegexMatcher(object):
     def __str__(self):
         return self.re.pattern
 
+    def __repr__(self):
+        return "RegexMatcher(regex={!r}, keys={!r})".format(self.re.pattern, self.keys)
+

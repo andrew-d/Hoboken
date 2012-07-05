@@ -380,28 +380,42 @@ class HobokenApplication(object):
         """
 
         body = []
+        body.append("Application {0} (Debug: {1})".format(self.name, self.debug))
+        body.append("")
 
-        def dump_route_array(arr):
-            body.append("-" * 79)
-            body.append("Function        Match                          Conditions")
+        def dump_filter_array(arr):
+            body.append("=" * 79)
+            body.append("Function        Match                     Conditions")
             body.append("-" * 79)
             for match, cond, func in arr:
                 conds = ", ".join([f.func_name for f in cond])
-                body.append("{0:<15} {1:<30} {2:<30}".format(func.func_name, repr(match), conds))
+                body.append("{0:<15} {1:<25} {2:<35}".format(func.func_name, str(match), conds))
+
+        def dump_route_array(arr):
+            body.append("=" * 79)
+            body.append("Method  Function        Match                     Conditions")
+            body.append("-" * 79)
+            for method in self.routes:
+                for match, cond, func in self.routes[method]:
+                    conds = ", ".join([f.func_name for f in cond])
+                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(method, func.func_name, str(match), conds))
 
         body.append("BEFORE FILTERS")
+        dump_filter_array(self.before_filters)
+        body.append("")
+
+        body.append("ROUTES")
         dump_route_array(self.before_filters)
         body.append("")
 
-        #body.append("ROUTES")
-        #dump_route_array(self.before_filters)
-        #body.append("")
-
         body.append("AFTER FILTERS")
-        dump_route_array(self.after_filters)
+        dump_filter_array(self.after_filters)
         body.append("")
 
         return '\n'.join(body)
+
+    def __repr__(self):
+        return "HobokenApplication(name={!r}, debug={!r})".format(self.name, self.debug)
 
 
 
