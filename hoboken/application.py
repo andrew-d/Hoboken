@@ -173,7 +173,7 @@ class HobokenApplication(object):
                 keys[index] = name
 
             # Append the route with these keys.
-           return (RegexMatcher(match, keys), [], func)
+            return (RegexMatcher(match, keys), [], func)
 
         elif hasattr(match, "match") and iscallable(getattr(match, "match")):
             # Don't know what type it is, but it has a callable "match"
@@ -199,7 +199,7 @@ class HobokenApplication(object):
         def internal_decorator(func):
             # Add the route.
             self.add_route(method, match, func)
-            
+
             # Mark this function as a route.
             func.func_dict['hoboken.route'] = True
             return func
@@ -287,7 +287,7 @@ class HobokenApplication(object):
             # TODO: check if the exception specifies a status code or
             # body, and then set these on the request
             pass
-            
+
         except Exception as e:
             # TODO: Output a 500 error.
             # Also, check if the exception has other information attached,
@@ -297,7 +297,7 @@ class HobokenApplication(object):
         finally:
             # Call our after filters
             for filt_tuple in self.after_filters:
-                self.process_route(req, resp, filt_tuple)
+                self._process_route(req, resp, filt_tuple)
 
         if not matched:
             resp = self.on_route_missing(req)
@@ -306,7 +306,7 @@ class HobokenApplication(object):
 
     def __call__(self, environ, start_response):
         return self.wsgi_entrypoint(environ, start_response)
-        
+
     def on_route_missing(self, req):
         """
         This function is called when a route to handle a request is not found.

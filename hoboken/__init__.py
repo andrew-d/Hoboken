@@ -1,6 +1,9 @@
+from __future__ import absolute_import
+
 # Imports we import into the namespace.
-from application import HobokenApplication
+from .application import HobokenApplication
 
 # Submodules we pull in here.
-import matchers
-import exceptions
+from . import matchers
+from . import exceptions
+
