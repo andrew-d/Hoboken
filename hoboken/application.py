@@ -17,6 +17,23 @@ from .matchers import *
 from .compat import *
 
 
+# TODO: move this to another file.
+def condition(condition_func):
+    def internal_decorator(func):
+        # Either call the add_condition() func, or add this condition to the
+        # list of conditions on the function.
+        if 'hoboken.add_condition' in func.func_dict:
+            func.func_dict['hoboken.add_condition'](condition_func)
+        elif 'hoboken.conditions' in func.func_dict:
+            func.func_dict['hoboken.conditions'].append(condition_func)
+        else:
+            func.func_dict['hoboken.conditions'] = [condition_func]
+
+        return func
+
+    return internal_decorator
+
+
 class WebRequest(Request):
     """
     This class represents a request.  It is comprised of:
@@ -195,19 +212,44 @@ class HobokenApplication(object):
         route_tuple = self._make_route(match, func)
         self.routes[method].append(route_tuple)
 
+    def find_route(self, method, func):
+        for t in self.routes[method]:
+            if t[2] == func:
+                return t
+
+        return None
+
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
+            # This allows us to add conditions!
+            def add_condition(condition_func):
+                route_tuple = self.find_route(method, func)
+                route_tuple[1].append(condition_func)
+                print "Added condition {0} for func {1}/{2}:".format(
+                    repr(condition_func), str(method), repr(func))
+
             # Add the route.
             self.add_route(method, match, func)
 
+            # Add each of the existing conditions.
+            if 'hoboken.conditions' in func.func_dict:
+                for c in func.func_dict['hoboken.conditions']:
+                    add_condition(c)
+
+                del func.func_dict['hoboken.conditions']
+
             # Mark this function as a route.
             func.func_dict['hoboken.route'] = True
+
+            # Add a function to add future conditions. This is so the order
+            # of conditions being added doesn't matter.
+            func.func_dict['hoboken.add_condition'] = add_condition
             return func
         return internal_decorator
 
     def add_before_filter(self, match, func):
         filter_tuple = self._make_route(match, func)
-        self.before_fiiters.append(filter_tuple)
+        self.before_filters.append(filter_tuple)
 
     def before(self, match=None):
         # If the match isn't provided, we match anything.
@@ -221,7 +263,7 @@ class HobokenApplication(object):
 
     def add_after_filter(self, match, func):
         filter_tuple = self._make_route(match, func)
-        self.after_fiiters.append(filter_tuple)
+        self.after_filters.append(filter_tuple)
 
     def after(self, match=None):
         # If the match isn't provided, we match anything.
@@ -293,6 +335,7 @@ class HobokenApplication(object):
             # Also, check if the exception has other information attached,
             # like a code/body.
             # TODO: Handle other HTTPExceptions from webob?
+            pass
 
         finally:
             # Call our after filters
@@ -329,6 +372,36 @@ class HobokenApplication(object):
         from wsgiref.simple_server import make_server
         httpd = make_server('localhost', port, self)
         httpd.serve_forever()
+
+    def __str__(self):
+        """
+        Some help for debugging: repr(app) will get a summary of the app and
+        it's defined before/after/routes.
+        """
+
+        body = []
+
+        def dump_route_array(arr):
+            body.append("-" * 79)
+            body.append("Function        Match                          Conditions")
+            body.append("-" * 79)
+            for match, cond, func in arr:
+                conds = ", ".join([f.func_name for f in cond])
+                body.append("{0:<15} {1:<30} {2:<30}".format(func.func_name, repr(match), conds))
+
+        body.append("BEFORE FILTERS")
+        dump_route_array(self.before_filters)
+        body.append("")
+
+        #body.append("ROUTES")
+        #dump_route_array(self.before_filters)
+        #body.append("")
+
+        body.append("AFTER FILTERS")
+        dump_route_array(self.after_filters)
+        body.append("")
+
+        return '\n'.join(body)
 
 
 
