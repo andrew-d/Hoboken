@@ -95,3 +95,58 @@ def test_app_passes_to_subapp():
     code, body = call_app(app, "/neither")
     assert_equal(code, 404)
 
+
+def test_filters():
+    app = HobokenApplication("test_filters")
+    calls = []
+
+    @app.before("/before/*")
+    def before_filter(req, resp):
+        calls.append("before")
+
+    @app.get("/*")
+    def route_func(req, resp):
+        calls.append("body")
+        return req.route_params['splat'][0]
+
+    @app.after("/after/*")
+    def after_filter(req, resp):
+        calls.append("after")
+
+    code, body = call_app(app, "/neither")
+    assert_equal(code, 200)
+    assert_equal(body, "neither")
+    assert_equal(calls, ["body"])
+
+    calls = []
+    code, body = call_app(app, "/before/stuff")
+    assert_equal(code, 200)
+    assert_equal(body, "before/stuff")
+    assert_equal(calls, ["before", "body"])
+
+    calls = []
+    code, body = call_app(app, "/after/stuff")
+    assert_equal(code, 200)
+    assert_equal(body, "after/stuff")
+    assert_equal(calls, ["body", "after"])
+
+
+def test_before_filter_can_modify_route():
+    app = HobokenApplication("test_before_filter_can_modify_route")
+
+    @app.before("/notmatched")
+    def modify_route(req, resp):
+        req.environ['PATH_INFO'] = "/matched"
+
+    @app.get("/matched")
+    def route_func(req, resp):
+        return 'success'
+
+    code, body = call_app(app, "/matched")
+    assert_equal(code, 200, "Calling the matched route should work")
+    assert_equal(body, 'success')
+
+    code, body = call_app(app, "/notmatched")
+    assert_equal(code, 200, "Calling the modified route should work")
+    assert_equal(body, 'success')
+
