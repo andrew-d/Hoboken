@@ -80,8 +80,9 @@ class HobokenApplication(object):
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
 
-    def __init__(self, name, debug=False):
+    def __init__(self, name, sub_app=None, debug=False):
         self.name = name
+        self.sub_app = sub_app
         self.debug = debug
 
         # Routes array. We split this by method, both for speed and simplicity.
@@ -217,9 +218,9 @@ class HobokenApplication(object):
         self.routes[method].append(route_tuple)
 
     def find_route(self, method, func):
-        for t in self.routes[method]:
-            if t[2] == func:
-                return t
+        for tup in self.routes[method]:
+            if tup[2] == func:
+                return tup
 
         return None
 
@@ -227,10 +228,10 @@ class HobokenApplication(object):
         def internal_decorator(func):
             # This allows us to add conditions!
             def add_condition(condition_func):
-                route_tuple = self.find_route(method, func)
-                route_tuple[1].append(condition_func)
-                print "Added condition {0} for func {1}/{2}:".format(
-                    repr(condition_func), str(method), repr(func))
+                _, conds, _ = self.find_route(method, func)
+                conds.append(condition_func)
+                self.logger.debug("Added condition '{0}' for func {1}/{2}:".format(
+                    condition_func.func_name, str(method), func.func_name))
 
             # Add the route.
             self.add_route(method, match, func)
@@ -280,6 +281,7 @@ class HobokenApplication(object):
         return internal_decorator
 
     def _process_route(self, req, resp, route_tuple):
+        self.logger.debug("Processing route: {0}".format(repr(route_tuple)))
         matcher, conditions, func = route_tuple
 
         if not matcher.match(req):
@@ -371,9 +373,14 @@ class HobokenApplication(object):
         It should return a Response that will then be sent to the requestor.
         Override this function to provide custom not-found logic.
         """
-        # By default, return a 404 request.
-        exc = HTTPNotFound(location=req.path)
-        resp = req.get_response(exc)
+        # If we have a sub_app, return what it has.
+        if self.sub_app:
+            resp = req.get_response(self.sub_app)
+        else:
+            # By default, return a 404 request.
+            exc = HTTPNotFound(location=req.path)
+            resp = req.get_response(exc)
+
         return resp
 
     def test_server(self, port=8000):
