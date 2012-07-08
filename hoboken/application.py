@@ -122,7 +122,7 @@ class HobokenApplication(object):
 
         # Was trying to use urllib.quote here, but it tries to encode too much for
         # my liking.  Just using a regex.
-        if re.match(r"[;/?:@&=+$,\[\]]", char):
+        if re.match(r"[;/?:@&=,\[\]]", char):
             encoded = encode_char(char)
         else:
             encoded = char
@@ -179,6 +179,10 @@ class HobokenApplication(object):
 
             # Now, replace parameters or splats with their matching regex.
             match_regex = re.sub(r"((:\w+)|\*)", convert_match, encoded_match)
+
+            # We need to add the begin/end anchors, because otherwise the lazy
+            # matches in our splats won't match anything.
+            match_regex = "^" + match_regex + "$"
 
             # Done - add the route.
             return (RegexMatcher(match_regex, keys), [], func)
@@ -324,6 +328,17 @@ class HobokenApplication(object):
                 if self._process_route(req, resp, route_tuple):
                     matched = True
                     break
+
+            # We special-case the HEAD method to fallback to GET.
+            if req.method == 'HEAD' and not matched:
+                new_req = req.copy()
+                new_req.method = 'GET'
+
+                resp = new_req.get_response(self)
+
+                # TODO: is this a good heuristic?
+                if resp.status_code < 400:
+                    matched = True
 
         except HaltRoutingException as halt:
             # TODO: check if the exception specifies a status code or
