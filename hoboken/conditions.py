@@ -1,41 +1,45 @@
-from __future__ import absolute_import
-from functools import wraps
+import re
+from collections import Iterable
+from webob.acceptparse import MIMEAccept
 
+def user_agent(match_re):
+    regex = re.compile(match_re)
 
-def condition(condition_callable):
-    def conditional_decorator(func):
-        if func.func_dict.get('hoboken.wrapped', False):
-            func.func_dict['hoboken.add_condition'](condition_callable)
+    def user_agent_func(req):
+        ua = req.headers['User-Agent']
+        if regex.match(ua):
+            return True
         else:
-            if 'hoboken.conditions' in func.func_dict:
-                func.func_dict['hoboken.conditions'].append(condition_callable)
-            else:
-                func.func_dict['hoboken.conditions'] = [condition_callable]
+            return False
 
-        @wraps(func)
-        def internal(req, resp):
-            return func(req, resp)
-
-        return internal
-
-    return conditional_decorator
+    return user_agent_func
 
 
-def hoboken_wrapper(func):
-    def add_condition(condition):
-        print "Adding condition: %r" % (condition,)
+def host(match_re):
+    regex = re.compile(match_re)
 
-    if 'hoboken.conditions' in func.func_dict:
-        for c in func.func_dict['hoboken.conditions']:
-            add_condition(c)
+    def host_func(req):
+        return regex.match(req.host)
 
-        del func.func_dict['hoboken.conditions']
+    return host_func
 
-    func.func_dict['hoboken.add_condition'] = add_condition
-    func.func_dict['hoboken.wrapped'] = True
 
-    @wraps(func)
-    def internal(req, resp):
-        return func(req, resp)
+def accepts(mimetypes):
+    # Note that we can't simply check for an iterable here, since
+    # strings are also iterables.
+    if isinstance(mimetypes, list):
+        will_accept = mimetypes
+    else:
+        will_accept = [mimetypes]
 
-    return internal
+    def accepts_func(req):
+        for a in will_accept:
+            print 'matching {0} against {1}'.format(str(req.accept), str(a))
+            #if str(req.accept) in a:
+            if a in req.accept:
+                return True
+
+        return False
+
+    return accepts_func
+
