@@ -9,7 +9,7 @@ import logging
 
 # External dependencies
 from webob import Request, Response
-from webob.exc import HTTPMethodNotAllowed, HTTPNotFound
+from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerError
 
 # In-package dependencies
 from .exceptions import *
@@ -17,7 +17,11 @@ from .matchers import *
 from .compat import *
 
 
-# TODO: move this to another file.
+# TODO: move these to another file.
+def is_route(func):
+    return func.func_dict.get('hoboken.route', False)
+
+
 def condition(condition_func):
     def internal_decorator(func):
         # Either call the add_condition() func, or add this condition to the
@@ -226,6 +230,10 @@ class HobokenApplication(object):
 
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
+            # We only allow one route for each function.
+            if is_route(func):
+                raise RouteExistsException()
+
             # This allows us to add conditions!
             def add_condition(condition_func):
                 _, conds, _ = self.find_route(method, func)
@@ -343,16 +351,22 @@ class HobokenApplication(object):
                     matched = True
 
         except HaltRoutingException as halt:
-            # TODO: check if the exception specifies a status code or
+            # Check if the exception specifies a status code or
             # body, and then set these on the request
-            pass
+            if halt.status_code != 0:
+                resp.status_code = halt.status_code
+
+            if halt.body is not None:
+                resp.body = halt.body
 
         except Exception as e:
-            # TODO: Output a 500 error.
             # Also, check if the exception has other information attached,
             # like a code/body.
             # TODO: Handle other HTTPExceptions from webob?
-            pass
+            resp = self.on_exception(req, e)
+
+            # Must set, or we get clobbered by the 404 handler.
+            matched = True
 
         finally:
             # Call our after filters
@@ -382,6 +396,11 @@ class HobokenApplication(object):
             resp = req.get_response(exc)
 
         return resp
+
+    def on_exception(self, req, exception):
+       exc = HTTPInternalServerError(location=req.path)
+       resp = req.get_response(exc)
+       return resp
 
     def test_server(self, port=8000):
         """

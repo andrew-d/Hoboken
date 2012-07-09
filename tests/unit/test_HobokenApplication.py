@@ -150,3 +150,15 @@ def test_before_filter_can_modify_route():
     assert_equal(code, 200, "Calling the modified route should work")
     assert_equal(body, 'success')
 
+
+def test_handles_exceptions():
+    app = HobokenApplication("test_handes_exceptions")
+
+    @app.get('/errors')
+    def errorme(req, resp):
+        raise Exception("foobar bloo blah")
+
+    code, body = call_app(app, '/errors')
+
+    assert_equal(code, 500)
+

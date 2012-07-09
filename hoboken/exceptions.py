@@ -16,10 +16,9 @@ class InvalidMatchTypeException(HobokenException):
     pass
 
 
-class NotDecoratedException(HobokenException):
+class RouteExistsException(HobokenException):
     """
-    Exception raised when trying to use conditions, or other decorators, on a
-    function that hasn't been decorated with a route.
+    Exception raised when trying to set multiple route decorators on a function.
     """
     pass
 
@@ -40,11 +39,12 @@ class ContinueRoutingException(HobokenUserException):
 class HaltRoutingException(HobokenUserException):
     """
     This exception signals that Hoboken should stop routing the current
-    request.  after() calls are NOT called, and the request is finished
-    immediately.
+    request.  NOTE: after() calls ARE called.
     """
-    # TODO: Should after() calls be called?
-    pass
+    def __init__(self, *args, **kwargs):
+        self.status_code = kwargs.pop('status_code', 0)
+        self.body = kwargs.pop('body', None)
+        super(HaltRoutingException, self).__init__(*args, **kwargs)
 
 
 class RedirectException(HobokenUserException):
