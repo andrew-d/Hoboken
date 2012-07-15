@@ -1,4 +1,4 @@
-from .context import hoboken
+from .context import hoboken, call_app, body_func
 HobokenApplication = hoboken.HobokenApplication
 
 from nose.exc import SkipTest
@@ -9,17 +9,17 @@ from webob import Request
 # Some useful tests from Sinatra: https://github.com/sinatra/sinatra/blob/master/test/routing_test.rb
 
 
-# Helper function.  Calls the given application, returns a tuple of
-# (status_int, body)
-def call_app(app, path="/", method="GET"):
-    req = Request.blank(path)
-    req.method = method
-    resp = req.get_response(app)
-    return resp.status_int, resp.body
+# # Helper function.  Calls the given application, returns a tuple of
+# # (status_int, body)
+# def call_app(app, path="/", method="GET"):
+#     req = Request.blank(path)
+#     req.method = method
+#     resp = req.get_response(app)
+#     return resp.status_int, resp.body
 
 
-def body_func(req, resp):
-    return "request body"
+# def body_func(req, resp):
+#     return "request body"
 
 
 def test_responds_to():
@@ -36,8 +36,8 @@ def test_responds_to():
 
 
 def test_does_not_respond_to():
-    for meth in hoboken.HobokenApplication.SUPPORTED_METHODS:
-        app = hoboken.HobokenApplication("test_" + meth)
+    for meth in HobokenApplication.SUPPORTED_METHODS:
+        app = HobokenApplication("test_" + meth)
         app.add_route(meth, "/somelongpath", body_func)
 
         code, body = call_app(app, "/someotherpath")
