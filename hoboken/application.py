@@ -118,6 +118,9 @@ class HobokenApplication(object):
             self.logger.setLevel(logging.WARN)
             handler.setLevel(logging.WARN)
 
+    def set_subapp(self, subapp):
+        self.sub_app = subapp
+
     def _encode_character(self, char):
         """
         This function will encode a given character as a regex that will match

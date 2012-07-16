@@ -1,24 +1,11 @@
-from .context import hoboken
-HobokenApplication = hoboken.HobokenApplication
-
-from nose.tools import *
-from webob import Request
+from . import HobokenTestCase
+from ..application import HobokenApplication, condition
 
 
-# Helper function.  Calls the given application, returns a tuple of
-# (status_int, body)
-def call_app(app, path="/", method="GET"):
-    req = Request.blank(path)
-    req.method = method
-    resp = req.get_response(app)
-    return resp.status_int, resp.body
-
-
-def test_has_http_methods():
-    a = HobokenApplication("")
-    for x in HobokenApplication.SUPPORTED_METHODS:
-        assert hasattr(a, x.lower())
-
+class TestHasHTTPMethods(HobokenTestCase):
+    def test_has_all_methods(self):
+        for x in self.app.SUPPORTED_METHODS:
+            assert hasattr(self.app, x.lower())
 
 def test_is_wsgi_application():
     a = HobokenApplication("")
@@ -26,85 +13,78 @@ def test_is_wsgi_application():
     # called properly when we make a WSGI request.  Maybe use WebOb to make
     # the request.
 
-def test_works_with_conditions():
-    calls = []
 
-    def cond_above(req):
-        calls.append("above")
-        return True
+class TestWorksWithConditions(HobokenTestCase):
+    def after_setup(self):
+        self.calls = []
 
-    def cond_below(req):
-        calls.append("below")
-        return True
+        def cond_above(req):
+            self.calls.append("above")
+            return True
 
-    app = HobokenApplication("test_works_with_conditions")
+        def cond_below(req):
+            self.calls.append("below")
+            return True
 
-    @hoboken.condition(cond_above)
-    @app.get('/')
-    @hoboken.condition(cond_below)
-    def route_func(req, resp):
-        calls.append("body")
-        return 'success'
+        @condition(cond_above)
+        @self.app.get('/')
+        @condition(cond_below)
+        def route_func(req, resp):
+            self.calls.append("body")
+            return 'success'
 
-    code, body = call_app(app)
-
-    assert_equal(code, 200)
-    assert_equal(calls, ["below", "above", "body"])
-
-
-def test_condition_can_abort_request():
-    app = HobokenApplication("test_condition_can_abort_request")
-
-    def no_foo_in_path(req):
-        return req.path.find('foo') == -1
-
-    @hoboken.condition(no_foo_in_path)
-    @app.get('/:param')
-    def bar(req, resp):
-        return req.route_params['param']
-
-    code, body = call_app(app, '/works')
-
-    assert_equal(code, 200)
-    assert_equal(body, 'works')
-
-    code, body = call_app(app, '/foobreaks')
-
-    assert_equal(code, 404)
+    def test_condtions_order(self):
+        self.assert_body_is("success")
+        self.assert_equal(self.calls, ["below", "above", "body"])
 
 
-def test_app_passes_to_subapp():
-    subapp = HobokenApplication("subapp")
-    app = HobokenApplication("app", sub_app=subapp)
+class TestConditionCanAbortRequest(HobokenTestCase):
+    def after_setup(self):
+        def no_foo_in_path(req):
+            return req.path.find('foo') == -1
 
-    @subapp.get("/subapp")
-    def subapp_func(req, resp):
-        return "subapp"
+        @condition(no_foo_in_path)
+        @self.app.get('/:param')
+        def bar(req, resp):
+            return req.route_params['param']
 
-    @app.get("/app")
-    def app_func(req, resp):
-        return "app"
+    def test_should_work(self):
+        self.assert_body_is("works", path='/works')
 
-    code, body = call_app(app, "/app")
-    assert_equal(code, 200)
-    assert_equal(body, "app")
-
-    code, body = call_app(app, "/subapp")
-    assert_equal(code, 200)
-    assert_equal(body, "subapp")
-
-    code, body = call_app(app, "/neither")
-    assert_equal(code, 404)
+    def test_should_not_work(self):
+        self.assert_not_found(path='/foobreaks')
 
 
-def test_handles_exceptions():
-    app = HobokenApplication("test_handes_exceptions")
+class TestSubapps(HobokenTestCase):
+    def after_setup(self):
+        subapp = HobokenApplication("subapp")
+        self.app.set_subapp(subapp)
 
-    @app.get('/errors')
-    def errorme(req, resp):
-        raise Exception("foobar bloo blah")
+        @subapp.get("/subapp")
+        def subapp_func(req, resp):
+            return "subapp"
 
-    code, body = call_app(app, '/errors')
+        @self.app.get("/app")
+        def app_func(req, resp):
+            return "app"
 
-    assert_equal(code, 500)
+    def test_app_call_works(self):
+        self.assert_body_is("app", path='/app')
+
+    def test_subapp_delegation_works(self):
+        self.assert_body_is("subapp", path='/subapp')
+
+    def test_neither(self):
+        self.assert_not_found(path='/neither')
+
+
+class TestHandlesExceptions(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get("/errors")
+        def errorme(req, resp):
+            raise Exception("foobar bloo blah")
+
+    def test_exception_handling(self):
+        code, body = self.call_app(path='/errors')
+        self.assert_equal(code, 500)
 
