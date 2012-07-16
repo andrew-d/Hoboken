@@ -26,6 +26,19 @@ class TestFilters():
         def after_filter(req, resp):
             self.calls.append("after")
 
+        @app.before("/both/*")
+        def both_before_filter(req, resp):
+            self.calls.append("before")
+
+        @app.after("/both/*")
+        def both_after_filter(req, resp):
+            self.calls.append("after")
+
+        @app.after("/both_at_once/*")
+        @app.before("/both_at_once/*")
+        def both_at_once_filter(req, resp):
+            self.calls.append("both_at_once")
+
         self.app = app
         self.calls = []
 
@@ -52,6 +65,18 @@ class TestFilters():
         assert_equal(body, "after/stuff")
         assert_equal(self.calls, ["body", "after"])
 
+    def test_both(self):
+        code, body = self.call_app("/both/stuff")
+        assert_equal(code, 200)
+        assert_equal(body, "both/stuff")
+        assert_equal(self.calls, ["before", "body", "after"])
+
+    def test_both_at_once(self):
+        code, body = self.call_app("/both_at_once/stuff")
+        assert_equal(code, 200)
+        assert_equal(body, "both_at_once/stuff")
+        assert_equal(self.calls, ["both_at_once", "body", "both_at_once"])
+
 
 def test_before_filter_can_modify_route():
     app = HobokenApplication("test_before_filter_can_modify_route")
@@ -71,3 +96,4 @@ def test_before_filter_can_modify_route():
     code, body = call_app(app, "/notmatched")
     assert_equal(code, 200, "Calling the modified route should work")
     assert_equal(body, 'success')
+
