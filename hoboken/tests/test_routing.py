@@ -1,240 +1,158 @@
-from .context import hoboken, call_app, body_func
-HobokenApplication = hoboken.HobokenApplication
-
-from nose.exc import SkipTest
-from nose.tools import *
+from . import HobokenTestCase
+from unittest import skip
 from webob import Request
 
 
 # Some useful tests from Sinatra: https://github.com/sinatra/sinatra/blob/master/test/routing_test.rb
 
 
-# # Helper function.  Calls the given application, returns a tuple of
-# # (status_int, body)
-# def call_app(app, path="/", method="GET"):
-#     req = Request.blank(path)
-#     req.method = method
-#     resp = req.get_response(app)
-#     return resp.status_int, resp.body
+class TestMethods(HobokenTestCase):
+    def after_setup(self):
+        for meth in self.app.SUPPORTED_METHODS:
+            self.app.add_route(meth, '/', self.body_func)
 
+    def test_successful_methods(self):
+        methods = list(self.app.SUPPORTED_METHODS)
+        methods.remove("HEAD")
+        for meth in methods:
+            self.assert_body_is('request body', method=meth)
 
-# def body_func(req, resp):
-#     return "request body"
+    def test_HEAD_method(self):
+        self.assert_body_is('', method="HEAD")
 
+    def test_failed_methods(self):
+        for meth in self.app.SUPPORTED_METHODS:
+            self.assert_not_found(path='/somebadpath')
 
-def test_responds_to():
-    for meth in HobokenApplication.SUPPORTED_METHODS:
-        app = HobokenApplication("test_" + meth)
-        app.add_route(meth, "/", body_func)
 
-        code, body = call_app(app, method=meth)
+class TestHeadFallback(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get('/')
+        def get_func(req, resp):
+            resp.headers['X-Custom-Header'] = 'foobar'
+            return 'get body'
 
-        assert_equal(code, 200, meth + " should succeed")
+    def test_HEAD_fallback(self):
+        r = Request.blank('/')
+        r.method = "HEAD"
+        resp = r.get_response(self.app)
 
-        if meth != "HEAD":
-            assert_equal(body, "request body", meth + " should have a body")
+        self.assert_equal(resp.status_int, 200)
+        self.assert_equal(resp.body, '')
+        self.assert_equal(resp.headers['X-Custom-Header'], 'foobar')
 
 
-def test_does_not_respond_to():
-    for meth in HobokenApplication.SUPPORTED_METHODS:
-        app = HobokenApplication("test_" + meth)
-        app.add_route(meth, "/somelongpath", body_func)
+@skip("Since webob insists on unescaping encoded slashes")
+class TestEncodedSlashes(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get("/:param")
+        def echo_func(req, resp):
+            return req.route_params['param']
 
-        code, body = call_app(app, "/someotherpath")
+    def test_slashes(self):
+        self.assert_body_is("foo/bar", path="/foo%2Fbar")
 
-        assert_equal(code, 404)
-        assert_not_equal(body, "request body")
 
+class TestSplatParams(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get("/*/foo/*/*")
+        def echo_func(req, resp):
+            return '\n'.join(req.route_params['splat'])
 
-def test_head_method():
-    """Assert that HEAD returns no body.  TODO: Set custom header"""
-    app = HobokenApplication("test_head_no_body")
-    app.add_route("HEAD", "/headpath", body_func)
+    def test_exact_match(self):
+        self.assert_body_is("one\ntwo\nthree", path="/one/foo/two/three")
 
-    code, body = call_app(app, "/headpath", method="HEAD")
+    def test_extended_match(self):
+        self.assert_body_is("one\ntwo\nthree/four", path="/one/foo/two/three/four")
 
-    assert_equal(code, 200)
-    assert_equal(body, "", "Body should be empty for a HEAD request")
+    def test_fails_properly(self):
+        self.assert_not_found(path='/one/foo/two')
 
 
-def test_head_fallback():
-    """Assert that HEAD will call GET when there"s no matching route.  TODO: Set custom header"""
-    app = HobokenApplication("test_head_fallback")
-    app.add_route("GET", "/getpath", body_func)
+class TestMixedParams(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get("/:one/*")
+        def test_func(req, resp):
+            self.assert_equal(len(req.route_params["splat"]), 1)
+            self.assert_equal(req.route_params["splat"][0], "foo/bar")
+            self.assert_equal(req.route_params["one"], "two")
+            return 'foo'
 
-    code, body = call_app(app, "/getpath", method="HEAD")
+    def test_mixed_params_simple(self):
+        self.assert_body_is("foo", path='/two/foo/bar')
 
-    assert_equal(code, 200, "App should fall back to GET for HEAD requests")
-    assert_equal(body, "", "Body should be empty for a HEAD request")
 
+class TestDotsInParams(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get("/:foo/:bar")
+        def echo_func(req, resp):
+            return req.route_params['foo'] + '\n' + req.route_params['bar']
 
-def test_encoded_slashes():
-    raise SkipTest() # webob insists on unescaping the encoded slash
-    def echo_func(req, resp):
-        return req.route_params['param']
+        @self.app.get("/:foo.:bar")
+        def echo_func2(req, resp):
+            return req.route_params['foo'] + '\n' + req.route_params['bar']
 
-    app = HobokenApplication("test_encoded_slashes")
-    app.add_route("GET", "/:param", echo_func)
+    def test_complex_param(self):
+        self.assert_body_is("test@foo.com\njohn", path='/test@foo.com/john')
 
-    code, body = call_app(app, "/foo%2Fbar")
+    def test_dot_outside_param(self):
+        self.assert_body_is("foo\nbar", path='/foo.bar')
 
-    assert_equal(code, 200)
-    assert_equal(body, "foo/bar")
+    def test_dot_outside_param_fails(self):
+        self.assert_not_found(path="/foo1bar")
 
 
-def test_splat_params():
-    def echo_func(req, resp):
-        return '\n'.join(req.route_params['splat'])
+class TestMiscellaneousCharacters(HobokenTestCase):
+    TEST_CHARS = '$()"\''
 
-    app = HobokenApplication("test_splat_params")
-    app.add_route("GET", "/*/foo/*/*", echo_func)
+    def after_setup(self):
+        for char in self.TEST_CHARS:
+            path = '/test' + char + '/'
+            self.app.add_route('GET', path, self.body_func)
 
-    code, body = call_app(app, "/one/foo/two/three")
+    def test_chars(self):
+        for char in self.TEST_CHARS:
+            path = '/test' + char + '/'
+            self.assert_body_is('request body', path=path)
 
-    assert_equal(code, 200)
-    assert_equal(body, "one\ntwo\nthree")
+    def test_chars_fail_properly(self):
+        self.assert_not_found(path='/test/')
 
-    code, body = call_app(app, "/one/foo/two/three/four")
 
-    assert_equal(code, 200)
-    assert_equal(body, "one\ntwo\nthree/four")
+class TestPlusCharacter(HobokenTestCase):
+    def after_setup(self):
+        self.app.add_route("GET", '/te+st', self.body_func)
 
-    code, body = call_app(app, "/one/foo/two")
+    def test_plus_matches(self):
+        self.assert_body_is("request body", path='/te%2Bst')
 
-    assert_equal(code, 404)
+    def test_plus_fails_when_expected(self):
+        self.assert_not_found(path='/test')
 
 
-def test_mixed_params():
-    def test_func(req, resp):
-        assert_equal(len(req.route_params["splat"]), 1)
-        assert_equal(req.route_params["splat"][0], "foo/bar")
-        assert_equal(req.route_params["one"], "two")
+class TestSpaceCharacter(HobokenTestCase):
+    def after_setup(self):
+        self.app.add_route('GET', '/path with spaces', self.body_func)
 
-    app = HobokenApplication("test_mixed_params")
-    app.add_route("GET", "/:one/*", test_func)
+        @self.app.get("/:foo")
+        def echo_func(req, resp):
+            return req.route_params["foo"]
 
-    code, body = call_app(app, "/two/foo/bar")
+    @skip("Not sure if this is expected behavior")
+    def test_space_decodes_to_plus(self):
+        self.assert_body_is('te st', path='/te+st')
 
-    assert_equal(code, 200, "calling the application should work")
+    def test_plus_matches_space(self):
+        self.assert_body_is("request body", path='/path+with+spaces')
 
+    def test_percent_encoded_spaces(self):
+        self.assert_body_is("request body", path="/path%20with%20spaces")
 
-def test_dot_in_param():
-    def test_func(req, resp):
-        return req.route_params["foo"]
+    def test_bad_path_fails(self):
+        self.assert_not_found("/foo/bar/bad/path")
 
-    app = HobokenApplication("test_dot_in_param")
-    app.add_route("GET", "/:foo/:bar", test_func)
 
-    code, body = call_app(app, "/test@foo.com/john")
-
-    assert_equal(code, 200, "calling a complex param with dots should work")
-    assert_equal(body, "test@foo.com", "calling a complex param with dots should work")
-
-
-def test_dot_outside_param():
-    def test_func(req, resp):
-        assert_equal(req.route_params["one"], "foo", "route param 1 should match")
-        assert_equal(req.route_params["two"], "bar", "route param 2 should match")
-        return "works"
-
-    app = HobokenApplication("test_dot_outside_param")
-    app.add_route("GET", "/:one.:two", test_func)
-
-    code, body = call_app(app, "/foo.bar")
-
-    assert_equal(code, 200, "calling a dot-seperated param path should work")
-    assert_equal(body, "works", "calling a dot-seperated param path should work")
-
-    code, body = call_app(app, "/foo1bar")
-
-    assert_equal(code, 404, "a bad path should not match")
-
-
-def test_dollar_sign():
-    app = HobokenApplication("test_dollar_sign")
-    app.add_route("GET", "/test$/", body_func)
-
-    code, body = call_app(app, "/test$/")
-
-    assert_equal(code, 200, "calling a path with a dollar sign should work")
-    assert_equal(body, "request body", "calling a path with a dollar sign should work")
-
-    code, body = call_app(app, "/test/")
-
-    assert_equal(code, 404, "a bad path should not match")
-
-
-def test_plus_character():
-    app = HobokenApplication("test_plus_character")
-    app.add_route("GET", "/te+st/", body_func)
-
-    code, body = call_app(app, "/te%2Bst/")
-
-    assert_equal(code, 200, "calling a path with pluses using a hex encoding should work")
-    assert_equal(body, "request body", "calling a path with pluses using a hex encoding should work")
-
-    code, body = call_app(app, "/test/")
-
-    assert_equal(code, 404, "a bad path should not match")
-
-
-def test_space_character():
-    def echo_func(req, resp):
-        return req.route_params["foo"]
-
-    app = HobokenApplication("test_space_character")
-    app.add_route("GET", "/:foo", echo_func)
-
-    code, body = call_app(app, "/te+st")
-
-    assert_equal(code, 200, "calling a param path with spaces should work")
-
-    # This is commented because we don't necessarily want to do this.
-    #assert_equal(body, "te st", "parameters should decode pluses to spaces")
-
-
-def test_brackets_characters():
-    app = HobokenApplication("test_brackets_characters")
-    app.add_route("GET", "/te(st)/", body_func)
-
-    code, body = call_app(app, "/te(st)/")
-
-    assert_equal(code, 200, "calling a path with brackets should work")
-    assert_equal(body, "request body", "calling a path with brackets should work")
-
-    code, body = call_app(app, "/test/")
-
-    assert_equal(code, 404, "a bad path should not match")
-
-
-def test_space_characters():
-    app = HobokenApplication("test_space_characters")
-    app.add_route("GET", "/path with spaces", body_func)
-
-    code, body = call_app(app, "/path+with+spaces")
-
-    assert_equal(code, 200,
-                    "calling a path with spaces using plus characters should work")
-    assert_equal(body, "request body",
-                    "calling a path with spaces using plus characters should work")
-
-    code, body = call_app(app, "/path%20with%20spaces")
-
-    assert_equal(code, 200,
-                "calling a path with spaces using hex-encoded spaces should work")
-    assert_equal(body, "request body",
-                "calling a path with spaces using hex-encoded spaces should work")
-
-    code, body = call_app(app, "/badpath")
-
-    assert_equal(code, 404, "bad paths should not match")
-
-
-# TODO: Tests involving +, ' ', and more . magic.
-# More TODO: Tests involving various encodings of spaces (" ", %20, +)
-#            Tests involving ampersands
-#            Tests involving URL encoding
-
-def test_invalid_route():
+class TestInvalidRoutes(HobokenTestCase):
     """TODO: Test routes that don't match, in various interesting configurations"""
     pass
+

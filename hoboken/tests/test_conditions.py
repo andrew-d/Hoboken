@@ -1,108 +1,75 @@
-import context
-from hoboken import HobokenApplication, condition
+from . import HobokenTestCase
+from hoboken import condition
 from hoboken.conditions import *
-from webob import Request
-from nose.tools import *
-from nose.exc import SkipTest
+
+from unittest import skip
 
 
-def test_useragent_condition():
-    app = HobokenApplication("")
+class TestUserAgentCondition(HobokenTestCase):
+    def after_setup(self):
+        @condition(user_agent("^Uagent1"))
+        @self.app.get("/")
+        def route_one(req, resp):
+            return "one"
 
-    @condition(user_agent("^Uagent1"))
-    @app.get("/")
-    def route_one(req, resp):
-        return "one"
+        @condition(user_agent("^Uagent2"))
+        @self.app.get("/")
+        def route_two(req, resp):
+            return "two"
 
-    @condition(user_agent("^Uagent2"))
-    @app.get("/")
-    def route_two(req, resp):
-        return "two"
+    def test_useragent_one(self):
+        self.assert_body_is("one", user_agent='Uagent1 v1.2.3')
 
-    req = Request.blank('/')
-    req.headers['User-Agent'] = 'Uagent1 v1.2.3'
-    resp = req.get_response(app)
-
-    assert_equal(resp.status_int, 200)
-    assert_equal(resp.body, 'one')
-
-    req = Request.blank('/')
-    req.headers['User-Agent'] = 'Uagent2 v1.2.3'
-    resp = req.get_response(app)
-
-    assert_equal(resp.status_int, 200)
-    assert_equal(resp.body, 'two')
+    def test_useragent_two(self):
+        self.assert_body_is("two", user_agent='Uagent2 v4.5.6')
 
 
-def test_host_condition():
-    app = HobokenApplication("")
+class TestHostCondition(HobokenTestCase):
+    def after_setup(self):
+        @condition(host("sub1.foobar.com"))
+        @self.app.get('/')
+        def sub1(req, resp):
+            return 'sub1'
 
-    @condition(host("sub1.foobar.com"))
-    @app.get('/')
-    def sub1(req, resp):
-        return 'sub1'
+        @condition(host("sub2.foobar.com"))
+        @self.app.get('/')
+        def sub2(req, resp):
+            return 'sub2'
 
-    @condition(host("sub2.foobar.com"))
-    @app.get('/')
-    def sub2(req, resp):
-        return 'sub2'
+    def test_host1(self):
+        self.assert_body_is("sub1", host='sub1.foobar.com')
 
-    req = Request.blank('/')
-    req.host = 'sub1.foobar.com'
-    resp = req.get_response(app)
-
-    assert_equal(resp.status_int, 200)
-    assert_equal(resp.body, 'sub1')
-
-    req = Request.blank('/')
-    req.host = 'sub2.foobar.com'
-    resp = req.get_response(app)
-
-    assert_equal(resp.status_int, 200)
-    assert_equal(resp.body, 'sub2')
+    def test_host2(self):
+        self.assert_body_is("sub2", host='sub2.foobar.com')
 
 
-class TestAcceptsCondition():
-    def setUp(self):
-        app = HobokenApplication("")
-
+class TestAcceptsCondition(HobokenTestCase):
+    def after_setup(self):
         @condition(accepts("text/html"))
-        @app.get('/')
+        @self.app.get('/')
         def html(req, resp):
             return 'html'
 
         @condition(accepts("text/plain"))
-        @app.get('/')
+        @self.app.get('/')
         def plain(req, resp):
             return 'plain'
 
         @condition(accepts("text/*"))
-        @app.get("/")
+        @self.app.get("/")
         def text(req, resp):
             return 'text'
 
-        self.app = app
-
-    def my_call(self, mime):
-        req = Request.blank('/')
-        req.accept = mime
-        return req.get_response(self.app)
-
-    def my_check(self, mime, body):
-        resp = self.my_call(mime)
-        assert_equal(resp.status_int, 200, "Mime {0} should succeed ({1})".format(mime, resp.status_int))
-        assert_equal(resp.body, body, "{0} != {1}".format(resp.body, body))
-
     def test_plain_accept(self):
-        self.my_check("text/html", "html")
+        self.assert_body_is("html", accepts="text/html")
 
     def test_compound_accept(self):
-        self.my_check("text/html; q=1, application/other; q=0.5", "html")
+        self.assert_body_is("html", accepts="text/html; q=1, application/other; q=0.5")
 
     def test_other_accept(self):
-        self.my_check("text/plain", "plain")
+        self.assert_body_is("plain", accepts="text/plain")
 
+    @skip("Since webob won't match this mime type")
     def test_general_match(self):
-        raise SkipTest("Since webob won't match this mime type")
-        self.my_check("text/otherfoo", "text")
+        self.assert_body_is("text", "text/otherfoo")
 

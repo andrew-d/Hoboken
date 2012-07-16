@@ -1,99 +1,70 @@
-# import context
-# from hoboken import HobokenApplication, condition
-# from hoboken.conditions import *
-from .context import hoboken, call_app
-HobokenApplication = hoboken.HobokenApplication
+from . import HobokenTestCase
+from unittest import skip
 
-from webob import Request
-from nose.tools import *
-from nose.exc import SkipTest
+class TestFilters(HobokenTestCase):
+    def after_setup(self):
+        self.calls = []
 
-
-class TestFilters():
-    def setUp(self):
-        app = HobokenApplication("test_filters")
-
-        @app.before("/before/*")
+        @self.app.before("/before/*")
         def before_filter(req, resp):
             self.calls.append("before")
 
-        @app.get("/*")
+        @self.app.get("/*")
         def route_func(req, resp):
             self.calls.append("body")
             return req.route_params['splat'][0]
 
-        @app.after("/after/*")
+        @self.app.after("/after/*")
         def after_filter(req, resp):
             self.calls.append("after")
 
-        @app.before("/both/*")
+        @self.app.before("/both/*")
         def both_before_filter(req, resp):
             self.calls.append("before")
 
-        @app.after("/both/*")
+        @self.app.after("/both/*")
         def both_after_filter(req, resp):
             self.calls.append("after")
 
-        @app.after("/both_at_once/*")
-        @app.before("/both_at_once/*")
+        @self.app.after("/both_at_once/*")
+        @self.app.before("/both_at_once/*")
         def both_at_once_filter(req, resp):
             self.calls.append("both_at_once")
 
-        self.app = app
-        self.calls = []
-
-
-    def call_app(self, path):
-        return call_app(self.app, path)
-
-
     def test_neither(self):
-        code, body = self.call_app("/neither")
-        assert_equal(code, 200)
-        assert_equal(body, "neither")
-        assert_equal(self.calls, ["body"])
+        self.assert_body_is("neither", path="/neither")
+        self.assert_equal(self.calls, ["body"])
 
     def test_before(self):
-        code, body = self.call_app("/before/stuff")
-        assert_equal(code, 200)
-        assert_equal(body, "before/stuff")
-        assert_equal(self.calls, ["before", "body"])
+        self.assert_body_is("before/stuff", path="/before/stuff")
+        self.assert_equal(self.calls, ["before", "body"])
 
     def test_after(self):
-        code, body = self.call_app("/after/stuff")
-        assert_equal(code, 200)
-        assert_equal(body, "after/stuff")
-        assert_equal(self.calls, ["body", "after"])
+        self.assert_body_is("after/stuff", path="/after/stuff")
+        self.assert_equal(self.calls, ["body", "after"])
 
     def test_both(self):
-        code, body = self.call_app("/both/stuff")
-        assert_equal(code, 200)
-        assert_equal(body, "both/stuff")
-        assert_equal(self.calls, ["before", "body", "after"])
+        self.assert_body_is("both/stuff", path="/both/stuff")
+        self.assert_equal(self.calls, ["before", "body", "after"])
 
     def test_both_at_once(self):
-        code, body = self.call_app("/both_at_once/stuff")
-        assert_equal(code, 200)
-        assert_equal(body, "both_at_once/stuff")
-        assert_equal(self.calls, ["both_at_once", "body", "both_at_once"])
+        self.assert_body_is("both_at_once/stuff", path="/both_at_once/stuff")
+        self.assert_equal(self.calls, ["both_at_once", "body", "both_at_once"])
 
 
-def test_before_filter_can_modify_route():
-    app = HobokenApplication("test_before_filter_can_modify_route")
+class TestFilterCanModifyRoute(HobokenTestCase):
+    def after_setup(self):
+        @self.app.before("/notmatched")
+        def modify_route(req, resp):
+            req.environ['PATH_INFO'] = "/matched"
 
-    @app.before("/notmatched")
-    def modify_route(req, resp):
-        req.environ['PATH_INFO'] = "/matched"
+        @self.app.get("/matched")
+        def route_func(req, resp):
+            return 'success'
 
-    @app.get("/matched")
-    def route_func(req, resp):
-        return 'success'
+    def test_matched_route(self):
+        self.assert_body_is("success", path="/matched")
 
-    code, body = call_app(app, "/matched")
-    assert_equal(code, 200, "Calling the matched route should work")
-    assert_equal(body, 'success')
-
-    code, body = call_app(app, "/notmatched")
-    assert_equal(code, 200, "Calling the modified route should work")
-    assert_equal(body, 'success')
+    def test_modified_route(self):
+        self.assert_body_is("success", path="/notmatched")
 

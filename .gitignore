@@ -11,6 +11,7 @@ tmp/
 # Packages
 *.egg
 *.egg-info
+MANIFEST
 dist
 build
 eggs
@@ -42,7 +43,7 @@ nosetests.xml
 *.sublime-workspace
 
 # Windows image file caches
-Thumbs.db 
+Thumbs.db
 
 # Folder config file
 Desktop.ini
