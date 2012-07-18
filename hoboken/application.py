@@ -63,28 +63,6 @@ def redirect(redirect_type=302):
     pass
 
 
-class WebRequest(Request):
-    """
-    This class represents a request.  It is comprised of:
-     - The underlying WebOb Request object
-     - Parameters from the route matcher
-     - Instance variables, set by any before/after filters
-    """
-    def __init__(self, *args, **kwargs):
-        super(WebRequest, self).__init__(*args, **kwargs)
-
-        self.reinitialize()
-
-    def reinitialize(self):
-        # Reinitialize ourself.  For now, just clear route parameters.
-        # TODO: we really shouldn't use these - webob includes the property
-        # 'urlargs' and 'urlvars' for this purpose
-        # Future work:
-        #  - Splat (*) params go in urlargs, in declaration order
-        #  - Named (:foobar) params go in urlvars, by name
-        self.route_params = {}
-
-
 class HobokenMetaclass(type):
     """
     This class does "black magic" to create an instance of HobokenApplication
@@ -348,7 +326,6 @@ class HobokenApplication(object):
                 self.on_returned_body(req, resp, ret)
 
         except ContinueRoutingException:
-            req.reinitialize()
             return False
 
         return True
@@ -363,7 +340,7 @@ class HobokenApplication(object):
 
     def wsgi_entrypoint(self, environ, start_response):
         # Create our request object.
-        req = WebRequest(environ)
+        req = Request(environ)
         self.logger.debug("%s %s", req.method, req.url)
 
         # Check for valid method.
