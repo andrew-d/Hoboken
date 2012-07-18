@@ -7,6 +7,11 @@ TODO list - a centralized list of stuff I'd like to do
  - Allow arbitrary parameters to be passed to HaltRoutingException
  - Implement redirect() in a sensible manner
  - More logging
+ - Automation (e.g. bump version, test, deploy, etc. - as a Fabfile?)
+ - Upload to PyPI
+   - Fix author/author_email
+   - MANIFEST.in
+   - README.txt
  - Template library integration (look at Tilt for Ruby - something similar for Python would be nice)
  - Examples
    - Middleware examples (e.g. security, stuff like that?)
