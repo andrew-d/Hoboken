@@ -46,7 +46,7 @@ class TestConditionCanAbortRequest(HobokenTestCase):
         @condition(no_foo_in_path)
         @self.app.get('/:param')
         def bar(req, resp):
-            return req.route_params['param']
+            return req.urlvars['param']
 
     def test_should_work(self):
         self.assert_body_is("works", path='/works')

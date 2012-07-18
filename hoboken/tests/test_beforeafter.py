@@ -12,7 +12,7 @@ class TestFilters(HobokenTestCase):
         @self.app.get("/*")
         def route_func(req, resp):
             self.calls.append("body")
-            return req.route_params['splat'][0]
+            return req.urlargs[0]
 
         @self.app.after("/after/*")
         def after_filter(req, resp):

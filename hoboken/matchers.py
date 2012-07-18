@@ -29,7 +29,7 @@ class RegexMatcher(object):
     This class matches a URL using a provided regex.
     """
 
-    def __init__(self, regex, keys):
+    def __init__(self, regex, key_types, key_names):
         # We handle regexes and string patterns for regexes here.
         if isinstance(regex, RegexType):
             self.re = regex
@@ -42,32 +42,25 @@ class RegexMatcher(object):
             raise TypeError("Parameter 'regex' is not a valid regex")
 
         # Save keys.
-        self.keys = keys
+        self.key_types = key_types
+        self.key_names = key_names
 
     def match(self, webr):
         match = self.re.match(webr.path)
         if match:
             matches = match.groups()
 
-            # Create lists for our splat parameter.
-            webr.route_params["splat"] = []
-
             # Merge in the captures.
-            for k, v in zip(self.keys, matches):
-                # If we have no key, then we do nothing.  This occurs, for example,
-                # when we are passed a regex with an unnamed group.
-                if k is None:
-                    continue
-
-                # If the key already exists and is a list, we append.  Otherwise,
-                # we simply overwrite the parameter if the value is non-None.
-                if k in webr.route_params and isinstance(webr.route_params[k], list):
-                    webr.route_params[k].append(v)
-                elif v:
-                    webr.route_params[k] = v
+            for t, k, v in zip(self.key_types, self.key_names, matches):
+                # Depending on the type, either add to urlargs or urlparams.
+                if t == True:
+                    if k is not None:
+                        webr.urlvars[k] = v
+                else:
+                    webr.urlargs = webr.urlargs + (v,)
 
             # We save all captures in the special parameter "_captures".
-            webr.route_params["_captures"] = list(matches)
+            webr.urlvars["_captures"] = list(matches)
 
             # Success!
             return True
@@ -78,5 +71,5 @@ class RegexMatcher(object):
         return self.re.pattern
 
     def __repr__(self):
-        return "RegexMatcher(regex={!r}, keys={!r})".format(self.re.pattern, self.keys)
+        return "RegexMatcher(regex={!r}, key_types={!r}, key_names={!r})".format(self.re.pattern, self.key_types, self.key_names)
 

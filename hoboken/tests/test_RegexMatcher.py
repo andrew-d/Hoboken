@@ -12,7 +12,7 @@ def test_RegexMatcher_compiles():
         mockobj.return_value = 0
 
         test_re = "test_string"
-        r = hoboken.matchers.RegexMatcher(test_re, [])
+        r = hoboken.matchers.RegexMatcher(test_re, [], [])
 
         assert isinstance(r, hoboken.matchers.RegexMatcher)
         mockobj.assert_called_with(test_re)
@@ -29,12 +29,14 @@ def test_RegexMatcher_fills_keys():
 
     class TestWebRequest():
         path = test_data
-        route_params = {}
+        urlargs = ()
+        urlvars = {}
 
-    r = hoboken.matchers.RegexMatcher(test_re, ['one', 'two'])
+    r = hoboken.matchers.RegexMatcher(test_re, [True, True], ['one', 'two'])
     webr = TestWebRequest()
 
     assert r.match(webr)
-    assert webr.route_params['_captures'] == ['FOO', 'BAR']
-    assert webr.route_params['one'] == 'FOO'
-    assert webr.route_params['two'] == 'BAR'
+    assert webr.urlvars['_captures'] == ['FOO', 'BAR']
+    assert webr.urlvars['one'] == 'FOO'
+    assert webr.urlvars['two'] == 'BAR'
+

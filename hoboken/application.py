@@ -38,6 +38,31 @@ def condition(condition_func):
     return internal_decorator
 
 
+def halt(code=None, body=None):
+    """
+    This function halts routing, and returns immediately.  If the code or body
+    parameters are given, this will set those values on the response.
+    """
+    raise HaltRoutingException(status_code=code, body=body)
+
+
+def pass_route():
+    """
+    This function signals that we should stop processing the current route and
+    continue trying to match routes.  If no more routes are found, a 404 error
+    will be returned.
+    """
+    raise ContinueRoutingException()
+
+
+def redirect(redirect_type=302):
+    """
+    This is a helper function for redirection.
+    """
+    # TODO: implement!
+    pass
+
+
 class WebRequest(Request):
     """
     This class represents a request.  It is comprised of:
@@ -52,6 +77,11 @@ class WebRequest(Request):
 
     def reinitialize(self):
         # Reinitialize ourself.  For now, just clear route parameters.
+        # TODO: we really shouldn't use these - webob includes the property
+        # 'urlargs' and 'urlvars' for this purpose
+        # Future work:
+        #  - Splat (*) params go in urlargs, in declaration order
+        #  - Named (:foobar) params go in urlvars, by name
         self.route_params = {}
 
 
@@ -68,7 +98,7 @@ class HobokenMetaclass(type):
             return lambda self, match: self._decorate_and_route(method, match)
 
         # Grab the SUPPORTED_METHODS constant and use this to dynamically add methods.
-        for method in attrs['SUPPORTED_METHODS']:
+        for method in attrs.get('SUPPORTED_METHODS', []):
             new_func = lambda_factory(method)
             new_func.__name__ = method.lower()
             attrs[method.lower()] = new_func
@@ -167,12 +197,15 @@ class HobokenApplication(object):
             #      blah*blah  --> r"blah(.*?)blah"
 
             keys = []
+            types = []
 
             def convert_match(match):
                 if match.group(0) == '*':
-                    keys.append("splat")
+                    types.append(False)
+                    keys.append(None)
                     return r"(.*?)"
                 else:
+                    types.append(True)
                     keys.append(match.group(0)[1:])
                     return r"([^/?#]+)"
 
@@ -193,16 +226,18 @@ class HobokenApplication(object):
             match_regex = "^" + match_regex + "$"
 
             # Done - add the route.
-            return (RegexMatcher(match_regex, keys), [], func)
+            return (RegexMatcher(match_regex, types, keys), [], func)
 
         elif isinstance(match, RegexType):
             # match is a regex, so we extract any named groups.
             keys = [None] * match.groups
+            types = [False] * match.groups
             for name, index in match.groupindex.iteritems():
+                types[index] = True
                 keys[index] = name
 
             # Append the route with these keys.
-            return (RegexMatcher(match, keys), [], func)
+            return (RegexMatcher(match, types, keys), [], func)
 
         elif hasattr(match, "match") and iscallable(getattr(match, "match")):
             # Don't know what type it is, but it has a callable "match"
@@ -295,6 +330,11 @@ class HobokenApplication(object):
         self.logger.debug("Processing route: {0}".format(repr(route_tuple)))
         matcher, conditions, func = route_tuple
 
+        # Reset the parameters in the request before each match,
+        req.urlargs = ()
+        req.urlvars = {}
+
+        # Do the match.
         if not matcher.match(req):
             return False
 
@@ -305,13 +345,21 @@ class HobokenApplication(object):
 
             ret = func(req, resp)
             if ret is not None:
-                resp.body = ret
+                self.on_returned_body(req, resp, ret)
 
         except ContinueRoutingException:
             req.reinitialize()
             return False
 
         return True
+
+    def on_returned_body(self, req, resp, value):
+        """
+        This function is used to turn a value that's been returned from a
+        route function into the request body.  Override this in a subclass
+        to customize how values are returned.
+        """
+        resp.body = value
 
     def wsgi_entrypoint(self, environ, start_response):
         # Create our request object.
@@ -360,7 +408,7 @@ class HobokenApplication(object):
                 resp.status_code = halt.status_code
 
             if halt.body is not None:
-                resp.body = halt.body
+                self.on_returned_body(self, req, resp, halt.body)
 
         except Exception as e:
             # Also, check if the exception has other information attached,

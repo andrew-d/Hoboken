@@ -47,7 +47,7 @@ class TestEncodedSlashes(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/:param")
         def echo_func(req, resp):
-            return req.route_params['param']
+            return req.urlvars['param']
 
     def test_slashes(self):
         self.assert_body_is("foo/bar", path="/foo%2Fbar")
@@ -57,7 +57,7 @@ class TestSplatParams(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/*/foo/*/*")
         def echo_func(req, resp):
-            return '\n'.join(req.route_params['splat'])
+            return '\n'.join(req.urlargs)
 
     def test_exact_match(self):
         self.assert_body_is("one\ntwo\nthree", path="/one/foo/two/three")
@@ -73,9 +73,9 @@ class TestMixedParams(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/:one/*")
         def test_func(req, resp):
-            self.assert_equal(len(req.route_params["splat"]), 1)
-            self.assert_equal(req.route_params["splat"][0], "foo/bar")
-            self.assert_equal(req.route_params["one"], "two")
+            self.assert_equal(len(req.urlargs), 1)
+            self.assert_equal(req.urlargs[0], "foo/bar")
+            self.assert_equal(req.urlvars['one'], "two")
             return 'foo'
 
     def test_mixed_params_simple(self):
@@ -86,11 +86,11 @@ class TestDotsInParams(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/:foo/:bar")
         def echo_func(req, resp):
-            return req.route_params['foo'] + '\n' + req.route_params['bar']
+            return req.urlvars['foo'] + '\n' + req.urlvars['bar']
 
         @self.app.get("/:foo.:bar")
         def echo_func2(req, resp):
-            return req.route_params['foo'] + '\n' + req.route_params['bar']
+            return req.urlvars['foo'] + '\n' + req.urlvars['bar']
 
     def test_complex_param(self):
         self.assert_body_is("test@foo.com\njohn", path='/test@foo.com/john')
@@ -136,7 +136,7 @@ class TestSpaceCharacter(HobokenTestCase):
 
         @self.app.get("/:foo")
         def echo_func(req, resp):
-            return req.route_params["foo"]
+            return req.urlvars["foo"]
 
     @skip("Not sure if this is expected behavior")
     def test_space_decodes_to_plus(self):
