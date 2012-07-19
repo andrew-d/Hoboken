@@ -1,5 +1,6 @@
 from . import HobokenTestCase
 from ..application import HobokenApplication, condition
+import unittest
 
 
 class TestHasHTTPMethods(HobokenTestCase):

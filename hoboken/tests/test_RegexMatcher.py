@@ -1,5 +1,6 @@
 from . import HobokenTestCase, BaseTestCase
 from ..matchers import RegexMatcher
+import unittest
 
 from mock import patch, MagicMock
 import re

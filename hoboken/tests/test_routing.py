@@ -1,4 +1,5 @@
 from . import HobokenTestCase
+import unittest
 from unittest import skip
 from webob import Request
 

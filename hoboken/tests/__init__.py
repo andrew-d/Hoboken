@@ -5,6 +5,7 @@ import sys
 import unittest
 from webob import Request
 
+
 def ensure_in_path(path):
     """
     Ensure that a given path is in the sys.path array
@@ -156,8 +157,21 @@ class HobokenTestCase(BaseTestCase):
 
 
 def suite():
+    # Import test suites here.
+    from .test_HobokenApplication import suite as suite_1
+    from .test_RegexMatcher import suite as suite_2
+    from .test_beforeafter import suite as suite_3
+    from .test_conditions import suite as suite_4
+    from .test_helpers import suite as suite_5
+    from .test_routing import suite as suite_6
+
     suite = unittest.TestSuite()
-    # TODO: add unit test suites here
+    suite.addTest(suite_1())
+    suite.addTest(suite_2())
+    suite.addTest(suite_3())
+    suite.addTest(suite_4())
+    suite.addTest(suite_5())
+    suite.addTest(suite_6())
 
     return suite
 
@@ -167,7 +181,7 @@ def main():
     This runs the our tests, suitable for a command-line application
     """
     try:
-        unittest.main()
+        unittest.main(defaultTest='suite')
     except Exception as e:
         print "Exception: {0!s}".format(e)
 
