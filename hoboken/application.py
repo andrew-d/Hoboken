@@ -38,12 +38,12 @@ def condition(condition_func):
     return internal_decorator
 
 
-def halt(code=None, body=None):
+def halt(*args, **kwargs):
     """
     This function halts routing, and returns immediately.  If the code or body
     parameters are given, this will set those values on the response.
     """
-    raise HaltRoutingException(status_code=code, body=body)
+    raise HaltRoutingException(*args, **kwargs)
 
 
 def pass_route():
@@ -55,12 +55,11 @@ def pass_route():
     raise ContinueRoutingException()
 
 
-def redirect(redirect_type=302):
+def redirect(*args, **kwargs):
     """
     This is a helper function for redirection.
     """
-    # TODO: implement!
-    pass
+    raise RedirectException(*args, **kwargs)
 
 
 class HobokenMetaclass(type):
@@ -378,17 +377,27 @@ class HobokenApplication(object):
                 if resp.status_code < 400:
                     matched = True
 
-        except HaltRoutingException as halt:
-            # Check if the exception specifies a status code or
-            # body, and then set these on the request
-            if halt.status_code != 0:
-                resp.status_code = halt.status_code
+        # except HaltRoutingException as halt:
+        #     # Check if the exception specifies a status code or
+        #     # body, and then set these on the request
+        #     if halt.status_code != 0:
+        #         resp.status_code = halt.status_code
 
-            if halt.body is not None:
-                self.on_returned_body(req, resp, halt.body)
+        #     if halt.body is not None:
+        #         self.on_returned_body(req, resp, halt.body)
 
-            # Must set, or we get clobbered by the 404 handler.
+        #     # Must set, or we get clobbered by the 404 handler.
+        #     matched = True
+
+        except HobokenResponseException as ex:
+            # For each attribute in the given kwargs, send it.
+            for attr, val in ex.kwargs.iteritems():
+                if val is not None:
+                    setattr(resp, attr, val)
+
+            # Must set this, or we get clobbered by the 404 handler.
             matched = True
+
 
         except Exception as e:
             # Raise the exception as normal if we're in debug mode.
