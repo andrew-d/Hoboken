@@ -42,7 +42,9 @@ class HaltRoutingException(HobokenUserException):
     request.  NOTE: after() calls ARE called.
     """
     def __init__(self, *args, **kwargs):
-        self.status_code = int(kwargs.pop('status_code', 0))
+        self.status_code = kwargs.pop('status_code', 0)
+        if self.status_code is None:
+            self.status_code = 0
         self.body = kwargs.pop('body', None)
         super(HaltRoutingException, self).__init__(*args, **kwargs)
 
