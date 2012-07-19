@@ -10,7 +10,7 @@ TODO list - a centralized list of stuff I'd like to do
  - Automation (e.g. bump version, test, deploy, etc. - as a Fabfile?)
  - Upload to PyPI
    - Fix author/author_email
-   - MANIFEST.in
+   * MANIFEST.in
    - README.txt
  - Template library integration (look at Tilt for Ruby - something similar for Python would be nice)
  - Examples
