@@ -156,6 +156,22 @@ class HobokenTestCase(BaseTestCase):
         self.assert_equal(status, 404)
 
 
+class FixedTestLoader(unittest.TestLoader):
+    """
+    This test loader should fix breakages on Python 2.6
+    """
+    def getRootSuite(self):
+        return suite()
+
+    def loadTestsFromName(self, name, module=None):
+        root = self.getRootSuite()
+        if name == 'suite':
+            return root
+
+        # TODO: what do we do here.
+        super(FixedTestLoader, self).loadTestsFromName(name, module=module)
+
+
 def suite():
     # Import test suites here.
     from .test_HobokenApplication import suite as suite_1
@@ -181,7 +197,7 @@ def main():
     This runs the our tests, suitable for a command-line application
     """
     try:
-        unittest.main(defaultTest='suite')
+        unittest.main(testLoader=FixedTestLoader(), defaultTest='suite')
     except Exception as e:
         print "Exception: {0!s}".format(e)
 
