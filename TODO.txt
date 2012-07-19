@@ -2,7 +2,7 @@ TODO list - a centralized list of stuff I'd like to do
 (in roughly priority order)
 ===========================================================
 
- - Test URL params/args in before()/after()/condition functions
+ * Test URL params/args in before()/after()/condition functions
  - Tests for the various helper functions and underlying exceptions
  - Allow arbitrary parameters to be passed to HaltRoutingException
  - Implement redirect() in a sensible manner
