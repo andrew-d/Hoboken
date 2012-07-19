@@ -4,11 +4,8 @@ import os
 import sys
 from setuptools import setup
 
-sys.path.insert(0, os.path.abspath(__file__))
-import hoboken
-
 setup(name='Hoboken',
-      version=hoboken.__version__,
+      version='0.1.0',
       description='A Sinatra-inspired web framework for Python',
       author='Andrew Dunham',
       url='http://github.com/andrew-d/hoboken',
@@ -17,6 +14,9 @@ setup(name='Hoboken',
       zip_safe=False,
       install_requires=[
         'WebOb==1.2'
+      ],
+      tests_require=[
+          'Mock'
       ],
       packages=['hoboken'],
       classifiers=[
