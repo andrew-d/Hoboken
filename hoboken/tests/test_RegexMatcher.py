@@ -33,3 +33,11 @@ class TestRegexMatcher(BaseTestCase):
 
         # TODO: test urlargs too
 
+
+def suite():
+    suite = unittest.TestSuite()
+
+    suite.addTest(unittest.makeSuite(TestRegexMatcher))
+
+    return suite
+

@@ -156,3 +156,19 @@ class TestInvalidRoutes(HobokenTestCase):
     """TODO: Test routes that don't match, in various interesting configurations"""
     pass
 
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestMethods))
+    suite.addTest(unittest.makeSuite(TestHeadFallback))
+    suite.addTest(unittest.makeSuite(TestEncodedSlashes))
+    suite.addTest(unittest.makeSuite(TestSplatParams))
+    suite.addTest(unittest.makeSuite(TestMixedParams))
+    suite.addTest(unittest.makeSuite(TestDotsInParams))
+    suite.addTest(unittest.makeSuite(TestMiscellaneousCharacters))
+    suite.addTest(unittest.makeSuite(TestPlusCharacter))
+    suite.addTest(unittest.makeSuite(TestSpaceCharacter))
+    suite.addTest(unittest.makeSuite(TestInvalidRoutes))
+
+    return suite
+

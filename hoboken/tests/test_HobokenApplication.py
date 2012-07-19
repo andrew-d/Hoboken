@@ -88,3 +88,14 @@ class TestHandlesExceptions(HobokenTestCase):
         code, body = self.call_app(path='/errors')
         self.assert_equal(code, 500)
 
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestHasHTTPMethods))
+    suite.addTest(unittest.makeSuite(TestWorksWithConditions))
+    suite.addTest(unittest.makeSuite(TestConditionCanAbortRequest))
+    suite.addTest(unittest.makeSuite(TestSubapps))
+    suite.addTest(unittest.makeSuite(TestHandlesExceptions))
+
+    return suite
+

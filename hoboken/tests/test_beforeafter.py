@@ -97,3 +97,12 @@ class TestFilterParams(HobokenTestCase):
         self.call_app(path='/after/abcd/morestuff/defg')
         self.assert_equal(self.val, 'abcd\nmorestuff\ndefg')
 
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestFilters))
+    suite.addTest(unittest.makeSuite(TestFilterCanModifyRoute))
+    suite.addTest(unittest.makeSuite(TestFilterParams))
+
+    return suite
+

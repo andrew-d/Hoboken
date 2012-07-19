@@ -2,6 +2,7 @@ from . import HobokenTestCase
 from hoboken import condition
 from hoboken.conditions import *
 
+import unittest
 from unittest import skip
 
 
@@ -72,4 +73,13 @@ class TestAcceptsCondition(HobokenTestCase):
     @skip("Since webob won't match this mime type")
     def test_general_match(self):
         self.assert_body_is("text", "text/otherfoo")
+
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestUserAgentCondition))
+    suite.addTest(unittest.makeSuite(TestHostCondition))
+    suite.addTest(unittest.makeSuite(TestAcceptsCondition))
+
+    return suite
 

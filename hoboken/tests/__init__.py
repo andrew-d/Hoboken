@@ -155,6 +155,13 @@ class HobokenTestCase(BaseTestCase):
         self.assert_equal(status, 404)
 
 
+def suite():
+    suite = unittest.TestSuite()
+    # TODO: add unit test suites here
+
+    return suite
+
+
 def main():
     """
     This runs the our tests, suitable for a command-line application

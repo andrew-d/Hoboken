@@ -105,3 +105,12 @@ class TestRedirectHelper(HobokenTestCase):
             self.assert_equal(resp.status_int, code)
             self.assert_equal(resp.location, 'http://localhost/foo')
 
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestHaltHelper))
+    suite.addTest(unittest.makeSuite(TestPasstHelper))
+    suite.addTest(unittest.makeSuite(TestRedirectHelper))
+
+    return suite
+
