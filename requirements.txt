@@ -2,5 +2,4 @@
 WebOb==1.2
 
 # Testing help
-Mock
-nose
+mock
