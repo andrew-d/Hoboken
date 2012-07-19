@@ -68,3 +68,32 @@ class TestFilterCanModifyRoute(HobokenTestCase):
     def test_modified_route(self):
         self.assert_body_is("success", path="/notmatched")
 
+
+class TestFilterParams(HobokenTestCase):
+    def after_setup(self):
+        @self.app.before("/before/:param1/:param2/*")
+        def before_func(req, resp):
+            self.val = (req.urlvars['param1'] + '\n' +
+                        req.urlvars['param2'] + '\n' +
+                        req.urlargs[0])
+
+        @self.app.after("/after/:foo/*/:bar")
+        def after_func(req, resp):
+            self.val = (req.urlvars['foo'] + '\n' +
+                        req.urlargs[0] + '\n' +
+                        req.urlvars['bar'])
+
+        @self.app.get("/*")
+        def catchall(req, resp):
+            pass
+
+        self.app.debug = True
+
+    def test_before_params(self):
+        self.call_app(path='/before/one/two/params')
+        self.assert_equal(self.val, 'one\ntwo\nparams')
+
+    def test_after_params(self):
+        self.call_app(path='/after/abcd/morestuff/defg')
+        self.assert_equal(self.val, 'abcd\nmorestuff\ndefg')
+
