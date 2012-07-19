@@ -385,9 +385,16 @@ class HobokenApplication(object):
                 resp.status_code = halt.status_code
 
             if halt.body is not None:
-                self.on_returned_body(self, req, resp, halt.body)
+                self.on_returned_body(req, resp, halt.body)
+
+            # Must set, or we get clobbered by the 404 handler.
+            matched = True
 
         except Exception as e:
+            # Raise the exception as normal if we're in debug mode.
+            if self.debug == True:
+                raise e
+
             # Also, check if the exception has other information attached,
             # like a code/body.
             # TODO: Handle other HTTPExceptions from webob?
