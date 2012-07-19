@@ -64,11 +64,11 @@ class BaseTestCase(unittest.TestCase):
     def assert_not_equal(self, x, y):
         return self.assertNotEqual(x, y)
 
-    def assert_true(self, x, y):
-        return self.assertTrue(x, y)
+    def assert_true(self, x):
+        return self.assertTrue(x)
 
-    def assert_false(self, x, y):
-        return self.assertFalse(x, y)
+    def assert_false(self, x):
+        return self.assertFalse(x)
 
     def assert_in(self, x, y):
         assert x in y, "{0!r} is not in {1!r}".format(x, y)
@@ -79,6 +79,9 @@ class BaseTestCase(unittest.TestCase):
             return catcher
         with catcher:
             callable(*args, **kwargs)
+
+    def assert_is_instance(self, obj, type):
+        assert isinstance(obj, type), "{0!r} is not an instance of type {1!r}".format(obj, type)
 
     def setup(self):
         """This is a non-camelCase hook that is identical to setUp"""
