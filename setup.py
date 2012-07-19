@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+import os
+import sys
+from setuptools import setup
+
+sys.path.insert(0, os.path.abspath(__file__))
+import hoboken
 
 setup(name='Hoboken',
-      version='0.1.0',
+      version=hoboken.__version__,
       description='A Sinatra-inspired web framework for Python',
       author='Andrew Dunham',
       url='http://github.com/andrew-d/hoboken',
+      license='Apache',
       platforms='any',
       zip_safe=False,
       install_requires=[
@@ -17,11 +23,13 @@ setup(name='Hoboken',
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
+        'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
-      ]
+      ],
+      test_suite = 'hoboken.tests',
      )
 
