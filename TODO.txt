@@ -1,11 +1,11 @@
 TODO list - a centralized list of stuff I'd like to do
-(in roughly priority order)
+(in roughly priority order, *-marked means done)
 ===========================================================
 
  * Test URL params/args in before()/after()/condition functions
- - Tests for the various helper functions and underlying exceptions
- - Allow arbitrary parameters to be passed to HaltRoutingException
- - Implement redirect() in a sensible manner
+ * Tests for the various helper functions and underlying exceptions
+ * Allow arbitrary parameters to be passed to HaltRoutingException
+ * Implement redirect() in a sensible manner
  - More logging
  - Automation (e.g. bump version, test, deploy, etc. - as a Fabfile?)
  - Upload to PyPI
