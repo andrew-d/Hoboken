@@ -11,7 +11,7 @@ TODO list - a centralized list of stuff I'd like to do
  - Upload to PyPI
    - Fix author/author_email
    * MANIFEST.in
-   - README.txt
+   * README.txt^H^H^H^H.md
  - Template library integration (look at Tilt for Ruby - something similar for Python would be nice)
  - Examples
    - Middleware examples (e.g. security, stuff like that?)
