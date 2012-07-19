@@ -1,42 +1,35 @@
-from .context import hoboken
+from . import HobokenTestCase, BaseTestCase
+from ..matchers import RegexMatcher
 
+from mock import patch, MagicMock
 import re
 
-from nose.plugins.attrib import attr
-from nose.tools import raises
-from mock import patch
+class TestRegexMatcher(BaseTestCase):
+    def test_compiles(self):
+        with patch('re.compile') as mock_obj:
+            mock_obj.return_value = 0
 
+            test_re = "test_string"
+            r = RegexMatcher(test_re, [], [])
 
-def test_RegexMatcher_compiles():
-    with patch('re.compile') as mockobj:
-        mockobj.return_value = 0
+            self.assert_is_instance(r, RegexMatcher)
+            mock_obj.assert_called_with(test_re)
 
-        test_re = "test_string"
-        r = hoboken.matchers.RegexMatcher(test_re, [], [])
+    def test_raises_on_invalid(self):
+        with self.assert_raises(TypeError):
+            RegexMatcher("asdf.(")
 
-        assert isinstance(r, hoboken.matchers.RegexMatcher)
-        mockobj.assert_called_with(test_re)
+    def test_fills_keys(self):
+        test_re = "blah(.*?)middle(.*?)end"
+        test_data = "blahFOOmiddleBARend"
 
+        m = RegexMatcher(test_re, [True, True], ['one', 'two'])
+        req = MagicMock(path=test_data)
 
-@raises(TypeError)
-def test_RegexMatcher_invalid_regex():
-    hoboken.matchers.RegexMatcher("asdf.(")
+        self.assert_true(m.match(req))
+        req.urlvars.__setitem__.assert_any_call('one', 'FOO')
+        req.urlvars.__setitem__.assert_any_call('two', 'BAR')
+        req.urlvars.__setitem__.assert_any_call('_captures', ['FOO', 'BAR'])
 
-
-def test_RegexMatcher_fills_keys():
-    test_re = "blah(.*?)middle(.*?)end"
-    test_data = "blahFOOmiddleBARend"
-
-    class TestWebRequest():
-        path = test_data
-        urlargs = ()
-        urlvars = {}
-
-    r = hoboken.matchers.RegexMatcher(test_re, [True, True], ['one', 'two'])
-    webr = TestWebRequest()
-
-    assert r.match(webr)
-    assert webr.urlvars['_captures'] == ['FOO', 'BAR']
-    assert webr.urlvars['one'] == 'FOO'
-    assert webr.urlvars['two'] == 'BAR'
+        # TODO: test urlargs too
 
