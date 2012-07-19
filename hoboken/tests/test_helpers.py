@@ -1,8 +1,7 @@
-from . import HobokenTestCase
+from . import HobokenTestCase, skip
 from webob import Request
 from hoboken import halt, pass_route, redirect
 import unittest
-from unittest import skip
 
 class TestHaltHelper(HobokenTestCase):
     def after_setup(self):

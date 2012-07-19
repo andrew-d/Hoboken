@@ -32,6 +32,24 @@ ensure_in_path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import hoboken
 
 
+if hasattr(unittest, 'skip'):
+    skip = unittest.skip
+else:
+    def skip(reason):
+        def decorator(obj):
+            if isinstance(obj, object):
+                class Nothing(object):
+                    pass
+
+                return Nothing
+            else:
+                def internal_function(*args, **kwargs):
+                    return None
+                return internal_function
+
+        return decorator
+
+
 class _ExceptionCatcher(object):
     """
     This is a context manager that asserts that a particular exception was raised
@@ -156,22 +174,6 @@ class HobokenTestCase(BaseTestCase):
         self.assert_equal(status, 404)
 
 
-class FixedTestLoader(unittest.TestLoader):
-    """
-    This test loader should fix breakages on Python 2.6
-    """
-    def getRootSuite(self):
-        return suite()
-
-    def loadTestsFromName(self, name, module=None):
-        root = self.getRootSuite()
-        if name == 'suite':
-            return root
-
-        # TODO: what do we do here.
-        super(FixedTestLoader, self).loadTestsFromName(name, module=module)
-
-
 def suite():
     # Import test suites here.
     from .test_HobokenApplication import suite as suite_1
@@ -197,7 +199,7 @@ def main():
     This runs the our tests, suitable for a command-line application
     """
     try:
-        unittest.main(testLoader=FixedTestLoader(), defaultTest='suite')
+        unittest.main(defaultTest='suite')
     except Exception as e:
         print "Exception: {0!s}".format(e)
 

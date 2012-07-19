@@ -30,6 +30,6 @@ setup(name='Hoboken',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
       ],
-      test_suite = 'hoboken.tests',
+      test_suite = 'hoboken.tests.suite',
      )
 
