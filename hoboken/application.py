@@ -1,5 +1,5 @@
 # Future-proofing
-from __future__ import with_statement, absolute_import
+from __future__ import with_statement, absolute_import, print_function
 
 # Stdlib dependencies
 import re
@@ -508,7 +508,7 @@ class HobokenApplication(object):
 # TODO:
 # def hoboken_wrapper(func):
 #     def add_condition(condition):
-#         print "Adding condition: %r" % (condition,)
+#         print("Adding condition: {0!r}".format(condition))
 # 
 #     if 'hoboken.conditions' in func.func_dict:
 #         for c in func.func_dict['hoboken.conditions']:

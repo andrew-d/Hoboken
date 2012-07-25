@@ -1,4 +1,4 @@
-from __future__ import with_statement
+from __future__ import with_statement, print_function
 
 import os
 import sys
@@ -67,7 +67,8 @@ class _ExceptionCatcher(object):
         if exc_type is None:
             self.test_case.fail('Expected exception of type %r' % exception_name)
         elif not issubclass(exc_type, self.exc_type):
-            raise exc_type, exc_value, tb
+            # raise exc_type, exc_value, tb  # This doesn't work on Python3
+            raise exc_type
         return True
 
 
@@ -201,7 +202,7 @@ def main():
     try:
         unittest.main(defaultTest='suite')
     except Exception as e:
-        print "Exception: {0!s}".format(e)
+        print("Exception: {0!s}".format(e))
 
 if __name__ == "__main__":
     main()

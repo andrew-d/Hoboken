@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 from collections import Iterable
 from webob.acceptparse import MIMEAccept
@@ -34,7 +35,7 @@ def accepts(mimetypes):
 
     def accepts_func(req):
         for a in will_accept:
-            print 'matching {0} against {1}'.format(str(req.accept), str(a))
+            print('matching {0} against {1}'.format(str(req.accept), str(a)))
             #if str(req.accept) in a:
             if a in req.accept:
                 return True

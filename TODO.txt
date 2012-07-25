@@ -4,6 +4,7 @@ TODO list - a centralized list of stuff I'd like to do
 
  - Move helper functions to sub-module
     - Add functions that check etag, last modified date, and then halt() with Not Modified if they match
+        - Tests for these!
     - Helpers for other stuff?
         - expires(some time value)
         - cache_control(various params, e.g. public=True/False, max_age=60, must_revalidate=True/False)
