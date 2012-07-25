@@ -2,6 +2,16 @@ TODO list - a centralized list of stuff I'd like to do
 (in roughly priority order, *-marked means done)
 ===========================================================
 
+ - Move helper functions to sub-module
+    - Add functions that check etag, last modified date, and then halt() with Not Modified if they match
+    - Helpers for other stuff?
+        - expires(some time value)
+        - cache_control(various params, e.g. public=True/False, max_age=60, must_revalidate=True/False)
+    - Look in to if-match and if-none-match headers to see how we handle them
+    - redirect_back helper that is a wrapper around redirect() and the referrer?
+ - URL generation that properly handles different mountpoints
+ - Integrate with Shift
+ - Session support - should allow hooking into this, so we can use e.g. beaker, or something like dogpile, just a cookie, etc
  * Test URL params/args in before()/after()/condition functions
  * Tests for the various helper functions and underlying exceptions
  * Allow arbitrary parameters to be passed to HaltRoutingException

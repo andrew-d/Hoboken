@@ -13,4 +13,5 @@ from .application import HobokenApplication, condition, halt, \
 # Submodules we pull in here.
 from . import matchers
 from . import exceptions
+from . import helpers
 
