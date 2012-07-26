@@ -18,6 +18,11 @@ def ensure_in_path(path):
             return os.path.samefile(x, y)
         except (IOError, OSError):
             return False
+        except AttributeError:
+            # Probably on Windows.
+            path1 = os.path.abspath(x).lower()
+            path2 = os.path.abspath(y).lower()
+            return path1 == path2
 
     # Remove existing copies of it.
     for pth in sys.path:
