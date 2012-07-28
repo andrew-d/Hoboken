@@ -12,6 +12,7 @@ TODO list - a centralized list of stuff I'd like to do
     - redirect_back helper that is a wrapper around redirect() and the referrer?
  - URL generation that properly handles different mountpoints
  - Integrate with Shift
+ - Integrate with itsdangerous to provide secure cookie support
  - Session support - should allow hooking into this, so we can use e.g. beaker, or something like dogpile, just a cookie, etc
  * Test URL params/args in before()/after()/condition functions
  * Tests for the various helper functions and underlying exceptions

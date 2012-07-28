@@ -32,7 +32,7 @@ class TestHaltHelper(HobokenTestCase):
         self.assert_halts_with(200, 'good', path='/halts')
 
 
-class TestPasstHelper(HobokenTestCase):
+class TestPassHelper(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/aroute/*")
         def pass_one(req, resp):
@@ -76,7 +76,7 @@ class TestRedirectHelper(HobokenTestCase):
         @self.app.post("/upload")
         def upload(req, resp):
             # Upload stuff here.
-            redirect(location="/uploaded")
+            redirect(req, "/uploaded")
 
         @self.app.get("/uploaded")
         def uploaded(req, resp):
@@ -84,7 +84,7 @@ class TestRedirectHelper(HobokenTestCase):
 
         @self.app.get("/redirect")
         def redirect_func(req, resp):
-            redirect(status=self.redirect_code, location='/foo')
+            redirect(req, '/foo', status_code=self.redirect_code)
 
         self.app.debug = True
 
@@ -109,7 +109,7 @@ class TestRedirectHelper(HobokenTestCase):
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestHaltHelper))
-    suite.addTest(unittest.makeSuite(TestPasstHelper))
+    suite.addTest(unittest.makeSuite(TestPassHelper))
     suite.addTest(unittest.makeSuite(TestRedirectHelper))
 
     return suite

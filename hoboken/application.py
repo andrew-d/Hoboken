@@ -8,13 +8,62 @@ import logging
 #from functools import wraps
 
 # External dependencies
-from webob import Request, Response
+import webob
 from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerError
 
 # In-package dependencies
 from .exceptions import *
 from .matchers import *
 from .compat import *
+
+
+class Request(webob.Request):
+    """
+    Hoboken's request objects.  Uses WebOb's request object
+    """
+    @property
+    def is_safe(self):
+        """
+        Returns True if the request is considered "safe" - i.e. if the request
+        should be treated as not modifying any state.
+        """
+        return self.method in ['GET', 'HEAD', 'OPTIONS', 'TRACE']
+
+    @property
+    def is_idempotent(self):
+        """
+        Returns True if the request is considered idempotent - i.e. if two
+        successive identical requests should result in the same result.
+        """
+        return self.safe() or self.method in ['PUT', 'DELETE']
+
+class Response(webob.Response):
+    """
+    Hoboken's request objects.  Uses WebOb's request object.
+    """
+    @property
+    def is_informational(self):
+        return 100 <= self.status_int <= 199
+
+    @property
+    def is_success(self):
+        return 200 <= self.status_int <= 299
+
+    @property
+    def is_redirect(self):
+        return 300 <= self.status_int <= 399
+
+    @property
+    def is_client_error(self):
+        return 400 <= self.status_int <= 499
+
+    @property
+    def is_server_error(self):
+        return 500 <= self.status_int <= 599
+
+    @property
+    def is_not_found(self):
+        return self.status_int == 404
 
 
 # TODO: move these to another file.
@@ -55,11 +104,29 @@ def pass_route():
     raise ContinueRoutingException()
 
 
-def redirect(*args, **kwargs):
+def redirect(req, location, *args, **kwargs):
     """
     This is a helper function for redirection.
     """
-    raise RedirectException(*args, **kwargs)
+
+    # If a code is specified, we take that.
+    code = kwargs.pop('status_code', None)
+    if code is None:
+        # If no code, we send a 303 if it's supported and we aren't already using GET.
+        if req.http_version == 'HTTP/1.1' and req.method != 'GET':
+            code = 303
+        else:
+            code = 302
+
+    # Re-set the code parameter.
+    kwargs['status_code'] = code
+
+    # Set the 'location' argument, which in turn sets the 'Location' header.
+    kwargs['location'] = location
+
+    # Halt routing with these parameters.
+    halt(*args, **kwargs)
+
 
 
 class HobokenMetaclass(type):
@@ -389,7 +456,7 @@ class HobokenApplication(object):
         #     # Must set, or we get clobbered by the 404 handler.
         #     matched = True
 
-        except HobokenResponseException as ex:
+        except HaltRoutingException as ex:
             # For each attribute in the given kwargs, send it.
             for attr, val in ex.kwargs.iteritems():
                 if val is not None:
