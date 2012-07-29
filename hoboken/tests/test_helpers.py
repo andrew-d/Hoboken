@@ -23,8 +23,14 @@ class TestHaltHelper(HobokenTestCase):
     def assert_halts_with(self, code, body, *args, **kwargs):
         """Helper function to set the halt value and assert"""
         self.halt_code = code
+
+        # The 'text' attribute of a webob Request only supports unicode
+        # strings on Python 2.X, so we need to make this unicode.
         if sys.version_info[0] < 3:
             self.halt_body = unicode(body)
+        else:
+            self.halt_body = body
+
         self.assert_body_is(body, *args, **kwargs)
 
     def test_before_can_halt(self):
