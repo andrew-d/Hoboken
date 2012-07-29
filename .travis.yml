@@ -11,5 +11,5 @@ python:
 install:
   - sudo python setup.py develop
 
-script: python setup.py test
+script: sudo python setup.py test
 
