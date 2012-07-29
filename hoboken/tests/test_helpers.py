@@ -1,4 +1,5 @@
 from . import HobokenTestCase, skip
+import sys
 from webob import Request
 from hoboken import halt, pass_route, redirect
 import unittest
@@ -22,14 +23,15 @@ class TestHaltHelper(HobokenTestCase):
     def assert_halts_with(self, code, body, *args, **kwargs):
         """Helper function to set the halt value and assert"""
         self.halt_code = code
-        self.halt_body = body
+        if sys.version_info[0] < 3:
+            self.halt_body = unicode(body)
         self.assert_body_is(body, *args, **kwargs)
 
     def test_before_can_halt(self):
-        self.assert_halts_with(200, u'foobar', path='/before/halt')
+        self.assert_halts_with(200, 'foobar', path='/before/halt')
 
     def test_body_can_halt(self):
-        self.assert_halts_with(200, u'good', path='/halts')
+        self.assert_halts_with(200, 'good', path='/halts')
 
 
 class TestPassHelper(HobokenTestCase):
