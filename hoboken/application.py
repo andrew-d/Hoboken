@@ -2,6 +2,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 # Stdlib dependencies
+import sys
 import re
 import urllib
 import logging
@@ -15,6 +16,26 @@ from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerErro
 from .exceptions import *
 from .matchers import *
 from .compat import *
+
+
+def get_func_attr(func, attr, default=None, delete=False):
+    if sys.version_info[0] >= 3:
+        func_dict = func.__dict__
+    else:
+        func_dict = func.func_dict
+
+    if delete:
+        return func_dict.pop(attr, default)
+    else:
+        return func_dict.get(attr, default)
+
+def set_func_attr(func, attr, value):
+    if sys.version_info[0] >= 3:
+        func_dict = func.__dict__
+    else:
+        func_dict = func.func_dict
+
+    func_dict[attr] = value
 
 
 class Request(webob.Request):
@@ -66,21 +87,18 @@ class Response(webob.Response):
         return self.status_int == 404
 
 
-# TODO: move these to another file.
-def is_route(func):
-    return func.func_dict.get('hoboken.route', False)
-
-
 def condition(condition_func):
     def internal_decorator(func):
         # Either call the add_condition() func, or add this condition to the
         # list of conditions on the function.
-        if 'hoboken.add_condition' in func.func_dict:
-            func.func_dict['hoboken.add_condition'](condition_func)
-        elif 'hoboken.conditions' in func.func_dict:
-            func.func_dict['hoboken.conditions'].append(condition_func)
-        else:
-            func.func_dict['hoboken.conditions'] = [condition_func]
+        add_condition = get_func_attr(func, 'hoboken.add_condition')
+        if add_condition is not None:
+            add_condition(condition_func)
+            return func
+
+        conditions_arr = get_func_attr(func, 'hoboken.conditions', default=[])
+        conditions_arr.append(condition_func)
+        set_func_attr(func, 'hoboken.conditions', conditions_arr)
 
         return func
 
@@ -128,7 +146,6 @@ def redirect(req, location, *args, **kwargs):
     halt(*args, **kwargs)
 
 
-
 class HobokenMetaclass(type):
     """
     This class does "black magic" to create an instance of HobokenApplication
@@ -151,7 +168,16 @@ class HobokenMetaclass(type):
         return super(HobokenMetaclass, klass).__new__(klass, name, bases, attrs)
 
 
-class HobokenApplication(object):
+def with_metaclass(meta, base=object):
+    """Create a base class with a metaclass."""
+    return meta("NewBase", (base,), {})
+
+
+def is_route(func):
+    return get_func_attr(func, 'hoboken.route', default=False)
+
+
+class HobokenApplication(with_metaclass(HobokenMetaclass)):
     __metaclass__ = HobokenMetaclass
 
     # These are the supported HTTP methods.  They can be overridden in
@@ -276,7 +302,7 @@ class HobokenApplication(object):
             # match is a regex, so we extract any named groups.
             keys = [None] * match.groups
             types = [False] * match.groups
-            for name, index in match.groupindex.iteritems():
+            for name, index in match.groupindex.items():
                 types[index] = True
                 keys[index] = name
 
@@ -321,24 +347,22 @@ class HobokenApplication(object):
                 _, conds, _ = self.find_route(method, func)
                 conds.append(condition_func)
                 self.logger.debug("Added condition '{0}' for func {1}/{2}:".format(
-                    condition_func.func_name, str(method), func.func_name))
+                    condition_func.__name__, str(method), func.__name__))
 
             # Add the route.
             self.add_route(method, match, func)
 
             # Add each of the existing conditions.
-            if 'hoboken.conditions' in func.func_dict:
-                for c in func.func_dict['hoboken.conditions']:
-                    add_condition(c)
-
-                del func.func_dict['hoboken.conditions']
+            conditions = get_func_attr(func, 'hoboken.conditions', default=[], delete=True)
+            for c in conditions:
+                add_condition(c)
 
             # Mark this function as a route.
-            func.func_dict['hoboken.route'] = True
+            set_func_attr(func, 'hoboken.route', True)
 
             # Add a function to add future conditions. This is so the order
             # of conditions being added doesn't matter.
-            func.func_dict['hoboken.add_condition'] = add_condition
+            set_func_attr(func, 'hoboken.add_condition', add_condition)
             return func
         return internal_decorator
 
@@ -402,7 +426,15 @@ class HobokenApplication(object):
         route function into the request body.  Override this in a subclass
         to customize how values are returned.
         """
-        resp.body = value
+        if sys.version_info[0] >= 3:
+            if isinstance(value, bytes):
+                resp.body = value
+            elif isinstance(value, str):
+                resp.text = value
+            else:
+                raise ValueError("Unknown return type: {0!r}".format(type(value)))
+        else:
+            resp.body = value
 
     def wsgi_entrypoint(self, environ, start_response):
         # Create our request object.
@@ -458,7 +490,7 @@ class HobokenApplication(object):
 
         except HaltRoutingException as ex:
             # For each attribute in the given kwargs, send it.
-            for attr, val in ex.kwargs.iteritems():
+            for attr, val in ex.kwargs.items():
                 if val is not None:
                     setattr(resp, attr, val)
 
@@ -540,8 +572,8 @@ class HobokenApplication(object):
             body.append("Function        Match                     Conditions")
             body.append("-" * 79)
             for match, cond, func in arr:
-                conds = ", ".join([f.func_name for f in cond])
-                body.append("{0:<15} {1:<25} {2:<35}".format(func.func_name, str(match), conds))
+                conds = ", ".join([f.__name__ for f in cond])
+                body.append("{0:<15} {1:<25} {2:<35}".format(func.__name__, str(match), conds))
 
         def dump_route_array(arr):
             body.append("=" * 79)
@@ -549,8 +581,8 @@ class HobokenApplication(object):
             body.append("-" * 79)
             for method in self.routes:
                 for match, cond, func in self.routes[method]:
-                    conds = ", ".join([f.func_name for f in cond])
-                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(method, func.func_name, str(match), conds))
+                    conds = ", ".join([f.__name__ for f in cond])
+                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(method, func.__name__, str(match), conds))
 
         body.append("BEFORE FILTERS")
         dump_filter_array(self.before_filters)

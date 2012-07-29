@@ -161,7 +161,7 @@ class HobokenTestCase(BaseTestCase):
             req.accept = accepts
 
         resp = req.get_response(self.app)
-        return resp.status_int, resp.body
+        return resp.status_int, resp.text
 
     def assert_body_is(self, body, *args, **kwargs):
         """

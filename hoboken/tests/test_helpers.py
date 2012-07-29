@@ -10,11 +10,11 @@ class TestHaltHelper(HobokenTestCase):
 
         @self.app.before("/before/halt")
         def before_halt_func(req, resp):
-            halt(code=self.halt_code, body=self.halt_body)
+            halt(code=self.halt_code, text=self.halt_body)
 
         @self.app.get("/halts")
         def halts(req, resp):
-            halt(code=self.halt_code, body=self.halt_body)
+            halt(code=self.halt_code, text=self.halt_body)
             return 'bad'
 
         self.app.debug = True
@@ -26,10 +26,10 @@ class TestHaltHelper(HobokenTestCase):
         self.assert_body_is(body, *args, **kwargs)
 
     def test_before_can_halt(self):
-        self.assert_halts_with(200, 'foobar', path='/before/halt')
+        self.assert_halts_with(200, u'foobar', path='/before/halt')
 
     def test_body_can_halt(self):
-        self.assert_halts_with(200, 'good', path='/halts')
+        self.assert_halts_with(200, u'good', path='/halts')
 
 
 class TestPassHelper(HobokenTestCase):
@@ -46,15 +46,15 @@ class TestPassHelper(HobokenTestCase):
         @self.app.before("/pass/before")
         def pass_before(req, resp):
             pass_route()
-            resp.body = 'bad'
+            resp.text = 'bad'
 
         @self.app.before("/pass/*")
         def before_pass_all(req, resp):
-            resp.body += 'good'
+            resp.text += 'good'
 
         @self.app.get("/pass/*")
         def pass_before_route(req, resp):
-            resp.body += 'foo'
+            resp.text += 'foo'
 
         self.app.debug = True
 

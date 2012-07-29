@@ -38,7 +38,7 @@ class TestHeadFallback(HobokenTestCase):
         resp = r.get_response(self.app)
 
         self.assert_equal(resp.status_int, 200)
-        self.assert_equal(resp.body, '')
+        self.assert_equal(len(resp.body), 0)
         self.assert_equal(resp.headers['X-Custom-Header'], 'foobar')
 
 

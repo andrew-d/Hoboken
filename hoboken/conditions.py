@@ -35,7 +35,7 @@ def accepts(mimetypes):
 
     def accepts_func(req):
         for a in will_accept:
-            print('matching {0} against {1}'.format(str(req.accept), str(a)))
+            # print('matching {0} against {1}'.format(str(req.accept), str(a)))
             #if str(req.accept) in a:
             if a in req.accept:
                 return True
