@@ -38,6 +38,68 @@ TODO list - a centralized list of stuff I'd like to do
 Longer-Term TODOs
 ===========================================================
 
- - Python 3 port (I like Python 3.3, would like to switch to it, but target 3.0/3.1+)
  - File uploads are currently non-ideal
+
+
+Planning
+===========================================================
+The current method for request handlers involve passing around Request and Response objects manually, like this:
+
+@app.get("/path")
+def request_handler(request, response):
+    # Do stuff
+    pass
+
+There are some alternative options:
+
+1. Do something like Flask, with an import from the module that refers to the current request.
+    - This is probably not a good idea, since we can have multiple apps running in the same process, and this would collide.
+   This would look like this:
+
+from hoboken import request, response
+
+@app.get("/path")
+def request_handler():
+    # Do stuff with request and response.
+    pass
+
+2. We could assume that each application only processes one request at a time, and make the request and response object a property of the current application.
+    - Combine this with threadlocals so we can have multiple threads processing on the same applications.
+   This would look like this:
+
+@app.get("/path")
+def request_handler():
+    # Do stuff with app.request and app.response.
+    pass
+
+   I like this best.  Another reason it's nice: the various halt() / redirect() / whatever functions don't need to take an explicit `req` or `resp` parameter, but instead can be methods on the application.  i.e. instead of writing:
+
+@app.get("/")
+def idx(req, resp):
+    redirect(req, "/otherpath")
+
+   You can instead write something more like this:
+
+@app.get("/")
+def idx():
+    app.redirect("/otherpath")
+
+   And the redirect() method will grab the request object from the application object, and use that to redirect to the new location.  Similarly for stuff that, e.g. checks the etag, or cache-control, or anything else that works on both request and response (because check_etag(request, response, etag) is so much more ugly than app.check_etag(etag).
+
+
+Other Considerations
+====================
+We could allow the parameters to be passed to the functions themselves.  Splat parameters as *args, other params as **kwargs
+
+@app.get("/*/:param/*")
+def request_handler(first_splat, second_splat, param=None):
+    pass
+
+vs.
+
+@app.get("/*/:param/*")
+def request_handler():
+    splats = app.request.urlargs
+    param = app.request.urlvars['param']
+
 
