@@ -357,7 +357,7 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
         route.method = method
         self.routes[method].append(route)
 
-    def find_route_method(self, method, func):
+    def find_route_with_method(self, method, func):
         for route in self.routes[method]:
             if route.func == func:
                 return route
@@ -366,7 +366,7 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
 
     def find_route(self, func):
         for method in self.SUPPORTED_METHODS:
-            route = self.find_route_method(method, func)
+            route = self.find_route_with_method(method, func)
             if route:
                 return route
 
