@@ -6,6 +6,10 @@ import sys
 import re
 import urllib
 import logging
+try:
+    import threading
+except:
+    import dummy_threading as threading
 #from functools import wraps
 
 # External dependencies
@@ -146,6 +150,67 @@ def redirect(req, location, *args, **kwargs):
     halt(*args, **kwargs)
 
 
+class Route(object):
+    """
+    This class is an abstraction around a URL route.  It encapsulates:
+      - The request method.
+      - Any conditions defined for the route.
+      - A matcher that determines if the route matches a request, and also
+        returns any parameters from the request.
+      - And finally, the route function itself.
+    """
+    def __init__(self, matcher, func, conditions=None):
+        self.matcher = matcher
+        self.func = func
+        self.conditions = conditions or []
+
+        self._method = None
+
+    @property
+    def method(self):
+        return self._method
+
+    @method.setter
+    def method(self, val):
+        self._method = val.upper()
+
+    def add_condition(self, condition):
+        self.conditions.append(condition)
+
+    def __call__(self, request, response):
+        """
+        Call this route.  This function will return True or False, depending on
+        whether the route matched and was processed.  It will also catch any
+        ContinueRoutingExceptions and return False.
+        """
+        # self.logger.debug("Processing route: {0}".format(repr(route_tuple)))
+
+        # Reset the parameters in the request before each match,
+        request.urlargs = ()
+        request.urlvars = {}
+
+        # Do the match.
+        does_match, args, kwargs = self.matcher.match(request)
+        if not does_match:
+            return False, None
+        else:
+            request.urlargs = tuple(args)
+            request.urlvars = kwargs
+
+        try:
+            for cond in self.conditions:
+                if not cond(request):
+                    raise ContinueRoutingException
+
+            ret = self.func(request, response)
+
+        except ContinueRoutingException:
+            return False, None
+
+        return True, ret
+
+
+
 class HobokenMetaclass(type):
     """
     This class does "black magic" to create an instance of HobokenApplication
@@ -190,15 +255,14 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
         self.debug = debug
 
         # Routes array. We split this by method, both for speed and simplicity.
-        # Format: List of tuples of the form (matcher, conditions, function)
-        # Note: "conditions" is an array of conditions
         self.routes = {}
+        # TODO: Might be worth having a reverse-mapping array, so we can turn a
+        # function into a route (e.g. for URL generation, and so on).
 
         for m in self.SUPPORTED_METHODS:
             self.routes[m] = []
 
-        # Before and after filter arrays.  These are in the same format as
-        # the routes[] array, above.
+        # Before and after filter arrays.  Note that these are also Routes
         self.before_filters = []
         self.after_filters = []
 
@@ -218,86 +282,42 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
             self.logger.setLevel(logging.WARN)
             handler.setLevel(logging.WARN)
 
+        # Set up threadlocal storage.  We use this so we can process multiple
+        # requests at the same time from one app.
+        self._locals = threading.local()
+        self._locals.request = None
+        self._locals.response = None
+
+    @property
+    def request(self):
+        return self._locals.request
+
+    @request.setter
+    def request(self, val):
+        self._locals.request = val
+
+    @request.deleter
+    def request(self):
+        self._locals.request = None
+
+    @property
+    def response(self):
+        return self._locals.response
+
+    @response.setter
+    def response(self, val):
+        self._locals.response = val
+
+    @response.deleter
+    def response(self):
+        self._locals.response = None
+
     def set_subapp(self, subapp):
         self.sub_app = subapp
 
-    def _encode_character(self, char):
-        """
-        This function will encode a given character as a regex that will match
-        it in either regular or encoded form.
-        """
-        encode_char = lambda c: re.escape("%" + hex(ord(c))[2:])
-
-        # Was trying to use urllib.quote here, but it tries to encode too much for
-        # my liking.  Just using a regex.
-        if re.match(r"[;/?:@&=,\[\]]", char):
-            encoded = encode_char(char)
-        else:
-            encoded = char
-
-        # If the encoded version is unchanged, then we match both
-        # the bare version, along with the encoded version.
-        if encoded == char:
-            encoded = "(?:" + re.escape(char) + "|" + encode_char(char) + ")"
-
-        # Specifically for the space charcter, we match everything, and also plus characters.
-        if char == ' ':
-            encoded = "(?:" + encoded + "|" + self._encode_character("+") + ")"
-
-        return encoded
-
     def _make_route(self, match, func):
-        # Determine match type.
         if isinstance(match, BaseStringType):
-            # Param/splat style.  We need to extract the splats, the named
-            # parameters, and then create a regex to match it.
-            #
-            # The general rules are as follows:
-            #  - Block parameters like :block match one path segment -
-            #    i.e. until the next "/", special character, or end-of-
-            #    string.  Note that blocks must match at least one
-            #    character.
-            #  - Splats match anything, but always match non-greedily.
-            #    Splats can also match the empty string (i.e. nothing).
-            #
-            # So, we convert to a regex in the following way:
-            #  - Blocks are converted like this:
-            #      blah:block --> r"blah([^/?#]+)"
-            #  - Splats are converted like this:
-            #      blah*blah  --> r"blah(.*?)blah"
-
-            keys = []
-            types = []
-
-            def convert_match(match):
-                if match.group(0) == '*':
-                    types.append(False)
-                    keys.append(None)
-                    return r"(.*?)"
-                else:
-                    types.append(True)
-                    keys.append(match.group(0)[1:])
-                    return r"([^/?#]+)"
-
-            # Wrapper function that simply passes through to encode_character() with the
-            # match's content.
-            def encode_character_wrapper(match):
-                return self._encode_character(match.group(0))
-
-            # Encode everything that's not in the set:
-            #   [?%\/:*] + all alphanumeric characters + underscore.
-            encoded_match = re.sub(r"[^?%\\/:*\w]", encode_character_wrapper, match)
-
-            # Now, replace parameters or splats with their matching regex.
-            match_regex = re.sub(r"((:\w+)|\*)", convert_match, encoded_match)
-
-            # We need to add the begin/end anchors, because otherwise the lazy
-            # matches in our splats won't match anything.
-            match_regex = "^" + match_regex + "$"
-
-            # Done - add the route.
-            return (RegexMatcher(match_regex, types, keys), [], func)
-
+            matcher = HobokenRouteMatcher(match)
         elif isinstance(match, RegexType):
             # match is a regex, so we extract any named groups.
             keys = [None] * match.groups
@@ -307,16 +327,18 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
                 keys[index] = name
 
             # Append the route with these keys.
-            return (RegexMatcher(match, types, keys), [], func)
+            matcher = RegexMatcher(match, types, keys)
 
         elif hasattr(match, "match") and iscallable(getattr(match, "match")):
             # Don't know what type it is, but it has a callable "match"
             # attribute, so we use that.
-            return (match, [], func)
+            matcher = match
 
         else:
             # Unknown type!
             raise InvalidMatchTypeException("Unknown type: %r" % (match,))
+
+        return Route(matcher, func)
 
     def add_route(self, method, match, func):
         # Methods are uppercase.
@@ -326,13 +348,14 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
         if not method in self.SUPPORTED_METHODS:
             raise HobokenException("Invalid method type given: %s" % (method,))
 
-        route_tuple = self._make_route(match, func)
-        self.routes[method].append(route_tuple)
+        route = self._make_route(match, func)
+        route.method = method
+        self.routes[method].append(route)
 
     def find_route(self, method, func):
-        for tup in self.routes[method]:
-            if tup[2] == func:
-                return tup
+        for route in self.routes[method]:
+            if route.func == func:
+                return route
 
         return None
 
@@ -344,8 +367,8 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
 
             # This allows us to add conditions!
             def add_condition(condition_func):
-                _, conds, _ = self.find_route(method, func)
-                conds.append(condition_func)
+                route = self.find_route(method, func)
+                route.add_condition(condition_func)
                 self.logger.debug("Added condition '{0}' for func {1}/{2}:".format(
                     condition_func.__name__, str(method), func.__name__))
 
@@ -394,33 +417,7 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
             return func
         return internal_decorator
 
-    def _process_route(self, req, resp, route_tuple):
-        self.logger.debug("Processing route: {0}".format(repr(route_tuple)))
-        matcher, conditions, func = route_tuple
-
-        # Reset the parameters in the request before each match,
-        req.urlargs = ()
-        req.urlvars = {}
-
-        # Do the match.
-        if not matcher.match(req):
-            return False
-
-        try:
-            for cond in conditions:
-                if not cond(req):
-                    raise ContinueRoutingException
-
-            ret = func(req, resp)
-            if ret is not None:
-                self.on_returned_body(req, resp, ret)
-
-        except ContinueRoutingException:
-            return False
-
-        return True
-
-    def on_returned_body(self, req, resp, value):
+    def on_returned_body(self, request, resp, value):
         """
         This function is used to turn a value that's been returned from a
         route function into the request body.  Override this in a subclass
@@ -437,53 +434,83 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
             resp.body = value
 
     def wsgi_entrypoint(self, environ, start_response):
-        # Create our request object.
-        req = Request(environ)
-        self.logger.debug("%s %s", req.method, req.url)
+        try:
+            # Create our request object.
+            self.request = Request(environ)
+
+            # Create an empty response.
+            self.response = Response()
+
+            # Actually handle this request.
+            self._handle_request()
+
+            # Finally, given our response, we finish the WSGI request.
+            return self.response(environ, start_response)
+        finally:
+            # After each request, we remove the request and response objects.
+            del self.request
+            del self.response
+
+    def _handle_request(self):
+        # Since these are thread-locals, we grab them as locals.
+        request = self.request
+        response = self.response
+        self.logger.debug("%s %s", request.method, request.url)
 
         # Check for valid method.
-        if req.method not in self.SUPPORTED_METHODS:
-            self.logger.warn("Called with invalid method: %r", req.method)
+        # TODO: Should this call our after filters?
+        if request.method not in self.SUPPORTED_METHODS:
+            self.logger.warn("Called with invalid method: %r", request.method)
 
             # Send "invalid method" exception.
-            exc = HTTPMethodNotAllowed(location=req.path)
-            resp = req.get_response(exc)
-            return resp(environ, start_response)
-
-        # Create response.
-        resp = Response()
+            # TODO: hook.
+            response.status_code = 405
+            return
 
         matched = False
         try:
-            for filt_tuple in self.before_filters:
+            for filter in self.before_filters:
                 # Call this filter.
-                self._process_route(req, resp, filt_tuple)
+                filter(request, response)
 
             # For each route of the specified type, try to match it.
-            for route_tuple in self.routes[req.method]:
-                if self._process_route(req, resp, route_tuple):
+            for route in self.routes[request.method]:
+                matches, ret = route(request, response)
+                if ret is not None:
+                    self.on_returned_body(request, response, ret)
+
+                if matches:
                     matched = True
                     break
 
             # We special-case the HEAD method to fallback to GET.
-            if req.method == 'HEAD' and not matched:
-                new_req = req.copy()
-                new_req.method = 'GET'
+            if request.method == 'HEAD' and not matched:
+                # Save our existing request and response.
+                saved_request = self.request
+                saved_response = self.response
 
-                resp = new_req.get_response(self)
+                # Make a new GET request that's otherwise identical.
+                new_request = request.copy()
+                new_request.method = 'GET'
+
+                resp = new_request.get_response(self)
 
                 # TODO: is this a good heuristic?
                 if resp.status_code < 400:
                     matched = True
 
+                # Reset our request/response.
+                self.request = saved_request
+                self.response = resp
+
         # except HaltRoutingException as halt:
         #     # Check if the exception specifies a status code or
         #     # body, and then set these on the request
         #     if halt.status_code != 0:
-        #         resp.status_code = halt.status_code
+        #         response.status_code = halt.status_code
 
         #     if halt.body is not None:
-        #         self.on_returned_body(req, resp, halt.body)
+        #         self.on_returned_body(request, response, halt.body)
 
         #     # Must set, or we get clobbered by the 404 handler.
         #     matched = True
@@ -492,7 +519,7 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
             # For each attribute in the given kwargs, send it.
             for attr, val in ex.kwargs.items():
                 if val is not None:
-                    setattr(resp, attr, val)
+                    setattr(response, attr, val)
 
             # Must set this, or we get clobbered by the 404 handler.
             matched = True
@@ -506,44 +533,37 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
             # Also, check if the exception has other information attached,
             # like a code/body.
             # TODO: Handle other HTTPExceptions from webob?
-            resp = self.on_exception(req, e)
+            self.on_exception(e)
 
             # Must set, or we get clobbered by the 404 handler.
             matched = True
 
         finally:
             # Call our after filters
-            for filt_tuple in self.after_filters:
-                self._process_route(req, resp, filt_tuple)
+            for route in self.after_filters:
+                route(request, response)
 
         if not matched:
-            resp = self.on_route_missing(req)
+            self.on_route_missing()
 
-        return resp(environ, start_response)
 
     def __call__(self, environ, start_response):
         return self.wsgi_entrypoint(environ, start_response)
 
-    def on_route_missing(self, req):
+    def on_route_missing(self):
         """
         This function is called when a route to handle a request is not found.
-        It should return a Response that will then be sent to the requestor.
         Override this function to provide custom not-found logic.
         """
         # If we have a sub_app, return what it has.
         if self.sub_app:
-            resp = req.get_response(self.sub_app)
+            self.response = self.request.get_response(self.sub_app)
         else:
             # By default, return a 404 request.
-            exc = HTTPNotFound(location=req.path)
-            resp = req.get_response(exc)
+            self.response.status_code = 404
 
-        return resp
-
-    def on_exception(self, req, exception):
-       exc = HTTPInternalServerError(location=req.path)
-       resp = req.get_response(exc)
-       return resp
+    def on_exception(self, exception):
+        self.response.status_code = 500
 
     def test_server(self, port=8000):
         """
@@ -571,18 +591,18 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
             body.append("=" * 79)
             body.append("Function        Match                     Conditions")
             body.append("-" * 79)
-            for match, cond, func in arr:
-                conds = ", ".join([f.__name__ for f in cond])
-                body.append("{0:<15} {1:<25} {2:<35}".format(func.__name__, str(match), conds))
+            for filter in arr:
+                conds = ", ".join([f.__name__ for f in filter.conditions])
+                body.append("{0:<15} {1:<25} {2:<35}".format(filter.func.__name__, str(filter.match), conds))
 
         def dump_route_array(arr):
             body.append("=" * 79)
             body.append("Method  Function        Match                     Conditions")
             body.append("-" * 79)
             for method in self.routes:
-                for match, cond, func in self.routes[method]:
-                    conds = ", ".join([f.__name__ for f in cond])
-                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(method, func.__name__, str(match), conds))
+                for route in self.routes[method]:
+                    conds = ", ".join([f.__name__ for f in route.conditions])
+                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(method, route.func.__name__, str(route.matcher), conds))
 
         body.append("BEFORE FILTERS")
         dump_filter_array(self.before_filters)
