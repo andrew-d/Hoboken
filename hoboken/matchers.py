@@ -193,6 +193,12 @@ class HobokenRouteMatcher(AbstractMatcher):
 
             last_fragment = m.end(0)
 
+        # Add the final fragment (or a blank string).
+        if last_fragment != len(match):
+            self.fragments.append(match[last_fragment:])
+        else:
+            self.fragments.append('')
+
         # This class gets around the lack of the nonlocal keyword on python 2.X
         class Store(object):
             num_groups = 0
@@ -254,7 +260,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         # For each fragment, we append it, and then lookup the associated type
         # for the current group.  If it's an arg, we grab the current arg and
         # then increment the arg count, otherwise we grab the right kwarg.
-        for i in range(num_fragments):
+        for i in range(num_fragments - 1):
             final_route += self.fragments[i]
 
             group_name = self.group_names[i]
@@ -264,5 +270,5 @@ class HobokenRouteMatcher(AbstractMatcher):
             else:
                 final_route += kwargs[group_name]
 
-        return final_route
+        return final_route + self.fragments[-1]
 

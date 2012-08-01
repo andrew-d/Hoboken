@@ -17,6 +17,7 @@ TODO list - a centralized list of stuff I'd like to do
         - match(test_path) should return True, args, kwargs if match, or False, None, None otherwise.  these args/kwargs are then passed to the underlying route function
         - finally, the matcher can have a reverse(args, kwargs) function that will use those parameters to return a given path
         - default matcher should be HobokenPathMatcher, which uses the standard splat (*)/param (:param) matching style.  move the logic out of the Hoboken class.
+    - Done the above. TODO: tests for this
  - Integrate with Shift
  - Integrate with itsdangerous to provide secure cookie support
  - Session support - should allow hooking into this, so we can use e.g. beaker, or something like dogpile, just a cookie, etc

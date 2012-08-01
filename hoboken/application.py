@@ -177,6 +177,9 @@ class Route(object):
     def add_condition(self, condition):
         self.conditions.append(condition)
 
+    def reverse(self, *args, **kwargs):
+        return self.matcher.reverse(args, kwargs)
+
     def __call__(self, request, response):
         """
         Call this route.  This function will return True or False, depending on
@@ -202,6 +205,8 @@ class Route(object):
                 if not cond(request):
                     raise ContinueRoutingException
 
+            # TODO: do we call the function with the request/response objects,
+            # or with *args/**kwargs?
             ret = self.func(request, response)
 
         except ContinueRoutingException:
@@ -352,12 +357,28 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
         route.method = method
         self.routes[method].append(route)
 
-    def find_route(self, method, func):
+    def find_route_method(self, method, func):
         for route in self.routes[method]:
             if route.func == func:
                 return route
 
         return None
+
+    def find_route(self, func):
+        for method in self.SUPPORTED_METHODS:
+            route = self.find_route_method(method, func)
+            if route:
+                return route
+
+        return None
+
+    def url_for(self, function, *args, **kwargs):
+        route = self.find_route(function)
+        if route is None:
+            return None
+
+        path = route.reverse(*args, **kwargs)
+        return path
 
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
@@ -367,7 +388,7 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
 
             # This allows us to add conditions!
             def add_condition(condition_func):
-                route = self.find_route(method, func)
+                route = self.find_route(func)
                 route.add_condition(condition_func)
                 self.logger.debug("Added condition '{0}' for func {1}/{2}:".format(
                     condition_func.__name__, str(method), func.__name__))
