@@ -1,127 +1,13 @@
 from __future__ import with_statement, print_function
 
+from .helpers import *
+
 import os
-import sys
 import unittest
 from webob import Request
 
-
-def ensure_in_path(path):
-    """
-    Ensure that a given path is in the sys.path array
-    """
-    if not os.path.isdir(path):
-        raise RuntimeError('Tried to add nonexisting path')
-
-    def _samefile(x, y):
-        try:
-            return os.path.samefile(x, y)
-        except (IOError, OSError):
-            return False
-        except AttributeError:
-            # Probably on Windows.
-            path1 = os.path.abspath(x).lower()
-            path2 = os.path.abspath(y).lower()
-            return path1 == path2
-
-    # Remove existing copies of it.
-    for pth in sys.path:
-        if _samefile(pth, path):
-            sys.path.remove(pth)
-
-    # Add it at the beginning.
-    sys.path.insert(0, path)
-
-
 ensure_in_path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import hoboken
-
-
-if hasattr(unittest, 'skip'):
-    skip = unittest.skip
-else:
-    def skip(reason):
-        def decorator(obj):
-            if isinstance(obj, object):
-                class Nothing(object):
-                    pass
-
-                return Nothing
-            else:
-                def internal_function(*args, **kwargs):
-                    return None
-                return internal_function
-
-        return decorator
-
-
-class _ExceptionCatcher(object):
-    """
-    This is a context manager that asserts that a particular exception was raised
-    during it.  This was borrowed from Mitsuhiko's flask testing code.
-    """
-    def __init__(self, test_case, exc_type):
-        self.test_case = test_case
-        self.exc_type = exc_type
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, tb):
-        exception_name = self.exc_type.__name__
-        if exc_type is None:
-            self.test_case.fail('Expected exception of type %r' % exception_name)
-        elif not issubclass(exc_type, self.exc_type):
-            # raise exc_type, exc_value, tb  # This doesn't work on Python3
-            raise exc_type
-        return True
-
-
-class BaseTestCase(unittest.TestCase):
-    """
-    This is the base class for all Hoboken base classes.  It adds some useful aliases for the
-    camelCased names in the standard library (like nose).
-    """
-
-    def assert_equal(self, x, y):
-        return self.assertEqual(x, y)
-
-    def assert_not_equal(self, x, y):
-        return self.assertNotEqual(x, y)
-
-    def assert_true(self, x):
-        return self.assertTrue(x)
-
-    def assert_false(self, x):
-        return self.assertFalse(x)
-
-    def assert_in(self, x, y):
-        assert x in y, "{0!r} is not in {1!r}".format(x, y)
-
-    def assert_raises(self, exception, callable=None, *args, **kwargs):
-        catcher = _ExceptionCatcher(self, exception)
-        if callable is None:
-            return catcher
-        with catcher:
-            callable(*args, **kwargs)
-
-    def assert_is_instance(self, obj, type):
-        assert isinstance(obj, type), "{0!r} is not an instance of type {1!r}".format(obj, type)
-
-    def setup(self):
-        """This is a non-camelCase hook that is identical to setUp"""
-        pass
-
-    def teardown(self):
-        """This is a non-camelCase hook that is identical to tearDown"""
-        pass
-
-    def setUp(self):
-        self.setup()
-
-    def tearDown(self):
-        unittest.TestCase.tearDown(self)
-        self.teardown()
 
 
 class HobokenTestCase(BaseTestCase):
