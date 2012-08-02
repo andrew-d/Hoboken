@@ -1,5 +1,5 @@
 from . import HobokenTestCase
-from ..application import HobokenApplication, condition
+from .. import HobokenApplication, condition
 import unittest
 
 

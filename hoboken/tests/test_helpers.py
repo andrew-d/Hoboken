@@ -1,7 +1,7 @@
 from . import HobokenTestCase, skip
 import sys
 from webob import Request
-from hoboken import halt, pass_route, redirect
+from hoboken import halt, pass_route
 import unittest
 
 class TestHaltHelper(HobokenTestCase):
@@ -84,7 +84,7 @@ class TestRedirectHelper(HobokenTestCase):
         @self.app.post("/upload")
         def upload(req, resp):
             # Upload stuff here.
-            redirect(req, "/uploaded")
+            self.app.redirect("/uploaded")
 
         @self.app.get("/uploaded")
         def uploaded(req, resp):
@@ -92,7 +92,7 @@ class TestRedirectHelper(HobokenTestCase):
 
         @self.app.get("/redirect")
         def redirect_func(req, resp):
-            redirect(req, '/foo', status_code=self.redirect_code)
+            self.app.redirect('/foo', status_code=self.redirect_code)
 
         self.app.debug = True
 
