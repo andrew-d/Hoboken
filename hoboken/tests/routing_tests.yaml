@@ -1,0 +1,122 @@
+---
+name: just_slash
+path: /
+regex: \A/\Z
+successes:
+  - route: /
+---
+name: no_params
+path: /foo
+regex: \A/foo\Z
+successes:
+  - route: /foo
+---
+name: single_named_param
+path: /:foo
+regex: \A/([^/?#]+)\Z
+successes:
+  - route: /bar
+    kwargs: {foo: bar}
+  - route: /foo.bar
+    kwargs: {foo: 'foo.bar'}
+  - route: /foo%2Fbar
+    kwargs: {foo: foo%2Fbar}
+fails:
+  - /foo?
+  - /foo/bar
+  - /
+  - /foo/
+---
+skip: Unicode matching currently attempts to match the literal-encoded character. Unsure of correct behavior.
+name: unicode_path
+path: /föö
+regex: \A/f%C3%B6%C3%B6\Z
+successes:
+  - route: /föö
+---
+name: two_params
+path: /:foo/:bar
+regex: \A/([^/?#]+)/([^/?#]+)\Z
+successes:
+  - route: /one/two
+    kwargs: {foo: one, bar: two}
+---
+name: param_after_path
+path: /greet/:name
+regex: \A/greet/([^/?#]+)\Z
+successes:
+  - route: /greet/John
+    kwargs: {name: John}
+---
+name: simple_splat
+path: /*
+regex: \A/(.*?)\Z
+successes:
+  - route: /
+    args: ['']
+  - route: /onesegment
+    args: ['onesegment']
+  - route: /two/segments
+    args: ['two/segments']
+---
+name: param_after_splat
+path: /*/:name
+regex: \A/(.*?)/([^/?#]+)\Z
+successes:
+  - route: /greet/John
+    args: ['greet']
+    kwargs: {name: John}
+---
+name: param_before_splat
+path: /:param/*
+regex: \A/([^/?#]+)/(.*?)\Z
+successes:
+  - route: /one/two/three
+    args: ['two/three']
+    kwargs: {param: one}
+---
+name: test_params_with_email
+path: /:one/:two
+regex: \A/([^/?#]+)/([^/?#]+)\Z
+successes:
+  - route: /user@example.com/email
+    kwargs: {one: 'user@example.com', two: email}
+---
+name: test_with_dollar_sign
+path: /test$/
+regex: \A/test(?:\$|\%24)/\Z
+successes:
+  - route: /test$/
+fails:
+  - /test/
+---
+name: test_with_plus
+path: /te+st/
+regex: \A/te(?:\+|\%2B)st/\Z
+successes:
+  - route: /te+st/
+fails:
+  - /test/
+  - /teeest/
+---
+name: test_with_brackets
+path: /test(bar)/
+regex: \A/test(?:\(|\%28)bar(?:\)|\%29)/\Z
+successes:
+  - route: /test(bar)/
+---
+skip: Unsure of exact behavior for spaces
+name: test_with_spaces
+path: /path with spaces/
+regex: \A/path(?:\%20|(?:\+|\%2B))with(?:\%20|(?:\+|\%2B))spaces/\Z
+successes:
+  - route: /path%20with%20spaces/
+  - route: /path+with+spaces/
+  - route: /path%2Bwith%2Bspaces/
+---
+skip: Not sure if we want to encode ampersands
+name: test_with_ampersand
+path: /one&two/
+regex: \A/one(?:&|\%26)two/\Z
+successes:
+  - route: /one&two/

@@ -16,7 +16,8 @@ setup(name='Hoboken',
         'WebOb>=1.2'
       ],
       tests_require=[
-          'Mock'
+          'Mock',
+          'PyYAML'
       ],
       packages=['hoboken'],
       classifiers=[

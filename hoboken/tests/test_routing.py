@@ -1,6 +1,11 @@
-from . import HobokenTestCase, skip
+from . import HobokenTestCase, skip, hoboken
+import os
+import yaml
 import unittest
+from .helpers import parametrize, parameters
 from webob import Request
+
+Matcher = hoboken.matchers.HobokenRouteMatcher
 
 
 # Some useful tests from Sinatra: https://github.com/sinatra/sinatra/blob/master/test/routing_test.rb
@@ -157,6 +162,49 @@ class TestInvalidRoutes(HobokenTestCase):
     pass
 
 
+# Load our list of test cases from our yaml file.
+curr_dir = os.path.abspath(os.path.dirname(__file__))
+test_file = os.path.join(curr_dir, 'routing_tests.yaml')
+with open(test_file, 'rb') as f:
+    file_data = f.read()
+test_cases = list(yaml.load_all(file_data))
+
+def make_name(idx, param):
+    return "test_" + param['name']
+
+@parametrize
+class TestRouting(HobokenTestCase):
+    @parameters(test_cases, name_func=make_name)
+    def test_route(self, param):
+        if 'skip' in param:
+            return
+
+        route = param['path']
+        matcher = Matcher(route)
+        self.assert_equal(matcher.match_re.pattern, param['regex'])
+
+        class FakeRequest(object):
+            path = None
+
+        for succ in param['successes']:
+            r = FakeRequest()
+            r.path = succ['route']
+            matched, args, kwargs = matcher.match(r)
+
+            expected_args = succ.get('args', [])
+            expected_kwargs = succ.get('kwargs', {})
+            self.assert_equal(matched, True)
+            self.assert_equal(args, expected_args)
+            self.assert_equal(kwargs, expected_kwargs)
+
+        for fail in param.get('failures', []):
+            r = FakeRequest()
+            r.path = fail
+            matched, args, kwargs = matcher.match(r)
+
+            self.assert_equal(matched, False)
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestMethods))
@@ -169,6 +217,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestPlusCharacter))
     suite.addTest(unittest.makeSuite(TestSpaceCharacter))
     suite.addTest(unittest.makeSuite(TestInvalidRoutes))
+    suite.addTest(unittest.makeSuite(TestRouting))
 
     return suite
 

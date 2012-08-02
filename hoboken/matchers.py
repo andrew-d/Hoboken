@@ -129,7 +129,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         This function will encode a given character as a regex that will match
         it in either regular or encoded form.
         """
-        encode_char = lambda c: re.escape("%" + hex(ord(c))[2:])
+        encode_char = lambda c: re.escape("%" + hex(ord(c))[2:]).upper()
 
         # Was trying to use urllib.quote here, but it tries to encode too much for
         # my liking.  Just using a regex.
@@ -232,7 +232,7 @@ class HobokenRouteMatcher(AbstractMatcher):
 
         # We need to add the begin/end anchors, because otherwise the lazy
         # matches in our splats won't match anything.
-        match_regex = "^" + match_regex + "$"
+        match_regex = '\\A' + match_regex + '\\Z'
         return match_regex
 
     def match(self, request):
