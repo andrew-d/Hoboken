@@ -7,11 +7,16 @@ __license__ = 'Apache'
 __copyright__ = "Copyright (c) 2012, Andrew Dunham"
 
 # Imports we import into the namespace.
-from .application import HobokenApplication, condition, halt, \
-        pass_route, redirect
+from .application import HobokenBaseApplication, condition, halt, \
+        pass_route
 
 # Submodules we pull in here.
 from . import matchers
 from . import exceptions
-from . import helpers
 
+# Grab mixins.
+from .helpers import *
+
+# Build our actual application.
+class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
+    pass

@@ -126,29 +126,6 @@ def pass_route():
     raise ContinueRoutingException()
 
 
-def redirect(req, location, *args, **kwargs):
-    """
-    This is a helper function for redirection.
-    """
-
-    # If a code is specified, we take that.
-    code = kwargs.pop('status_code', None)
-    if code is None:
-        # If no code, we send a 303 if it's supported and we aren't already using GET.
-        if req.http_version == 'HTTP/1.1' and req.method != 'GET':
-            code = 303
-        else:
-            code = 302
-
-    # Re-set the code parameter.
-    kwargs['status_code'] = code
-
-    # Set the 'location' argument, which in turn sets the 'Location' header.
-    kwargs['location'] = location
-
-    # Halt routing with these parameters.
-    halt(*args, **kwargs)
-
 
 class Route(object):
     """
@@ -247,7 +224,7 @@ def is_route(func):
     return get_func_attr(func, 'hoboken.route', default=False)
 
 
-class HobokenApplication(with_metaclass(HobokenMetaclass)):
+class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     __metaclass__ = HobokenMetaclass
 
     # These are the supported HTTP methods.  They can be overridden in
@@ -379,6 +356,29 @@ class HobokenApplication(with_metaclass(HobokenMetaclass)):
 
         path = route.reverse(*args, **kwargs)
         return path
+
+    def redirect(self, location, *args, **kwargs):
+        """
+        This is a helper function for redirection.
+        """
+
+        # If a code is specified, we take that.
+        code = kwargs.pop('status_code', None)
+        if code is None:
+            # If no code, we send a 303 if it's supported and we aren't already using GET.
+            if self.request.http_version == 'HTTP/1.1' and self.request.method != 'GET':
+                code = 303
+            else:
+                code = 302
+
+        # Re-set the code parameter.
+        kwargs['status_code'] = code
+
+        # Set the 'location' argument, which in turn sets the 'Location' header.
+        kwargs['location'] = location
+
+        # Halt routing with these parameters.
+        halt(*args, **kwargs)
 
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
