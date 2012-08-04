@@ -74,14 +74,14 @@ successes:
     args: ['two/three']
     kwargs: {param: one}
 ---
-name: test_params_with_email
+name: params_with_email
 path: /:one/:two
 regex: \A/([^/?#]+)/([^/?#]+)\Z
 successes:
   - route: /user@example.com/email
     kwargs: {one: 'user@example.com', two: email}
 ---
-name: test_with_dollar_sign
+name: with_dollar_sign
 path: /test$/
 regex: \A/test(?:\$|\%24)/\Z
 successes:
@@ -89,7 +89,7 @@ successes:
 fails:
   - /test/
 ---
-name: test_with_plus
+name: with_plus
 path: /te+st/
 regex: \A/te(?:\+|\%2B)st/\Z
 successes:
@@ -98,13 +98,13 @@ fails:
   - /test/
   - /teeest/
 ---
-name: test_with_brackets
+name: with_brackets
 path: /test(bar)/
 regex: \A/test(?:\(|\%28)bar(?:\)|\%29)/\Z
 successes:
   - route: /test(bar)/
 ---
-name: test_with_spaces
+name: with_spaces
 path: /path with spaces/
 regex: \A/path(?:\%20|(?:\+|\%2B))with(?:\%20|(?:\+|\%2B))spaces/\Z
 successes:
@@ -112,13 +112,13 @@ successes:
   - route: /path+with+spaces/
   - route: /path%2Bwith%2Bspaces/
 ---
-name: test_with_ampersand
+name: with_ampersand
 path: /one&two/
 regex: \A/one(?:\&|\%26)two/\Z
 successes:
   - route: /one&two/
 ---
-name: test_with_encoded
+name: with_encoded
 path: /:param/*
 regex: \A/([^/?#]+)/(.*?)\Z
 successes:
@@ -126,7 +126,7 @@ successes:
     args: ['test%20path%20yo']
     kwargs: {param: 'this%20is%20a'}
 ---
-name: test_with_multiple_splats
+name: with_multiple_splats
 path: /*/middle/*/*
 regex: \A/(.*?)/middle/(.*?)/(.*?)\Z
 successes:
@@ -135,7 +135,7 @@ successes:
 fails:
   - /one/middle/two
 ---
-name: test_with_period
+name: with_period
 path: /file.ext
 regex: \A/file(?:\.|\%2E)ext\Z
 successes:
@@ -143,7 +143,7 @@ successes:
 fails:
   - /file0ext
 ---
-name: test_optional_params
+name: optional_params
 path: /:file.?:optext?
 regex: \A/([^\.\%2E/?#]+)(?:\.|\%2E)?([^\.\%2E/?#]+)?\Z
 successes:
@@ -158,7 +158,7 @@ successes:
 fails:
   - /.justext
 ---
-name: test_advanced_optional_params
+name: advanced_optional_params
 path: /:user@?:host?
 regex: \A/([^\@\%40/?#]+)(?:\@|\%40)?([^\@\%40/?#]+)?\Z
 successes:
