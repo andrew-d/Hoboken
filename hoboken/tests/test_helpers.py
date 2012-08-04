@@ -10,11 +10,11 @@ class TestHaltHelper(HobokenTestCase):
         self.halt_body = None
 
         @self.app.before("/before/halt")
-        def before_halt_func(req, resp):
+        def before_halt_func():
             halt(code=self.halt_code, text=self.halt_body)
 
         @self.app.get("/halts")
-        def halts(req, resp):
+        def halts():
             halt(code=self.halt_code, text=self.halt_body)
             return 'bad'
 
@@ -43,26 +43,26 @@ class TestHaltHelper(HobokenTestCase):
 class TestPassHelper(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/aroute/*")
-        def pass_one(req, resp):
+        def pass_one(splat):
             pass_route()
             return 'bad'
 
         @self.app.get("/aroute/*")
-        def real_route(req, resp):
+        def real_route(splat):
             return 'good'
 
         @self.app.before("/pass/before")
-        def pass_before(req, resp):
+        def pass_before():
             pass_route()
-            resp.text = 'bad'
+            self.app.response.text = 'bad'
 
         @self.app.before("/pass/*")
-        def before_pass_all(req, resp):
-            resp.text += 'good'
+        def before_pass_all(splat):
+            self.app.response.text += 'good'
 
         @self.app.get("/pass/*")
-        def pass_before_route(req, resp):
-            resp.text += 'foo'
+        def pass_before_route(splat):
+            self.app.response.text += 'foo'
 
         self.app.debug = True
 
@@ -82,16 +82,16 @@ class TestRedirectHelper(HobokenTestCase):
         self.redirect_code = 0
 
         @self.app.post("/upload")
-        def upload(req, resp):
+        def upload():
             # Upload stuff here.
             self.app.redirect("/uploaded")
 
         @self.app.get("/uploaded")
-        def uploaded(req, resp):
+        def uploaded():
             return 'uploaded successfully'
 
         @self.app.get("/redirect")
-        def redirect_func(req, resp):
+        def redirect_func():
             self.app.redirect('/foo', status_code=self.redirect_code)
 
         self.app.debug = True

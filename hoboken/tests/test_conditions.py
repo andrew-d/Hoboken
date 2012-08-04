@@ -9,12 +9,12 @@ class TestUserAgentCondition(HobokenTestCase):
     def after_setup(self):
         @condition(user_agent("^Uagent1"))
         @self.app.get("/")
-        def route_one(req, resp):
+        def route_one():
             return "one"
 
         @condition(user_agent("^Uagent2"))
         @self.app.get("/")
-        def route_two(req, resp):
+        def route_two():
             return "two"
 
     def test_useragent_one(self):
@@ -28,12 +28,12 @@ class TestHostCondition(HobokenTestCase):
     def after_setup(self):
         @condition(host("sub1.foobar.com"))
         @self.app.get('/')
-        def sub1(req, resp):
+        def sub1():
             return 'sub1'
 
         @condition(host("sub2.foobar.com"))
         @self.app.get('/')
-        def sub2(req, resp):
+        def sub2():
             return 'sub2'
 
     def test_host1(self):
@@ -47,17 +47,17 @@ class TestAcceptsCondition(HobokenTestCase):
     def after_setup(self):
         @condition(accepts("text/html"))
         @self.app.get('/')
-        def html(req, resp):
+        def html():
             return 'html'
 
         @condition(accepts("text/plain"))
         @self.app.get('/')
-        def plain(req, resp):
+        def plain():
             return 'plain'
 
         @condition(accepts("text/*"))
         @self.app.get("/")
-        def text(req, resp):
+        def text():
             return 'text'
 
     def test_plain_accept(self):

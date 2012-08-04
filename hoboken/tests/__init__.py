@@ -25,7 +25,7 @@ class HobokenTestCase(BaseTestCase):
         """
         pass
 
-    def body_func(self, req, resp):
+    def body_func(self):
         """
         This is a simple function that just returns some data, sufficient for testing a route
         """

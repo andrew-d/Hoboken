@@ -184,8 +184,8 @@ class Route(object):
 
             # TODO: do we call the function with the request/response objects,
             # or with *args/**kwargs?
-            ret = self.func(request, response)
-            # ret = self.func(*args, **kwargs)
+            # ret = self.func(request, response)
+            ret = self.func(*args, **kwargs)
 
         except ContinueRoutingException:
             return False, None

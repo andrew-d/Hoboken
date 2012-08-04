@@ -6,29 +6,29 @@ class TestFilters(HobokenTestCase):
         self.calls = []
 
         @self.app.before("/before/*")
-        def before_filter(req, resp):
+        def before_filter(splat):
             self.calls.append("before")
 
         @self.app.get("/*")
-        def route_func(req, resp):
+        def route_func(splat):
             self.calls.append("body")
-            return req.urlargs[0]
+            return splat
 
         @self.app.after("/after/*")
-        def after_filter(req, resp):
+        def after_filter(splat):
             self.calls.append("after")
 
         @self.app.before("/both/*")
-        def both_before_filter(req, resp):
+        def both_before_filter(splat):
             self.calls.append("before")
 
         @self.app.after("/both/*")
-        def both_after_filter(req, resp):
+        def both_after_filter(splat):
             self.calls.append("after")
 
         @self.app.after("/both_at_once/*")
         @self.app.before("/both_at_once/*")
-        def both_at_once_filter(req, resp):
+        def both_at_once_filter(splat):
             self.calls.append("both_at_once")
 
     def test_neither(self):
@@ -55,11 +55,11 @@ class TestFilters(HobokenTestCase):
 class TestFilterCanModifyRoute(HobokenTestCase):
     def after_setup(self):
         @self.app.before("/notmatched")
-        def modify_route(req, resp):
-            req.environ['PATH_INFO'] = "/matched"
+        def modify_route():
+            self.app.request.environ['PATH_INFO'] = "/matched"
 
         @self.app.get("/matched")
-        def route_func(req, resp):
+        def route_func():
             return 'success'
 
     def test_matched_route(self):
@@ -72,19 +72,19 @@ class TestFilterCanModifyRoute(HobokenTestCase):
 class TestFilterParams(HobokenTestCase):
     def after_setup(self):
         @self.app.before("/before/:param1/:param2/*")
-        def before_func(req, resp):
-            self.val = (req.urlvars['param1'] + '\n' +
-                        req.urlvars['param2'] + '\n' +
-                        req.urlargs[0])
+        def before_func(splat, param1=None, param2=None):
+            self.val = (param1 + '\n' +
+                        param2 + '\n' +
+                        splat)
 
         @self.app.after("/after/:foo/*/:bar")
-        def after_func(req, resp):
-            self.val = (req.urlvars['foo'] + '\n' +
-                        req.urlargs[0] + '\n' +
-                        req.urlvars['bar'])
+        def after_func(splat, foo=None, bar=None):
+            self.val = (foo + '\n' +
+                        splat + '\n' +
+                        bar)
 
         @self.app.get("/*")
-        def catchall(req, resp):
+        def catchall(splat):
             pass
 
         self.app.debug = True

@@ -33,7 +33,7 @@ class TestWorksWithConditions(HobokenTestCase):
         @condition(cond_above)
         @self.app.get('/')
         @condition(cond_below)
-        def route_func(req, resp):
+        def route_func():
             self.calls.append("body")
             return 'success'
 
@@ -49,8 +49,8 @@ class TestConditionCanAbortRequest(HobokenTestCase):
 
         @condition(no_foo_in_path)
         @self.app.get('/:param')
-        def bar(req, resp):
-            return req.urlvars['param']
+        def bar(param=None):
+            return param
 
     def test_should_work(self):
         self.assert_body_is("works", path='/works')
@@ -65,11 +65,11 @@ class TestSubapps(HobokenTestCase):
         self.app.set_subapp(subapp)
 
         @subapp.get("/subapp")
-        def subapp_func(req, resp):
+        def subapp_func():
             return "subapp"
 
         @self.app.get("/app")
-        def app_func(req, resp):
+        def app_func():
             return "app"
 
     def test_app_call_works(self):
@@ -85,7 +85,7 @@ class TestSubapps(HobokenTestCase):
 class TestHandlesExceptions(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/errors")
-        def errorme(req, resp):
+        def errorme():
             raise Exception("foobar bloo blah")
 
     def test_exception_handling(self):
@@ -96,11 +96,11 @@ class TestHandlesExceptions(HobokenTestCase):
 class TestBodyReturnValues(HobokenTestCase):
     def after_setup(self):
         @self.app.get("/bytes")
-        def bytes(req, resp):
+        def bytes():
             return b'byte string'
 
         @self.app.get("/string")
-        def bytes(req, resp):
+        def string():
             # føø
             return b'f\xc3\xb8\xc3\xb8'.decode('utf-8')
 

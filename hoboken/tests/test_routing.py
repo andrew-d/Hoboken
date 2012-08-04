@@ -30,8 +30,8 @@ class TestMethods(HobokenTestCase):
 class TestHeadFallback(HobokenTestCase):
     def after_setup(self):
         @self.app.get('/')
-        def get_func(req, resp):
-            resp.headers['X-Custom-Header'] = 'foobar'
+        def get_func():
+            self.app.response.headers['X-Custom-Header'] = 'foobar'
             return 'get body'
 
     def test_HEAD_fallback(self):

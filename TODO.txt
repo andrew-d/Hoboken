@@ -18,7 +18,7 @@ TODO list - a centralized list of stuff I'd like to do
         - expires(some time value)
         - cache_control(various params, e.g. public=True/False, max_age=60, must_revalidate=True/False)
     - Look in to if-match and if-none-match headers to see how we handle them
-    - redirect_back helper that is a wrapper around redirect() and the referrer?
+    * redirect_back helper that is a wrapper around redirect() and the referrer?
  - URL generation that properly handles different mountpoints
     * As part of this, it might be worth making a Route() class that encapsulates the concept of a method, conditions, the route itself, and a matcher.  This could be helpful, because said Route() object could also handle reversing a route - i.e. getting a URL for a given route, given some parameters.
     * Might be worth integrating this into the Matcher concept.  For example, we could have a matcher that has the concept of:
@@ -26,7 +26,7 @@ TODO list - a centralized list of stuff I'd like to do
         * match(test_path) should return True, args, kwargs if match, or False, None, None otherwise.  these args/kwargs are then passed to the underlying route function
         * finally, the matcher can have a reverse(args, kwargs) function that will use those parameters to return a given path
         * default matcher should be HobokenPathMatcher, which uses the standard splat (*)/param (:param) matching style.  move the logic out of the Hoboken class.
-    - TODO: tests for this
+    * TODO: tests for this
  - Integrate with Shift
  - Integrate with itsdangerous to provide secure cookie support
  - Session support - should allow hooking into this, so we can use e.g. beaker, or something like dogpile, just a cookie, etc
