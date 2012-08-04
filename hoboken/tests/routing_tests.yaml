@@ -29,7 +29,7 @@ fails:
 ---
 name: unicode_path
 path: /föö
-regex: \A/f%C3%B6%C3%B6\Z
+regex: \A/f\%C3\%B6\%C3\%B6\Z
 successes:
   - route: /f%C3%B6%C3%B6
 ---
@@ -104,7 +104,6 @@ regex: \A/test(?:\(|\%28)bar(?:\)|\%29)/\Z
 successes:
   - route: /test(bar)/
 ---
-skip: Unsure of exact behavior for spaces
 name: test_with_spaces
 path: /path with spaces/
 regex: \A/path(?:\%20|(?:\+|\%2B))with(?:\%20|(?:\+|\%2B))spaces/\Z
@@ -144,9 +143,30 @@ successes:
 fails:
   - /file0ext
 ---
-skip: Don't support optional params
 name: test_optional_params
-path: /
-regex: \A\Z
+path: /:file.?:optext?
+regex: \A/([^\.\%2E/?#]+)(?:\.|\%2E)?([^\.\%2E/?#]+)?\Z
 successes:
-  - route: /
+  - route: /name
+    kwargs: {file: name, optext: null}
+  - route: /name.
+    kwargs: {file: name, optext: null}
+  - route: /name.ext
+    kwargs: {file: name, optext: ext}
+  - route: /name%2Eext
+    kwargs: {file: name, optext: ext}
+fails:
+  - /.justext
+---
+name: test_advanced_optional_params
+path: /:user@?:host?
+regex: \A/([^\@\%40/?#]+)(?:\@|\%40)?([^\@\%40/?#]+)?\Z
+successes:
+  - route: /andrew
+    kwargs: {user: andrew, host: null}
+  - route: /andrew@computer
+    kwargs: {user: andrew, host: computer}
+  - route: /one.two@three
+    kwargs: {user: one.two, host: three}
+  - route: /one@two.three
+    kwargs: {user: one, host: two.three}

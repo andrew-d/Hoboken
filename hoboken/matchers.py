@@ -206,17 +206,25 @@ class HobokenRouteMatcher(AbstractMatcher):
         # any of the ways it might appear in a URL.  Note that we special-case
         # spaces to also match plus signs.
         def encoded(c):
+            # We handle the case of Space specifically.
+            if c == b' ':
+                return b'(?:\%20' + b'|' + encoded(b'+') + b')'
+
+            # If the encoding doesn't change, we match both the encoded and un-
+            # encoded version.  Otherwise, we match just the encoded version.
+            # Note that we regex-escape in all cases.
             char = self._url_encode(c)
             if char == c:
                 char = b'(?:' + b'|'.join(escaped(c)) + b')'
-            if c == b' ':
-                char = b'(?:' + char + b'|' + encoded(b'+') + b')'
+            else:
+                char = re.escape(char)
+
             return char
 
         # This function will convert a matched character into the proper encoding.
         def encode_character(match):
             char = match.group(0)
-            if char == '.' or char == '@':
+            if char == b'.' or char == b'@':
                 Store.ignore += b''.join(escaped(char))
             return encoded(char)
 

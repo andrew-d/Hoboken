@@ -188,7 +188,7 @@ class TestRouting(HobokenTestCase):
         class FakeRequest(object):
             path = None
 
-        for succ in param['successes']:
+        for succ in param.get('successes', []):
             r = FakeRequest()
             r.path = succ['route']
             matched, args, kwargs = matcher.match(r)
