@@ -6,6 +6,7 @@ import sys
 import re
 import urllib
 import logging
+import traceback
 try:
     import threading
 except:
@@ -476,6 +477,22 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             del self.request
             del self.response
 
+    def _run_routes(self, method):
+        # Since these are thread-locals, we grab them as locals.
+        request = self.request
+        response = self.response
+
+        # For each route of the specified type, try to match it.
+        for route in self.routes[method]:
+            matches, ret = route(request, response)
+            if ret is not None:
+                self.on_returned_body(request, response, ret)
+
+            if matches:
+                return True
+
+        return False
+
     def _handle_request(self):
         # Since these are thread-locals, we grab them as locals.
         request = self.request
@@ -499,46 +516,12 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
                 filter(request, response)
 
             # For each route of the specified type, try to match it.
-            for route in self.routes[request.method]:
-                matches, ret = route(request, response)
-                if ret is not None:
-                    self.on_returned_body(request, response, ret)
-
-                if matches:
-                    matched = True
-                    break
+            matched = self._run_routes(request.method)
 
             # We special-case the HEAD method to fallback to GET.
             if request.method == 'HEAD' and not matched:
-                # Save our existing request and response.
-                saved_request = self.request
-                saved_response = self.response
-
-                # Make a new GET request that's otherwise identical.
-                new_request = request.copy()
-                new_request.method = 'GET'
-
-                resp = new_request.get_response(self)
-
-                # TODO: is this a good heuristic?
-                if resp.status_code < 400:
-                    matched = True
-
-                # Reset our request/response.
-                self.request = saved_request
-                self.response = resp
-
-        # except HaltRoutingException as halt:
-        #     # Check if the exception specifies a status code or
-        #     # body, and then set these on the request
-        #     if halt.status_code != 0:
-        #         response.status_code = halt.status_code
-
-        #     if halt.body is not None:
-        #         self.on_returned_body(request, response, halt.body)
-
-        #     # Must set, or we get clobbered by the 404 handler.
-        #     matched = True
+                # Run our routes against the 'GET' method.
+                matched = self._run_routes('GET')
 
         except HaltRoutingException as ex:
             # For each attribute in the given kwargs, send it.
@@ -549,12 +532,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # Must set this, or we get clobbered by the 404 handler.
             matched = True
 
-
         except Exception as e:
-            # Raise the exception as normal if we're in debug mode.
-            if self.debug == True:
-                raise e
-
             # Also, check if the exception has other information attached,
             # like a code/body.
             # TODO: Handle other HTTPExceptions from webob?
@@ -570,7 +548,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
         if not matched:
             self.on_route_missing()
-
 
     def __call__(self, environ, start_response):
         return self.wsgi_entrypoint(environ, start_response)
@@ -589,6 +566,16 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     def on_exception(self, exception):
         self.response.status_code = 500
+        if self.debug:
+            # Format the current traceback
+            tb = traceback.format_exc()
+
+            # Return the traceback as text.
+            self.response.content_type = 'text/plain'
+            if sys.version_info[0] >= 3:
+                self.response.text = tb
+            else:
+                self.response.body = tb
 
     def test_server(self, port=8000):
         """

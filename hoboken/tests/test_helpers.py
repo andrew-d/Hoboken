@@ -76,7 +76,6 @@ class TestPassHelper(HobokenTestCase):
         self.assert_body_is('goodfoo', path='/pass/other')
 
 
-
 class TestRedirectHelper(HobokenTestCase):
     def after_setup(self):
         self.redirect_code = 0
