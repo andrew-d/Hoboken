@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+
 from . import HobokenTestCase
 from .. import HobokenApplication, condition
 import unittest
+from webob import Request
 
 
 class TestHasHTTPMethods(HobokenTestCase):
@@ -90,6 +93,28 @@ class TestHandlesExceptions(HobokenTestCase):
         self.assert_equal(code, 500)
 
 
+class TestBodyReturnValues(HobokenTestCase):
+    def after_setup(self):
+        @self.app.get("/bytes")
+        def bytes(req, resp):
+            return b'byte string'
+
+        @self.app.get("/string")
+        def bytes(req, resp):
+            # føø
+            return b'f\xc3\xb8\xc3\xb8'.decode('utf-8')
+
+    def test_bytes(self):
+        req = Request.blank('/bytes')
+        resp = req.get_response(self.app)
+        self.assert_equal(resp.body, b'byte string')
+
+    def test_bytes(self):
+        req = Request.blank('/string')
+        resp = req.get_response(self.app)
+        self.assert_equal(resp.text, b'f\xc3\xb8\xc3\xb8'.decode('utf-8'))
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestHasHTTPMethods))
@@ -97,6 +122,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestConditionCanAbortRequest))
     suite.addTest(unittest.makeSuite(TestSubapps))
     suite.addTest(unittest.makeSuite(TestHandlesExceptions))
+    suite.addTest(unittest.makeSuite(TestBodyReturnValues))
 
     return suite
 

@@ -452,7 +452,10 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             else:
                 raise ValueError("Unknown return type: {0!r}".format(type(value)))
         else:
-            resp.body = value
+            if isinstance(value, unicode):
+                resp.text = value
+            else:
+                resp.body = value
 
     def wsgi_entrypoint(self, environ, start_response):
         try:
