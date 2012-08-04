@@ -3,6 +3,7 @@ from __future__ import with_statement, absolute_import
 
 # Stdlib dependencies
 import re
+import sys
 
 # In-package dependencies
 from .exceptions import *
@@ -117,23 +118,28 @@ class RegexMatcher(AbstractMatcher):
 
 
 class HobokenRouteMatcher(AbstractMatcher):
-    ENCODING_REGEX = re.compile(r"[^?%\\/:*\w]")
+    ENCODING_REGEX = re.compile(br"[^?%\\/:*\w]")
     MATCH_REGEX = re.compile(r"((:\w+)|\*)")
 
     def __init__(self, route):
-        match_regex = self._convert_path(route)
+        match_regex = self._convert_path_new(route)
         self.match_re = re.compile(match_regex)
+
+    def _escape_char(self, char):
+        uri_escaped = b"%" + hex(ord(c))[2:].upper()
+        escapings = [re.escape(char), re.escape(uri_escaped)]
+        return b"|".join(escapings)
 
     def _encode_character(self, char):
         """
         This function will encode a given character as a regex that will match
         it in either regular or encoded form.
         """
-        encode_char = lambda c: re.escape("%" + hex(ord(c))[2:]).upper()
+        encode_char = lambda c: re.escape(b"%" + hex(ord(c))[2:].encode('ascii')).upper()
 
         # Was trying to use urllib.quote here, but it tries to encode too much for
         # my liking.  Just using a regex.
-        if re.match(r"[;/?:@&=,\[\]]", char):
+        if re.match(br"[;/?:@&=,\[\]]", char):
             encoded = encode_char(char)
         else:
             encoded = char
@@ -141,13 +147,110 @@ class HobokenRouteMatcher(AbstractMatcher):
         # If the encoded version is unchanged, then we match both
         # the bare version, along with the encoded version.
         if encoded == char:
-            encoded = "(?:" + re.escape(char) + "|" + encode_char(char) + ")"
+            encoded = b"(?:" + re.escape(char) + b"|" + encode_char(char) + b")"
 
         # Specifically for the space charcter, we match everything, and also plus characters.
-        if char == ' ':
-            encoded = "(?:" + encoded + "|" + self._encode_character("+") + ")"
+        if char == b' ':
+            encoded = b"(?:" + encoded + b"|" + self._encode_character(b"+") + b")"
 
         return encoded
+
+    def _save_fragments(self, match):
+        """
+        Store the fragments between matches, so that we can rebuild the path,
+        given a route.
+        """
+
+        self.fragments = []
+        last_fragment = 0
+        for m in self.MATCH_REGEX.finditer(match):
+            frag_start = last_fragment
+            frag_end = m.start(0)
+            frag_content = match[frag_start:frag_end]
+            self.fragments.append(frag_content)
+
+            last_fragment = m.end(0)
+
+        # Add the final fragment (or a blank string).
+        if last_fragment != len(match):
+            self.fragments.append(match[last_fragment:])
+        else:
+            self.fragments.append('')
+
+    def _convert_path_new(self, path):
+        self._save_fragments(path)
+
+        # This class gets around the lack of the nonlocal keyword on python 2.X
+        class Store(object):
+            ignore = b""
+            num_groups = 0
+
+        def url_encode_char(c):
+            c = hex(ord(c))[2:].upper()
+            c = b'%' + c.encode('ascii').zfill(2)
+            return c
+
+        def url_encode(c):
+            alphanumeric = b"A-Za-z0-9"
+            unreserved = br"\-_.!~*'()" + alphanumeric
+            reserved = br";/?:@&=+$,\[\]"
+            unsafe_re = br"[^" + unreserved + reserved + b"]"
+            r = re.compile(unsafe_re)
+            if r.match(c) is not None:
+                c = url_encode_char(c)
+            return c
+
+        def escaped(c):
+            return [re.escape(x) for x in [c, url_encode_char(c)]]
+
+        def encoded(c):
+            char = url_encode(c)
+            if char == c:
+                char = b'(?:' + b'|'.join(escaped(c)) + b')'
+            if c == b' ':
+                char = b'(?:' + char + b'|' + encoded(b'+') + b')'
+            return char
+
+        def encode_character(match):
+            char = match.group(0)
+            if char == '.' or char == '@':
+                Store.ignore += b''.join(escaped(char))
+            return encoded(char)
+
+        # The 'keys' array will store the name of the current segment - i.e.
+        # 'param' if the segment is ':param', or None if it's a splat.
+        # The types array will store False if the current segment is a splat,
+        # and True if it's a parameter.  We use these arrays when matching to
+        # determine whether to return a match as an arg or kwarg.
+        self.group_names = {}
+
+        def convert_match(match):
+            # Store the fragment.
+            group_num = Store.num_groups
+            Store.num_groups += 1
+
+            # Return the appropriate regex.
+            if match.group(0) == b'*':
+                self.group_names[group_num] = None
+                return br"(.*?)"
+            else:
+                self.group_names[group_num] = match.group(0)[1:].decode('ascii')
+                return br"([^" + Store.ignore + br"/?#]+)"
+
+        if sys.version_info[0] >= 3:
+            path = path.encode('utf-8')
+        else:
+            if isinstance(path, unicode):
+                path = path.encode('utf-8')
+
+        # print('path: {0!r}'.format(path))
+        pattern = re.sub(br'[^\?\%\\\/\:\*\w]', encode_character, path)
+        # print('pattern1: {0!r}'.format(pattern))
+        pattern = re.sub(br'((:\w+)|\*)', convert_match, pattern)
+        # print('pattern2: {0!r}'.format(pattern))
+
+        pattern = br'\A' + pattern + br'\Z'
+        return pattern.decode('ascii')
 
     def _convert_path(self, match):
         """
@@ -155,6 +258,9 @@ class HobokenRouteMatcher(AbstractMatcher):
         also save enough information that we can reverse this path, given some
         args and kwargs.
         """
+
+        # Save fragments of the path.
+        self._save_fragments(match)
 
         # We need to extract the splats, the named parameters, and then create
         # a regex to match it.
@@ -180,25 +286,6 @@ class HobokenRouteMatcher(AbstractMatcher):
         # determine whether to return a match as an arg or kwarg.
         self.group_names = {}
 
-        # Store the fragments between matches, so that we can rebuild the path,
-        # given a route.
-        self.fragments = []
-        last_fragment = 0
-        for m in self.MATCH_REGEX.finditer(match):
-            frag_start = last_fragment
-            frag_end = m.start(0)
-            frag_content = match[frag_start:frag_end]
-            # print("Fragment: {0} --> {1} ({2})".format(frag_start, frag_end, frag_content))
-            self.fragments.append(frag_content)
-
-            last_fragment = m.end(0)
-
-        # Add the final fragment (or a blank string).
-        if last_fragment != len(match):
-            self.fragments.append(match[last_fragment:])
-        else:
-            self.fragments.append('')
-
         # This class gets around the lack of the nonlocal keyword on python 2.X
         class Store(object):
             num_groups = 0
@@ -207,8 +294,6 @@ class HobokenRouteMatcher(AbstractMatcher):
             # Store the fragment.
             group_num = Store.num_groups
             Store.num_groups += 1
-
-            # print("Group {0} starts at position {1}, is '{2}'".format(group_num, match.start(0), match.group(0)))
 
             # Return the appropriate regex.
             if match.group(0) == '*':
@@ -223,9 +308,23 @@ class HobokenRouteMatcher(AbstractMatcher):
         def encode_character_wrapper(match):
             return self._encode_character(match.group(0))
 
+        # Before doing anything else, we need to deal with encoding.  On Python
+        # 2, we take the input as-is if it's a str, or encode to utf-8 if it's
+        # a unicode value.  On Python 3, we encode it as bytes (the input must
+        # be a string on Python 3) using utf-8.
+        if sys.version_info[0] >= 3:
+            match = match.encode('utf-8')
+        else:
+            if isinstance(match, unicode):
+                match = match.encode('utf-8')
+
         # Encode everything that's not in the set:
         #   [?%\/:*] + all alphanumeric characters + underscore.
         encoded_match = self.ENCODING_REGEX.sub(encode_character_wrapper, match)
+
+        # If on Python 3, we encode back to a string now.
+        if sys.version_info[0] >= 3:
+            encoded_match = encoded_match.decode('ascii')
 
         # Now, replace parameters or splats with their matching regex.
         match_regex = self.MATCH_REGEX.sub(convert_match, encoded_match)

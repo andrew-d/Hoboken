@@ -177,11 +177,13 @@ class TestRouting(HobokenTestCase):
     @parameters(test_cases, name_func=make_name)
     def test_route(self, param):
         if 'skip' in param:
+            if hasattr(unittest, 'SkipTest'):
+                raise unittest.SkipTest(param['skip'])
             return
 
-        route = param['path']
-        matcher = Matcher(route)
-        self.assert_equal(matcher.match_re.pattern, param['regex'])
+        matcher = Matcher(param['path'])
+        regex = param['regex']
+        self.assert_equal(matcher.match_re.pattern, regex)
 
         class FakeRequest(object):
             path = None
@@ -200,7 +202,7 @@ class TestRouting(HobokenTestCase):
         for fail in param.get('failures', []):
             r = FakeRequest()
             r.path = fail
-            matched, args, kwargs = matcher.match(r)
+            matched, _, _ = matcher.match(r)
 
             self.assert_equal(matched, False)
 

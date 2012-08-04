@@ -27,12 +27,11 @@ fails:
   - /
   - /foo/
 ---
-skip: Unicode matching currently attempts to match the literal-encoded character. Unsure of correct behavior.
 name: unicode_path
 path: /föö
 regex: \A/f%C3%B6%C3%B6\Z
 successes:
-  - route: /föö
+  - route: /f%C3%B6%C3%B6
 ---
 name: two_params
 path: /:foo/:bar
@@ -114,9 +113,40 @@ successes:
   - route: /path+with+spaces/
   - route: /path%2Bwith%2Bspaces/
 ---
-skip: Not sure if we want to encode ampersands
 name: test_with_ampersand
 path: /one&two/
-regex: \A/one(?:&|\%26)two/\Z
+regex: \A/one(?:\&|\%26)two/\Z
 successes:
   - route: /one&two/
+---
+name: test_with_encoded
+path: /:param/*
+regex: \A/([^/?#]+)/(.*?)\Z
+successes:
+  - route: /this%20is%20a/test%20path%20yo
+    args: ['test%20path%20yo']
+    kwargs: {param: 'this%20is%20a'}
+---
+name: test_with_multiple_splats
+path: /*/middle/*/*
+regex: \A/(.*?)/middle/(.*?)/(.*?)\Z
+successes:
+  - route: /one/middle/two/three/four
+    args: ['one', 'two', 'three/four']
+fails:
+  - /one/middle/two
+---
+name: test_with_period
+path: /file.ext
+regex: \A/file(?:\.|\%2E)ext\Z
+successes:
+  - route: /file.ext
+fails:
+  - /file0ext
+---
+skip: Don't support optional params
+name: test_optional_params
+path: /
+regex: \A\Z
+successes:
+  - route: /
