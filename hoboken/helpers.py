@@ -1,6 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 from .application import halt
+import sys
 import time
 import datetime
 import webob
@@ -43,7 +44,7 @@ class HobokenCachingMixin(object):
             if time_val < timestamp:
                 halt(status_code=412)
 
-    def check_etag(self, etag, new_resource=None, weak=False):
+    def check_etag(self, etag, new_resource=False, weak=False):
         """
         As per check_if_modified(), except checks the ETag header instead.
         """
@@ -56,8 +57,9 @@ class HobokenCachingMixin(object):
         #  - If it's not a new resource, and the header specifies 'anything' (i.e. '*')
         #  - Otherwise, if it's an exact match.
         def etag_matches(value):
-            if value == '*' and not new_resource:
-                return True
+            print("value = {0!r}, new_resource = {1!r}".format(value, new_resource), file=sys.stderr)
+            if value is webob.etag.AnyETag:
+                return not new_resource
             return self.response.etag in value
 
         if self.response.is_success or self.response.status_int == 304:
@@ -66,7 +68,7 @@ class HobokenCachingMixin(object):
                     halt(status_code=304)
                 else:
                     halt(status_code=412)
-            elif self.request.if_match is not webob.etag.NoETag and not etag_matches(self.request.if_match):
+            elif self.request.if_match is not webob.etag.AnyETag and not etag_matches(self.request.if_match):
                 halt(status_code=412)
 
     def set_cache_control(self, **kwargs):
@@ -75,14 +77,18 @@ class HobokenCachingMixin(object):
 
     def set_expires(self, amount, **kwargs):
         if isinstance(amount, int):
-            amount = datetime.datetime.now() + datetime.timedelta(seconds=amount)
             max_age = amount
+            amount = datetime.datetime.now() + datetime.timedelta(seconds=amount)
         else:
-            max_age = (datetime.datetime.now() - amount).seconds
+            now = datetime.datetime.now()
+            if now >= amount:
+                # Do nothing, this expired already.
+                max_age = 0
+            else:
+                max_age = (amount - now).seconds
 
         kwargs['max_age'] = max_age
         self.set_cache_control(**kwargs)
-
         self.response.expires = amount
 
 
@@ -94,9 +100,9 @@ class HobokenRedirectMixin(object):
         """
         This is a helper function to redirect 'back' - i.e. to whichever page
         referred to this one.
-        TODO: emit HTML to redirect back if no referrer.
+        TODO: maybe emit HTML to redirect back if no referrer?
         """
-        if self.request.referer is not None:
+        if self.request.referer is not None and self.request.referer != '':
             self.redirect(location=self.request.referer, *args, **kwargs)
         # TODO: do we want to do this?
         # elif 'text/html' in self.request.accept:
