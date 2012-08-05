@@ -74,7 +74,7 @@ class TestLastModified(HobokenTestCase):
 
 class TestETag(HobokenTestCase):
     def after_setup(self):
-        self.etag = b'some etag'
+        self.etag = 'some etag'
         self.app.debug = True
 
         @self.app.get("/resource")
@@ -100,7 +100,7 @@ class TestETag(HobokenTestCase):
 
     def test_etag_will_return_200_for_no_match(self):
         r = Request.blank("/resource")
-        r.if_none_match = self.etag + b'else'
+        r.if_none_match = self.etag + 'else'
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_code, 200)
 
@@ -112,7 +112,7 @@ class TestETag(HobokenTestCase):
 
     def test_etag_will_return_412_for_incorrect_match(self):
         r = Request.blank("/resource", method='PUT')
-        r.if_match = self.etag + b'fail'
+        r.if_match = self.etag + 'fail'
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_code, 412)
 
