@@ -9,7 +9,7 @@ import logging
 import traceback
 try:
     import threading
-except:
+except:                     # pragma: no cover
     import dummy_threading as threading
 #from functools import wraps
 
@@ -23,7 +23,7 @@ from .matchers import *
 from .compat import *
 
 
-def get_func_attr(func, attr, default=None, delete=False):
+def get_func_attr(func, attr, default=None, delete=False):      # pragma: no cover
     if sys.version_info[0] >= 3:
         func_dict = func.__dict__
     else:
@@ -34,7 +34,7 @@ def get_func_attr(func, attr, default=None, delete=False):
     else:
         return func_dict.get(attr, default)
 
-def set_func_attr(func, attr, value):
+def set_func_attr(func, attr, value):                           # pragma: no cover
     if sys.version_info[0] >= 3:
         func_dict = func.__dict__
     else:
@@ -43,7 +43,7 @@ def set_func_attr(func, attr, value):
     func_dict[attr] = value
 
 
-class Request(webob.Request):
+class Request(webob.BaseRequest):
     """
     Hoboken's request objects.  Uses WebOb's request object
     """
@@ -61,7 +61,7 @@ class Request(webob.Request):
         Returns True if the request is considered idempotent - i.e. if two
         successive identical requests should result in the same result.
         """
-        return self.safe() or self.method in ['PUT', 'DELETE']
+        return self.is_safe or self.method in ['PUT', 'DELETE']
 
 class Response(webob.Response):
     """
