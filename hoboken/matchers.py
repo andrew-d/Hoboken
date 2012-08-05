@@ -72,12 +72,12 @@ class RegexMatcher(AbstractMatcher):
         # We handle regexes and string patterns for regexes here.
         if isinstance(regex, RegexType):
             self.re = regex
-        elif isinstance(regex, BaseStringType):
+        elif isinstance(regex, BaseStringType):     # pragma: no cover
             try:
                 self.re = re.compile(regex)
             except re.error:
                 raise TypeError("Parameter 'regex' is not a valid regex")
-        else:
+        else:                                       # pragma: no cover
             raise TypeError("Parameter 'regex' is not a valid regex")
 
         # Save keys.
@@ -249,9 +249,9 @@ class HobokenRouteMatcher(AbstractMatcher):
         # 2, we take the input as-is if it's a str, or encode to utf-8 if it's
         # a unicode value.  On Python 3, we encode it as bytes (the input must
         # be a string on Python 3) using utf-8.
-        if sys.version_info[0] >= 3:            # pragma: nocover
+        if sys.version_info[0] >= 3:        # pragma: no cover
             path = path.encode('utf-8')
-        else:
+        else:                               # pragma: no cover
             if isinstance(path, unicode):
                 path = path.encode('utf-8')
 

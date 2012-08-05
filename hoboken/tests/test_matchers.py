@@ -44,7 +44,10 @@ class TestRegexMatcher(BaseTestCase):
 
     def test_raises_on_invalid(self):
         with self.assert_raises(TypeError):
-            RegexMatcher("asdf.(")
+            _ = RegexMatcher("asdf.(")
+
+        with self.assert_raises(TypeError):
+            _ = RegexMatcher(123)
 
     def test_fills_keys(self):
         test_re = "blah(.*?)middle(.*?)end"
