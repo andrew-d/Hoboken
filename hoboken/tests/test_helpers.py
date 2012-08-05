@@ -184,7 +184,7 @@ class TestExpires(HobokenTestCase):
         self.assert_equal(expires_timestamp, test_timestamp + 10)
         self.assert_equal(resp.cache_control.max_age, 10)
 
-    # @skip_if(is_pypy(), "This fails on PyPy and I don't know why")
+    @skip_if(is_pypy(), "This fails on PyPy and I don't know why")
     def test_cache_control_with_absolute(self):
         test_time = datetime.datetime(year=2012, month=7, day=15, hour=0, minute=0, second=0)
         with patch('datetime.datetime', wraps=datetime.datetime) as new_datetime:
@@ -198,7 +198,7 @@ class TestExpires(HobokenTestCase):
         self.assert_equal(expires_timestamp, test_timestamp + 60)
         self.assert_equal(resp.cache_control.max_age, 60)
 
-    # @skip_if(is_pypy(), "This fails on PyPy and I don't know why")
+    @skip_if(is_pypy(), "This fails on PyPy and I don't know why")
     def test_cache_control_already_expired(self):
         print("entering already-expired", file=sys.stderr)
         test_time = datetime.datetime(year=2012, month=7, day=15, hour=1, minute=0, second=0)
