@@ -1,123 +1,75 @@
 from . import HobokenTestCase, skip
 import sys
-from webob import Request
-from hoboken import halt, pass_route
 import unittest
+from datetime import datetime
+from webob import Request
 
-class TestHaltHelper(HobokenTestCase):
+
+class TestLastModified(HobokenTestCase):
     def after_setup(self):
-        self.halt_code = None
-        self.halt_body = None
-
-        @self.app.before("/before/halt")
-        def before_halt_func():
-            halt(code=self.halt_code, text=self.halt_body)
-
-        @self.app.get("/halts")
-        def halts():
-            halt(code=self.halt_code, text=self.halt_body)
-            return 'bad'
-
+        self.time = datetime(year=2012, month=7, day=15)
         self.app.debug = True
 
-    def assert_halts_with(self, code, body, *args, **kwargs):
-        """Helper function to set the halt value and assert"""
-        self.halt_code = code
+        @self.app.get("/resource")
+        def resource():
+            self.app.check_last_modified(self.time)
+            return b'resource value'
 
-        # The 'text' attribute of a webob Request only supports unicode
-        # strings on Python 2.X, so we need to make this unicode.
-        if sys.version_info[0] < 3:
-            self.halt_body = unicode(body)
-        else:
-            self.halt_body = body
+        @self.app.put("/resource")
+        def resource():
+            self.app.check_last_modified(self.time)
+            return b'resource value'
 
-        self.assert_body_is(body, *args, **kwargs)
+    def test_has_last_modified(self):
+        r = Request.blank("/resource")
+        resp = r.get_response(self.app)
+        self.assert_true(resp.last_modified is not None)
 
-    def test_before_can_halt(self):
-        self.assert_halts_with(200, 'foobar', path='/before/halt')
+    def test_will_return_304_for_get(self):
+        r = Request.blank("/resource")
+        r.if_modified_since = datetime(year=2012, month=7, day=20)
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 304)
+        self.assert_equal(resp.body, b'')
 
-    def test_body_can_halt(self):
-        self.assert_halts_with(200, 'good', path='/halts')
+    def test_will_return_200_for_newer(self):
+        r = Request.blank("/resource")
+        r.if_modified_since = datetime(year=2012, month=7, day=1)
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.body, b'resource value')
+
+    def test_if_unmodified_since(self):
+        r = Request.blank("/resource", method='PUT')
+        r.if_unmodified_since = datetime(year=2012, month=7, day=20)
+        r.body = b'put this here'
+        resp = r.get_response(self.app)
+
+        self.assert_equal(resp.status_code, 200)
+
+    def test_if_unmodified_since_precondition_fail(self):
+        r = Request.blank("/resource", method='PUT')
+        r.if_unmodified_since = datetime(year=2012, month=7, day=1)
+        r.body = b'put this here'
+        resp = r.get_response(self.app)
+
+        self.assert_equal(resp.status_code, 412)
 
 
-class TestPassHelper(HobokenTestCase):
+class TestETag(HobokenTestCase):
     def after_setup(self):
-        @self.app.get("/aroute/*")
-        def pass_one(splat):
-            pass_route()
-            return 'bad'
-
-        @self.app.get("/aroute/*")
-        def real_route(splat):
-            return 'good'
-
-        @self.app.before("/pass/before")
-        def pass_before():
-            pass_route()
-            self.app.response.text = 'bad'
-
-        @self.app.before("/pass/*")
-        def before_pass_all(splat):
-            self.app.response.text += 'good'
-
-        @self.app.get("/pass/*")
-        def pass_before_route(splat):
-            self.app.response.text += 'foo'
-
+        self.time = datetime(year=2012, month=7, day=15)
         self.app.debug = True
 
-    def test_pass_route(self):
-        self.assert_body_is('good', path='/aroute/')
-
-    def test_pass_before(self):
-        # Passing in filter will simply jump to the next filter.  It has no
-        # effect on the actual body routes themselves.
-        self.assert_body_is('goodfoo', path='/pass/before')
-        self.assert_body_is('goodfoo', path='/pass/other')
-
-
-class TestRedirectHelper(HobokenTestCase):
-    def after_setup(self):
-        self.redirect_code = 0
-
-        @self.app.post("/upload")
-        def upload():
-            # Upload stuff here.
-            self.app.redirect("/uploaded")
-
-        @self.app.get("/uploaded")
-        def uploaded():
-            return 'uploaded successfully'
-
-        @self.app.get("/redirect")
-        def redirect_func():
-            self.app.redirect('/foo', status_code=self.redirect_code)
-
-        self.app.debug = True
-
-    def test_redirect(self):
-        req = Request.blank("/upload", method='POST')
-        resp = req.get_response(self.app)
-
-        self.assert_equal(resp.status_int, 302)
-        self.assert_equal(resp.location, 'http://localhost/uploaded')
-
-    def test_redirect_code(self):
-        for code in [301, 302, 303]:
-            self.redirect_code = code
-
-            req = Request.blank("/redirect")
-            resp = req.get_response(self.app)
-
-            self.assert_equal(resp.status_int, code)
-            self.assert_equal(resp.location, 'http://localhost/foo')
+        @self.app.get("/resource")
+        def resource():
+            self.app.check_etag("some etag")
+            return b'resource value'
 
 
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestHaltHelper))
-    suite.addTest(unittest.makeSuite(TestPassHelper))
-    suite.addTest(unittest.makeSuite(TestRedirectHelper))
+    suite.addTest(unittest.makeSuite(TestLastModified))
 
     return suite
 

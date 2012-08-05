@@ -577,6 +577,8 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             else:
                 self.response.body = tb
 
+            # print(tb, file=sys.stderr)
+
     def test_server(self, port=8000):
         """
         This method lets you start a test server for development purposes.

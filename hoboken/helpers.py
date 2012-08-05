@@ -1,7 +1,9 @@
-from __future__ import with_statement, absolute_import
+from __future__ import with_statement, absolute_import, print_function
 
 from .application import halt
+import time
 import datetime
+import webob
 
 
 class HobokenCachingMixin(object):
@@ -19,17 +21,30 @@ class HobokenCachingMixin(object):
         request specifies an equivalent or newer resource, this function will call
         halt() to abort the current request with a 304 Not Modified status.
         """
-        self.response.last_modified = date
-        if self.request.if_none_match is not None:
+        if date is None:
             return
 
+        # Python's time functions are stupid.  We do everything with unix times.
+        timestamp = time.mktime(date.timetuple())
+        self.response.last_modified = timestamp
+
+        # We don't do anything if there's an ETag.
+        if self.request.if_none_match is not webob.etag.NoETag:
+            return
+
+        print("Status:", self.response.status_int, "If-Modified-Since:", self.request.if_modified_since)
+
         if self.response.status_int == 200 and self.request.if_modified_since is not None:
-            if self.request.if_modified_since >= date:
+            time_val = time.mktime(self.request.if_modified_since.timetuple())
+            print("If-Modified-Since:", time_val, "Date:", timestamp)
+            if time_val >= timestamp:
                 halt(status_code=304)
 
-        if (self.response.is_success or self.response.status_int == 412 and
-            self.request.if_unmodified_since is not None):
-            if self.request.if_unmodified_since >= date:
+        if ((self.response.is_success or self.response.status_int == 412) and
+             self.request.if_unmodified_since is not None):
+            time_val = time.mktime(self.request.if_unmodified_since.timetuple())
+            print("If-Unmodified-Since:", time_val, "Date:", timestamp)
+            if time_val < timestamp:
                 halt(status_code=412)
 
     def check_etag(self, etag, new_resource=None, weak=False):
