@@ -7,7 +7,7 @@ __all__ = ["iscallable", "BaseStringType", "StringIO", "RegexType"]
 python_version = sys.version_info[:3]
 is_python3 = python_version >= (3, 0, 0)
 
-if is_python3:                      # pragma: no cover
+if is_python3:
     import collections
 
     # callable() replacement
@@ -19,7 +19,7 @@ if is_python3:                      # pragma: no cover
 
     # StringIO
     from io import StringIO
-else:                               # pragma: no cover
+else:
     def iscallable(f):
         return callable(f)
 
