@@ -249,7 +249,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         # 2, we take the input as-is if it's a str, or encode to utf-8 if it's
         # a unicode value.  On Python 3, we encode it as bytes (the input must
         # be a string on Python 3) using utf-8.
-        if sys.version_info[0] >= 3:
+        if sys.version_info[0] >= 3:            # pragma: nocover
             path = path.encode('utf-8')
         else:
             if isinstance(path, unicode):
@@ -294,7 +294,8 @@ class HobokenRouteMatcher(AbstractMatcher):
                 final_route += args[args_index]
                 args_index += 1
             else:
-                final_route += kwargs[group_name]
+                value = kwargs[group_name] or ''
+                final_route += value
 
         return final_route + self.fragments[-1]
 

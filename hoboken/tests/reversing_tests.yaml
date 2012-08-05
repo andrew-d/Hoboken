@@ -1,0 +1,54 @@
+---
+name: bare_path
+path: /bare
+args: []
+kwargs: {}
+reverse: /bare
+---
+name: one_param
+path: /:param
+args: []
+kwargs: {param: foo}
+reverse: /foo
+---
+name: one_splat
+path: /*
+args: [bar]
+kwargs: {}
+reverse: /bar
+---
+name: param_then_splat
+path: /:param/*
+args: [splat]
+kwargs: {param: value}
+reverse: /value/splat
+---
+name: splat_then_param
+path: /*/:param
+args: [splat]
+kwargs: {param: value}
+reverse: /splat/value
+---
+name: two_params
+path: /:param1.:param2
+args: []
+kwargs: {param1: file, param2: ext}
+reverse: /file.ext
+---
+name: two_splats
+path: /*/*
+args: [one, two]
+kwargs: {}
+reverse: /one/two
+---
+name: ending_slash
+path: /:method/
+args: []
+kwargs: {method: waffle}
+reverse: /waffle/
+---
+name: null_param
+path: /:param1/:param2
+args: []
+kwargs: {param1: here, param2: null}
+reverse: /here/

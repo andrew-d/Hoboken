@@ -1,9 +1,15 @@
-from . import HobokenTestCase, BaseTestCase
-from ..matchers import BasicMatcher, RegexMatcher
-import unittest
+# -*- coding: utf-8 -*-
 
-from mock import patch, MagicMock
+from . import HobokenTestCase, BaseTestCase
+from ..matchers import BasicMatcher, RegexMatcher, HobokenRouteMatcher
+from .helpers import parametrize, parameters
+
 import re
+import os
+import sys
+import yaml
+import unittest
+from mock import patch, MagicMock
 
 class TestBasicMatcher(BaseTestCase):
     def test_basic_matcher(self):
@@ -74,11 +80,47 @@ class TestRegexMatcher(BaseTestCase):
         m = RegexMatcher("/asdf", [], [])
         self.assert_false(m.reverse(None, None))
 
+# Load our list of test cases from our yaml file.
+curr_dir = os.path.abspath(os.path.dirname(__file__))
+test_file = os.path.join(curr_dir, 'reversing_tests.yaml')
+with open(test_file, 'rb') as f:
+    file_data = f.read()
+test_cases = list(yaml.load_all(file_data))
+
+def make_name(idx, param):
+    return "test_" + param['name']
+
+@parametrize
+class TestHobokenRouteMatcher(BaseTestCase):
+    @parameters(test_cases, name_func=make_name)
+    def test_handles_unicode(self, param):
+        path = param['path']
+        args = param.get('args', [])
+        kwargs = param.get('kwargs', {})
+
+        m = HobokenRouteMatcher(path)
+        out = m.reverse(args, kwargs)
+
+        self.assert_equal(out, param['reverse'])
+
+    def test_reversing(self):
+        if sys.version_info[0] >= 3:
+            return
+
+        unicode_str = b'/f\xc3\xb8\xc3\xb8'.decode('utf-8')
+
+        m = HobokenRouteMatcher(unicode_str)
+        request = MagicMock(path="/f%C3%B8%C3%B8")
+        matches, _, _ = m.match(request)
+        self.assert_true(matches)
+
 
 def suite():
     suite = unittest.TestSuite()
 
+    suite.addTest(unittest.makeSuite(TestBasicMatcher))
     suite.addTest(unittest.makeSuite(TestRegexMatcher))
+    suite.addTest(unittest.makeSuite(TestHobokenRouteMatcher))
 
     return suite
 
