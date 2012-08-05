@@ -1,0 +1,20 @@
+# This file contains settings for coverage.py
+
+[run]
+# Change to True some day?
+branch = False
+# branch = True
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Re-enable the standard pragma
+    pragma: no cover
+
+    # Ignore defensive assertions
+    raise NotImplementedError
+
+    # Ignore debugging representations.
+    def __str__
+    def __repr__
+

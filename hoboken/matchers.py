@@ -45,9 +45,9 @@ class BasicMatcher(AbstractMatcher):
 
     def match(self, request):
         if self.case_sensitive:
-            matches = self.path == webr.path
+            matches = self.path == request.path
         else:
-            matches = self.path.lower() == webr.path.lower()
+            matches = self.path.lower() == request.path.lower()
 
         # No arguments, so always return empty values.
         return matches, [], {}
@@ -84,8 +84,11 @@ class RegexMatcher(AbstractMatcher):
         self.key_types = key_types
         self.key_names = key_names
 
-    def match(self, webr):
-        match = self.re.match(webr.path)
+    def match(self, request):
+        match = self.re.match(request.path)
+        args = []
+        kwargs = {}
+
         if match:
             matches = match.groups()
 
@@ -94,17 +97,14 @@ class RegexMatcher(AbstractMatcher):
                 # Depending on the type, either add to urlargs or urlparams.
                 if t == True:
                     if k is not None:
-                        webr.urlvars[k] = v
+                        kwargs[k] = v
                 else:
-                    webr.urlargs = webr.urlargs + (v,)
+                    args.append(v)
 
             # We save all captures in the special parameter "_captures".
-            webr.urlvars["_captures"] = list(matches)
+            kwargs["_captures"] = list(matches)
 
-            # Success!
-            return True
-        else:
-            return False
+        return match, args, kwargs
 
     def reverse(self, args, kwargs):
         # We cannot reverse a regex.

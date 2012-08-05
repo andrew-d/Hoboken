@@ -32,18 +32,14 @@ class HobokenCachingMixin(object):
         if self.request.if_none_match is not webob.etag.NoETag:
             return
 
-        print("Status:", self.response.status_int, "If-Modified-Since:", self.request.if_modified_since)
-
         if self.response.status_int == 200 and self.request.if_modified_since is not None:
             time_val = time.mktime(self.request.if_modified_since.timetuple())
-            print("If-Modified-Since:", time_val, "Date:", timestamp)
             if time_val >= timestamp:
                 halt(status_code=304)
 
         if ((self.response.is_success or self.response.status_int == 412) and
              self.request.if_unmodified_since is not None):
             time_val = time.mktime(self.request.if_unmodified_since.timetuple())
-            print("If-Unmodified-Since:", time_val, "Date:", timestamp)
             if time_val < timestamp:
                 halt(status_code=412)
 
@@ -65,12 +61,12 @@ class HobokenCachingMixin(object):
             return self.response.etag in value
 
         if self.response.is_success or self.response.status_int == 304:
-            if self.request.if_none_match is not None and etag_matches(self.request.if_none_match):
+            if self.request.if_none_match is not webob.etag.NoETag and etag_matches(self.request.if_none_match):
                 if self.request.is_safe:
                     halt(status_code=304)
                 else:
                     halt(status_code=412)
-            elif self.request.if_match is not None and not etag_matches(self.request.if_match):
+            elif self.request.if_match is not webob.etag.NoETag and not etag_matches(self.request.if_match):
                 halt(status_code=412)
 
     def set_cache_control(self, **kwargs):

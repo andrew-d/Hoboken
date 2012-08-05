@@ -69,7 +69,7 @@ class HobokenTestCase(BaseTestCase):
 def suite():
     # Import test suites here.
     from .test_HobokenApplication import suite as suite_1
-    from .test_RegexMatcher import suite as suite_2
+    from .test_matchers import suite as suite_2
     from .test_beforeafter import suite as suite_3
     from .test_conditions import suite as suite_4
     from .test_helpers import suite as suite_5
