@@ -57,7 +57,6 @@ class HobokenCachingMixin(object):
         #  - If it's not a new resource, and the header specifies 'anything' (i.e. '*')
         #  - Otherwise, if it's an exact match.
         def etag_matches(value):
-            print("value = {0!r}, new_resource = {1!r}".format(value, new_resource), file=sys.stderr)
             if value is webob.etag.AnyETag:
                 return not new_resource
             return self.response.etag in value
