@@ -4,22 +4,19 @@ TODO list - a centralized list of stuff I'd like to do
 
  - Move helper functions to sub-module
     - Move these to the application
-        - Sub-class of application, i.e. app.functions.redirect(), app.functions.etag(), etc?
-        - I'd like to seperate logic out a bit, and not have a giant monolithic class.
-        - Maybe have in a subfunction and just import and bind?
-        - Mixins are a good choice here, I think.
-            - One for caching - CachingMixin
-            - One for redirection - RedirectionMixin
+        * Mixins are a good choice here, I think.
+            * One for caching - CachingMixin
+            * One for redirection - RedirectionMixin
             - etc.
-            - Means that we can unit-test each mixin seperately
-    - Add functions that check etag, last modified date, and then halt() with Not Modified if they match
-        - Tests for these!
-    - Helpers for other stuff?
-        - expires(some time value)
-        - cache_control(various params, e.g. public=True/False, max_age=60, must_revalidate=True/False)
-    - Look in to if-match and if-none-match headers to see how we handle them
+            * Means that we can unit-test each mixin seperately
+    * Add functions that check etag, last modified date, and then halt() with Not Modified if they match
+        * Tests for these!
+    * Helpers for other stuff?
+        * expires(some time value)
+        * cache_control(various params, e.g. public=True/False, max_age=60, must_revalidate=True/False)
+    * Look in to if-match and if-none-match headers to see how we handle them
     * redirect_back helper that is a wrapper around redirect() and the referrer?
- - URL generation that properly handles different mountpoints
+ * URL generation that properly handles different mountpoints
     * As part of this, it might be worth making a Route() class that encapsulates the concept of a method, conditions, the route itself, and a matcher.  This could be helpful, because said Route() object could also handle reversing a route - i.e. getting a URL for a given route, given some parameters.
     * Might be worth integrating this into the Matcher concept.  For example, we could have a matcher that has the concept of:
         * path (i.e. the input path)
