@@ -2,22 +2,19 @@
 
 from . import HobokenTestCase
 from .. import HobokenApplication, condition
+from ..application import Route, halt, pass_route
+from ..matchers import RegexMatcher
+import re
 import sys
 import unittest
 from webob import Request
-from hoboken import halt, pass_route
+import mock
 
 
 class TestHasHTTPMethods(HobokenTestCase):
     def test_has_all_methods(self):
         for x in self.app.SUPPORTED_METHODS:
             assert hasattr(self.app, x.lower())
-
-def test_is_wsgi_application():
-    a = HobokenApplication("")
-    # TODO: Mock WSGI environ and start_application, and test that they're
-    # called properly when we make a WSGI request.  Maybe use WebOb to make
-    # the request.
 
 
 class TestWorksWithConditions(HobokenTestCase):
@@ -226,6 +223,96 @@ class TestRedirectHelper(HobokenTestCase):
             self.assert_equal(resp.location, 'http://localhost/foo')
 
 
+class TestRoute(HobokenTestCase):
+    def test_route_uppercases_method(self):
+        m = Route(None, None)
+        m.method = 'get'
+        self.assert_equal(m.method, 'GET')
+
+
+class TestMatcherTypes(HobokenTestCase):
+    def test_will_handle_regex(self):
+        r = re.compile("(.*?)")
+        @self.app.get(r)
+        def regex_get():
+            return b'body'
+
+        route = self.app.find_route(regex_get)
+        self.assert_true(isinstance(route.matcher, RegexMatcher))
+
+    def test_will_handle_regex_named_captures(self):
+        r = re.compile("/(.*?)foo(?P<name>.*?)bar")
+
+        @self.app.get(r)
+        def regex_get_params(arg, name=None):
+            self.assert_equal(arg, 'ONE')
+            self.assert_equal(name, 'TWO')
+            return b'param'
+
+        r = Request.blank("/ONEfooTWObar")
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.body, b'param')
+
+    def test_will_handle_regex_named_captures_2(self):
+        r = re.compile("/(?P<first>.*?)foo(?P<second>.*?)bar")
+
+        @self.app.get(r)
+        def regex_get_params(first=None, second=None):
+            self.assert_equal(first, 'ONE')
+            self.assert_equal(second, 'TWO')
+            return b'param'
+
+        r = Request.blank("/ONEfooTWObar")
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.body, b'param')
+
+    def test_will_handle_regex_named_captures_3(self):
+        r = re.compile("/(.*?)foo(.*?)bar")
+
+        @self.app.get(r)
+        def regex_get_params(arg1, arg2):
+            self.assert_equal(arg1, 'ONE')
+            self.assert_equal(arg2, 'TWO')
+            return b'param'
+
+        r = Request.blank("/ONEfooTWObar")
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.body, b'param')
+
+    def test_will_handle_regex_named_captures_4(self):
+        r = re.compile("/(?P<first>.*?)foo(.*?)bar")
+
+        @self.app.get(r)
+        def regex_get_params(arg, first=None):
+            self.assert_equal(first, 'ONE')
+            self.assert_equal(arg, 'TWO')
+            return b'param'
+
+        r = Request.blank("/ONEfooTWObar")
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.body, b'param')
+
+    def test_will_handle_custom_matcher(self):
+        m = mock.MagicMock()
+        m.match.return_value = (True, ['arg'], {'val': 'kwarg'})
+
+        @self.app.get(m)
+        def custom_get(arg, val=None):
+            self.assert_equal(arg, 'arg')
+            self.assert_equal(val, 'kwarg')
+            return b'body'
+
+        r = Request.blank("/")
+        resp = r.get_response(self.app)
+        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(m.match.call_count, 1)
+
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestHasHTTPMethods))
@@ -237,6 +324,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TestHaltHelper))
     suite.addTest(unittest.makeSuite(TestPassHelper))
     suite.addTest(unittest.makeSuite(TestRedirectHelper))
+    suite.addTest(unittest.makeSuite(TestRoute))
+    suite.addTest(unittest.makeSuite(TestMatcherTypes))
 
     return suite
 

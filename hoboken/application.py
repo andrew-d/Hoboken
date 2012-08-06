@@ -183,9 +183,8 @@ class Route(object):
                 if not cond(request):
                     raise ContinueRoutingException
 
-            # TODO: do we call the function with the request/response objects,
-            # or with *args/**kwargs?
-            # ret = self.func(request, response)
+            # We remove the optional "_captures" kwarg, if it exists.
+            kwargs.pop('_captures', None)
             ret = self.func(*args, **kwargs)
 
         except ContinueRoutingException:
@@ -307,8 +306,8 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             keys = [None] * match.groups
             types = [False] * match.groups
             for name, index in match.groupindex.items():
-                types[index] = True
-                keys[index] = name
+                types[index - 1] = True
+                keys[index - 1] = name
 
             # Append the route with these keys.
             matcher = RegexMatcher(match, types, keys)
