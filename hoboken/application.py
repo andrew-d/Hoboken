@@ -445,14 +445,14 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         route function into the request body.  Override this in a subclass
         to customize how values are returned.
         """
-        if sys.version_info[0] >= 3:
+        if sys.version_info[0] >= 3:        # pragma: no cover
             if isinstance(value, bytes):
                 resp.body = value
             elif isinstance(value, str):
                 resp.text = value
             else:
                 raise ValueError("Unknown return type: {0!r}".format(type(value)))
-        else:
+        else:                               # pragma: no cover
             if isinstance(value, unicode):
                 resp.text = value
             else:

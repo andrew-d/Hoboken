@@ -4,6 +4,7 @@ from . import HobokenTestCase
 from .. import HobokenApplication, condition
 from ..application import Route, halt, pass_route
 from ..matchers import RegexMatcher
+from ..exceptions import *
 import re
 import sys
 import unittest
@@ -210,7 +211,7 @@ class TestRedirectHelper(HobokenTestCase):
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 302)
-        self.assert_equal(resp.location, 'http://localhost/uploaded')
+        self.assert_true(resp.location.endswith('/uploaded'))
 
     def test_redirect_code(self):
         for code in [301, 302, 303]:
@@ -220,7 +221,15 @@ class TestRedirectHelper(HobokenTestCase):
             resp = req.get_response(self.app)
 
             self.assert_equal(resp.status_int, code)
-            self.assert_equal(resp.location, 'http://localhost/foo')
+            self.assert_true(resp.location.endswith('/foo'))
+
+    def test_redirect_with_non_get(self):
+        req = Request.blank("/upload", method='POST')
+        req.http_version = "HTTP/1.1"
+        resp = req.get_response(self.app)
+
+        self.assert_equal(resp.status_int, 303)
+        self.assert_true(resp.location.endswith('/uploaded'))
 
 
 class TestRoute(HobokenTestCase):
@@ -312,6 +321,49 @@ class TestMatcherTypes(HobokenTestCase):
         self.assert_equal(m.match.call_count, 1)
 
 
+class TestMiscellaneousMethods(HobokenTestCase):
+    def test_add_route_will_throw(self):
+        with self.assert_raises(HobokenException):
+            self.app.add_route('bad', None, None)
+
+    def test_invalid_matcher_type(self):
+        with self.assert_raises(InvalidMatchTypeException):
+            @self.app.get(123)
+            def bad():
+                pass
+
+    def test_find_route_will_return_none_on_failure(self):
+        def not_exist():
+            pass
+
+        res = self.app.find_route(not_exist)
+        self.assert_true(res is None)
+
+    def test_url_for_will_return_none_on_failure(self):
+        def not_a_route():
+            pass
+
+        url = self.app.url_for(not_a_route)
+        self.assert_true(url is None)
+
+    def test_only_one_route_per_function(self):
+        with self.assert_raises(RouteExistsException):
+            @self.app.get("/one")
+            @self.app.get("/two")
+            def route_func():
+                pass
+
+    def test_invalid_method(self):
+        @self.app.get("/")
+        def index():
+            return b'foo'
+
+        r = Request.blank("/")
+        r.method = 'OTHER'
+        resp = r.get_response(self.app)
+
+        self.assert_equal(resp.status_code, 405)
+
 
 def suite():
     suite = unittest.TestSuite()
@@ -326,6 +378,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestRedirectHelper))
     suite.addTest(unittest.makeSuite(TestRoute))
     suite.addTest(unittest.makeSuite(TestMatcherTypes))
+    suite.addTest(unittest.makeSuite(TestMiscellaneousMethods))
 
     return suite
 

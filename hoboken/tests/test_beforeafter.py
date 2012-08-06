@@ -98,11 +98,34 @@ class TestFilterParams(HobokenTestCase):
         self.assert_equal(self.val, 'abcd\nmorestuff\ndefg')
 
 
+class TestCatchallFilters(HobokenTestCase):
+    def after_setup(self):
+        self.calls = []
+
+        @self.app.before()
+        def before_all():
+            self.calls.append('before')
+
+        @self.app.after()
+        def after_all():
+            self.calls.append('after')
+
+        @self.app.get("/")
+        def index():
+            self.calls.append('body')
+            return b'body'
+
+    def test_catchall_filters(self):
+        self.call_app(path='/')
+        self.assert_equal(self.calls, ['before', 'body', 'after'])
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestFilters))
     suite.addTest(unittest.makeSuite(TestFilterCanModifyRoute))
     suite.addTest(unittest.makeSuite(TestFilterParams))
+    suite.addTest(unittest.makeSuite(TestCatchallFilters))
 
     return suite
 
