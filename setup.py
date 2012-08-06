@@ -5,7 +5,7 @@ import sys
 from setuptools import setup
 
 setup(name='Hoboken',
-      version='0.0.1',
+      version='0.0.2',
       description='A Sinatra-inspired web framework for Python',
       author='Andrew Dunham',
       url='http://github.com/andrew-d/hoboken',
@@ -28,6 +28,7 @@ setup(name='Hoboken',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.2',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
       ],
