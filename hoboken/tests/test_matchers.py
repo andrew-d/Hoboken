@@ -67,8 +67,6 @@ class TestRegexMatcher(BaseTestCase):
         self.assert_in('_captures', kwargs)
         self.assert_equal(kwargs['_captures'], ['FOO', 'BAR'])
 
-        # TODO: test urlargs too
-
     def test_with_existing_regex(self):
         r = re.compile("/foob(.*?)ar")
         m = RegexMatcher(r, [False], [None])

@@ -503,15 +503,16 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         if request.method not in self.SUPPORTED_METHODS:
             self.logger.warn("Called with invalid method: %r", request.method)
 
-            # Send "invalid method" exception.
             # TODO: hook.
+
+            # Send "invalid method" exception.
             response.status_code = 405
             return
 
         matched = False
         try:
+            # Call before filters.
             for filter in self.before_filters:
-                # Call this filter.
                 filter(request, response)
 
             # For each route of the specified type, try to match it.
@@ -537,7 +538,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # TODO: Handle other HTTPExceptions from webob?
             self.on_exception(e)
 
-            # Must set, or we get clobbered by the 404 handler.
+            # Must set this, or we get clobbered by the 404 handler.
             matched = True
 
         finally:
@@ -634,19 +635,3 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def __repr__(self):
         return "HobokenApplication(name={!r}, debug={!r})".format(self.name, self.debug)
 
-
-
-
-# TODO:
-# def hoboken_wrapper(func):
-#     def add_condition(condition):
-#         print("Adding condition: {0!r}".format(condition))
-# 
-#     if 'hoboken.conditions' in func.func_dict:
-#         for c in func.func_dict['hoboken.conditions']:
-#             add_condition(c)
-# 
-#         del func.func_dict['hoboken.conditions']
-# 
-#     func.func_dict['hoboken.add_condition'] = add_condition
-#     func.func_dict['hoboken.wrapped'] = True
