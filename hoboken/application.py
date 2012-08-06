@@ -23,26 +23,6 @@ from .objects import *
 from .compat import *
 
 
-def get_func_attr(func, attr, default=None, delete=False):      # pragma: no cover
-    if sys.version_info[0] >= 3:
-        func_dict = func.__dict__
-    else:
-        func_dict = func.func_dict
-
-    if delete:
-        return func_dict.pop(attr, default)
-    else:
-        return func_dict.get(attr, default)
-
-def set_func_attr(func, attr, value):                           # pragma: no cover
-    if sys.version_info[0] >= 3:
-        func_dict = func.__dict__
-    else:
-        func_dict = func.func_dict
-
-    func_dict[attr] = value
-
-
 def condition(condition_func):
     def internal_decorator(func):
         # Either call the add_condition() func, or add this condition to the
