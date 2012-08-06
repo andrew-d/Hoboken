@@ -579,7 +579,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
             print(tb, file=sys.stderr)
 
-    def test_server(self, port=8000):
+    def test_server(self, port=8000):                   # pragma: no cover
         """
         This method lets you start a test server for development purposes.
         Note: There is deliberately no option to set the address to listen on.

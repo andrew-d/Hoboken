@@ -24,3 +24,6 @@ exclude_lines =
     if False:
     if __name__ == .__main__.:
 
+    # Exclude stuff for debugging
+    if self\.debug:
+
