@@ -68,11 +68,11 @@ class TestRouting(HobokenTestCase):
         self.assert_equal(matcher.match_re.pattern, regex)
 
         class FakeRequest(object):
-            path = None
+            path_info = None
 
         for succ in param.get('successes', []):
             r = FakeRequest()
-            r.path = succ['route']
+            r.path_info = succ['route']
             matched, args, kwargs = matcher.match(r)
 
             expected_args = succ.get('args', [])

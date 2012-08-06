@@ -42,6 +42,7 @@ TODO list - a centralized list of stuff I'd like to do
    - Fix author/author_email
    * MANIFEST.in
    * README.txt^H^H^H^H.md
+ - sendfile() support of some kind (checkout wsgi.file_wrapper in PEP 333[3], also X-Sendfile)
  - Examples
    - Middleware examples (e.g. security, stuff like that?)
    - File upload example
@@ -55,7 +56,18 @@ Longer-Term TODOs
 ===========================================================
 
  - File uploads are currently non-ideal
-
+ - Look into switching to Werkzeug's request/response objects.
+   - Upsides:
+     - I like the immutability of the Request
+     - Seems more generally-exensible
+     - send_file support is handy
+     - File uploading is generally better
+   - Downsides / things that bother me:
+     - No Python3 support, pretty much a dealbreaker
+     - str(request) doesn't return the HTTP-ified version.  WebOb does this, which is really handy
+ - Might be worth making my own request/response objects that wrap the underlying bits?
+   - I.e. make a req/resp object that provides the "basic" information as properties, and delegates to the underlying implementation to actually do the parsing, and so on.  This would make the actual request/response objects relatively framework-independent.
+   - Downside: will be slower due to the indirection, not convinced this is 100% the correct thing to do.
 
 Planning
 ===========================================================

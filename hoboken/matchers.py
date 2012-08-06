@@ -45,9 +45,9 @@ class BasicMatcher(AbstractMatcher):
 
     def match(self, request):
         if self.case_sensitive:
-            matches = self.path == request.path
+            matches = self.path == request.path_info
         else:
-            matches = self.path.lower() == request.path.lower()
+            matches = self.path.lower() == request.path_info.lower()
 
         # No arguments, so always return empty values.
         return matches, [], {}
@@ -85,7 +85,7 @@ class RegexMatcher(AbstractMatcher):
         self.key_names = key_names
 
     def match(self, request):
-        match = self.re.match(request.path)
+        match = self.re.match(request.path_info)
         args = []
         kwargs = {}
 
@@ -262,7 +262,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         return pattern.decode('ascii')
 
     def match(self, request):
-        match = self.match_re.match(request.path)
+        match = self.match_re.match(request.path_info)
         args = []
         kwargs = {}
 

@@ -14,14 +14,14 @@ from mock import patch, MagicMock
 class TestBasicMatcher(BaseTestCase):
     def test_basic_matcher(self):
         m = BasicMatcher('/foobar')
-        req = MagicMock(path="/foobar")
+        req = MagicMock(path_info="/foobar")
 
         matches, _, _ = m.match(req)
         self.assert_true(matches)
 
     def test_basic_matcher_case_insensitive(self):
         m = BasicMatcher('/foobar', case_sensitive=False)
-        req = MagicMock(path="/FOOBAR")
+        req = MagicMock(path_info="/FOOBAR")
 
         matches, _, _ = m.match(req)
         self.assert_true(matches)
@@ -54,7 +54,7 @@ class TestRegexMatcher(BaseTestCase):
         test_data = "blahFOOmiddleBARend"
 
         m = RegexMatcher(test_re, [True, True], ['one', 'two'])
-        req = MagicMock(path=test_data)
+        req = MagicMock(path_info=test_data)
 
         matches, args, kwargs = m.match(req)
         self.assert_true(matches)
@@ -71,7 +71,7 @@ class TestRegexMatcher(BaseTestCase):
         r = re.compile("/foob(.*?)ar")
         m = RegexMatcher(r, [False], [None])
 
-        req = MagicMock(path='/foobAAAAAAAAAAAAAar')
+        req = MagicMock(path_info='/foobAAAAAAAAAAAAAar')
 
         matches, args, _  = m.match(req)
         self.assert_true(matches)
@@ -111,7 +111,7 @@ class TestHobokenRouteMatcher(BaseTestCase):
         unicode_str = b'/f\xc3\xb8\xc3\xb8'.decode('utf-8')
 
         m = HobokenRouteMatcher(unicode_str)
-        request = MagicMock(path="/f%C3%B8%C3%B8")
+        request = MagicMock(path_info="/f%C3%B8%C3%B8")
         matches, _, _ = m.match(request)
         self.assert_true(matches)
 

@@ -3,9 +3,9 @@ Hoboken
 
 [![Build Status](https://secure.travis-ci.org/andrew-d/Hoboken.png?branch=master)](http://travis-ci.org/andrew-d/Hoboken)
 
-Hoboken is a Sinatra-like web framework for Python.  It attempts to make writing simple web applications both easy, but also provide enough power to accomplish more complex things.  Hoboken officially supports Python 2.6, 2.7, and 3.2 (as these are the platforms on which WebOb is supported).  Unofficially, the tests pass on Python 3.0.
+Hoboken is a Sinatra-like web framework for Python.  It attempts to make writing simple web applications both easy, but also provide enough power to accomplish more complex things.  Hoboken officially supports Python 2.6, 2.7, and 3.2 (as these are the platforms on which WebOb is supported).  Unofficially, the tests pass on Python 3.0 (but *not* 3.1).
 
-Currently, Hoboken is in alpha.  There are plenty of tests, but documentation is somewhat lacking.  That said, here's a simple "hello world" application:
+Currently, Hoboken is in alpha.  There are plenty of tests (actually, test coverage is 100%), but documentation is somewhat lacking.  That said, here's a simple "hello world" application:
 
     from hoboken import HobokenApplication
 
@@ -31,7 +31,7 @@ You can then host this using any WSGI server (since Hoboken applications are WSG
 
     $ curl -ik http://localhost:8080/greet/John
     HTTP/1.0 200 OK
-    Date: Thu, 19 Jul 2012 09:59:23 GMT
+    Date: Thu, 19 Jul 2012 00:00:00 GMT
     Server: WSGIServer/0.1 Python/2.7.3
     Content-Type: text/html; charset=UTF-8
     Content-Length: 26
