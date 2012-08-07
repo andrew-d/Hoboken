@@ -1,11 +1,15 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import os
 import sys
 from setuptools import setup
 
+sys.path.insert(0, os.path.abspath('.'))
+import hoboken
+
 setup(name='Hoboken',
-      version='0.0.2',
+      version=hoboken.__version__,
       description='A Sinatra-inspired web framework for Python',
       author='Andrew Dunham',
       url='http://github.com/andrew-d/hoboken',
