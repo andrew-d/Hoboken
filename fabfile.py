@@ -5,7 +5,7 @@ import platform
 from fabric.api import *
 from fabric.colors import red, yellow, green
 
-env.hoboken_init = os.path.join('hoboken', '__init__.py')
+env.version_file = os.path.join('hoboken', '_version.py')
 env.version_regex = r'((?:\d+)\.(?:\d+)\.(?:\d+))'
 
 version_re = re.compile(env.version_regex)
@@ -20,30 +20,30 @@ def join_version(split_ver):
 
 
 def read_version():
-    with open(env.hoboken_init, 'rb') as f:
+    with open(env.version_file, 'rb') as f:
         file_data = f.read().replace('\r\n', '\n')
 
     m = version_re.search(file_data)
     if m is None:
-        abort(red("Could not find version in '{0}'!".format(env.hoboken_init)))
+        abort(red("Could not find version in '{0}'!".format(env.version_file)))
 
     return m.group(0)
 
 
 def write_version(v):
-    with open(env.hoboken_init, 'rb') as f:
+    with open(env.version_file, 'rb') as f:
         file_data = f.read().replace('\r\n', '\n')
 
     m = version_re.search(file_data)
     if m is None:
-        abort(red("Could not find version in '{0}'!".format(env.hoboken_init)))
+        abort(red("Could not find version in '{0}'!".format(env.version_file)))
 
     before = file_data[0:m.start(0)]
     after  = file_data[m.end(0):]
 
     new_data = before + v + after
 
-    with open(env.hoboken_init, 'wb') as f:
+    with open(env.version_file, 'wb') as f:
         f.write(new_data)
 
 
@@ -98,7 +98,7 @@ def commit_and_tag_version():
     curr_ver = read_version()
     curr_tag = get_current_tag()
     if curr_ver != curr_tag:
-        local('git add {0}'.format(env.hoboken_init))
+        local('git add {0}'.format(env.version_file))
         local('git commit -m "Set package version to {0}"'.format(curr_ver))
         local('git tag {0}'.format(curr_ver))
     else:

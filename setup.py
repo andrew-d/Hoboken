@@ -2,14 +2,22 @@
 from __future__ import print_function
 
 import os
+import re
 import sys
 from setuptools import setup
 
-sys.path.insert(0, os.path.abspath('.'))
-import hoboken
+version_file = os.path.join('hoboken', '_version.py')
+with open(version_file, 'rb') as f:
+    version_data = f.read().strip()
+
+if sys.version_info[0] >= 3:
+    version_data = version_data.decode('ascii')
+
+version_re = re.compile(r'((?:\d+)\.(?:\d+)\.(?:\d+))')
+version = version_re.search(version_data).group(0)
 
 setup(name='Hoboken',
-      version=hoboken.__version__,
+      version=version,
       description='A Sinatra-inspired web framework for Python',
       author='Andrew Dunham',
       url='http://github.com/andrew-d/hoboken',
