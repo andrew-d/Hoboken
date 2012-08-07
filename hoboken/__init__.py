@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 # This is the canonical package information.
-__version__ = '0.0.2'
+__version__ = '0.1.0'
 __author__  = 'Andrew Dunham'
 __license__ = 'Apache'
 __copyright__ = "Copyright (c) 2012, Andrew Dunham"
