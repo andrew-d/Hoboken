@@ -2,12 +2,24 @@ TODO list - a centralized list of stuff I'd like to do
 (in roughly priority order, *-marked means done)
 ===========================================================
 
- - Move helper functions to sub-module
-    - Move these to the application
+ - Configuration support
+    - Do we do it with a standard python-style "lots of kwargs", or something else?
+    - I like the 'something else' option, since we can then do stuff like getting config from a Python file, a config file, or a user-provided dict() - which might just be dict(foo=bar) in the standard kwargs style.
+    - Should actually provide options for configuring from, at least, a config file (ini-style/other?) and from a dict.  From a python module/file is also handy.
+    - Config options:
+        - debug
+        - template directory
+    - Future config options:
+        - static directory - so we can serve statics
+        - default charset/encoding?
+        - lock to serialize all requests, if an app is non-thread-safe
+        - More?
+ * Move helper functions to sub-module
+    * Move these to the application
         * Mixins are a good choice here, I think.
             * One for caching - CachingMixin
             * One for redirection - RedirectionMixin
-            - etc.
+            * etc.
             * Means that we can unit-test each mixin seperately
     * Add functions that check etag, last modified date, and then halt() with Not Modified if they match
         * Tests for these!

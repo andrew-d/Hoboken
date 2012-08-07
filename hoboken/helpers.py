@@ -121,4 +121,17 @@ class HobokenRedirectMixin(object):
         self.redirect(location, status_code=status_code)
 
 
+class HobokenRenderMixin(object):
+    def __init__(self):
+        raise NotImplementedError("Hoboken mixins cannot be instantiated!")
+
+    # Mixin __init__() calls are not called, so we initialize shift here.
+    # import shift
+    # _shift = shift.Shift()
+
+    # TODO: might want to make Shift a hard dependency, so we can configure it properly
+
+    def render(self, file, context=None):
+        # self._shift
+        pass
 

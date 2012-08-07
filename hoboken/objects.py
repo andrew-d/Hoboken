@@ -23,6 +23,7 @@ class Request(webob.BaseRequest):
         """
         return self.is_safe or self.method in ['PUT', 'DELETE']
 
+
 class Response(webob.Response):
     """
     Hoboken's request objects.  Uses WebOb's request object.
