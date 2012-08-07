@@ -4,3 +4,4 @@ WebOb==1.2
 # Testing help
 mock
 PyYAML
+fabric
