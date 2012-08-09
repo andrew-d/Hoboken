@@ -63,8 +63,10 @@ def increment_version(version_index):
 
 def get_current_tag():
     with hide('running'):
-        res = local('git tag')
-    return res.strip()
+        res = local('git tag', capture=True)
+
+    lines = res.replace("\r\n", "\n").split("\n")
+    return lines[-1]
 
 @task
 def get_version():
