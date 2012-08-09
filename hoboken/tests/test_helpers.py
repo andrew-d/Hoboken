@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 from . import HobokenTestCase, skip, skip_if, is_pypy
+import os
 import sys
 import time
 import unittest
@@ -250,6 +251,22 @@ class TestRedirection(HobokenTestCase):
         self.assert_true(resp.location.endswith('/to_me'))
 
 
+class TestShift(HobokenTestCase):
+    def test_shift_will_render(self):
+        curr_file = os.path.abspath(__file__)
+        dir_name = os.path.dirname(curr_file)
+        path = os.path.join(dir_name, "test_shift.bare")
+        output = self.app.render(path)
+
+        self.assert_true(output is not None)
+        self.assert_equal(output.strip(), "This is a bare file.")
+
+    def test_shift_will_fail_on_unknown(self):
+        output = self.app.render("not_existing.badext")
+        self.assert_true(output is None)
+
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestLastModified))
@@ -257,6 +274,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestCacheControl))
     suite.addTest(unittest.makeSuite(TestExpires))
     suite.addTest(unittest.makeSuite(TestRedirection))
+    suite.addTest(unittest.makeSuite(TestShift))
 
     return suite
 

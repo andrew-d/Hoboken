@@ -1,3 +1,4 @@
-include requirements.txt
-recursive-include hoboken *.py *.yaml
+include requirements.txt README.md
+recursive-include hoboken *.py *.yaml *.bare
+recursive-exclude hoboken *.pyc *.pyo *.pyd
 

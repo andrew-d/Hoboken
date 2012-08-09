@@ -121,6 +121,10 @@ class HobokenRenderMixin(object):
         self._shift = shift.Shift()
         super(HobokenRenderMixin, self).__init__(*args, **kwargs)
 
-    def render(self, file, context=None):
-        pass
+    def render(self, template_file, context=None):
+        template = self._shift.new(template_file)
+        if template is None:
+            return None
+
+        return template.render(context=context)
 
