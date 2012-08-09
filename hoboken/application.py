@@ -168,8 +168,6 @@ class objdict(dict):
 
 
 class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
-    __metaclass__ = HobokenMetaclass
-
     # These are the supported HTTP methods.  They can be overridden in
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
