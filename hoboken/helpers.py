@@ -12,9 +12,6 @@ class HobokenCachingMixin(object):
     This class defines a mixin that one can combine with the base
     HobokenApplication to add some handy helpers for dealing with caching.
     """
-    def __init__(self):
-        raise NotImplementedError("Hoboken mixins cannot be instantiated!")
-
     def check_last_modified(self, date):
         """
         This function will check if one of a given request's last modified headers
@@ -92,9 +89,6 @@ class HobokenCachingMixin(object):
 
 
 class HobokenRedirectMixin(object):
-    def __init__(self):
-        raise NotImplementedError("Hoboken mixins cannot be instantiated!")
-
     def redirect_back(self, *args, **kwargs):
         """
         This is a helper function to redirect 'back' - i.e. to whichever page
@@ -122,16 +116,11 @@ class HobokenRedirectMixin(object):
 
 
 class HobokenRenderMixin(object):
-    def __init__(self):
-        raise NotImplementedError("Hoboken mixins cannot be instantiated!")
-
-    # Mixin __init__() calls are not called, so we initialize shift here.
-    # import shift
-    # _shift = shift.Shift()
-
-    # TODO: might want to make Shift a hard dependency, so we can configure it properly
+    def __init__(self, *args, **kwargs):
+        import shift
+        self._shift = shift.Shift()
+        super(HobokenRenderMixin, self).__init__(*args, **kwargs)
 
     def render(self, file, context=None):
-        # self._shift
         pass
 

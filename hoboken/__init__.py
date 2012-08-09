@@ -21,5 +21,5 @@ from . import exceptions
 from .helpers import *
 
 # Build our actual application.
-class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
+class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin, HobokenRenderMixin):
     pass

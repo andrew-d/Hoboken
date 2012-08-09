@@ -2,7 +2,7 @@
 
 from . import HobokenTestCase
 from .. import HobokenApplication, condition
-from ..application import Route, halt, pass_route
+from ..application import HobokenBaseApplication, Route, halt, pass_route
 from ..matchers import RegexMatcher
 from ..exceptions import *
 import re
@@ -377,6 +377,26 @@ class TestConfig(HobokenTestCase):
         self.assert_true('foo' not in self.app.config)
 
 
+class TestInheritance(HobokenTestCase):
+    def test_mixin_init_called(self):
+        calls = []
+
+        class Mixin(object):
+            def __init__(self, *args, **kwargs):
+                calls.append("mixin")
+                super(Mixin, self).__init__(*args, **kwargs)
+
+        class Inherited(HobokenBaseApplication, Mixin):
+            def __init__(self, *args, **kwargs):
+                calls.append("inherited")
+                super(Inherited, self).__init__(*args, **kwargs)
+
+        cls = Inherited("foobar")
+
+        self.assert_true("inherited" in calls)
+        self.assert_true("mixin" in calls)
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestHasHTTPMethods))
@@ -392,6 +412,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestMatcherTypes))
     suite.addTest(unittest.makeSuite(TestMiscellaneousMethods))
     suite.addTest(unittest.makeSuite(TestConfig))
+    suite.addTest(unittest.makeSuite(TestInheritance))
 
     return suite
 

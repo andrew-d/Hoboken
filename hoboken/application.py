@@ -173,7 +173,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
     DEFAULT_CONFIG = {
-        'debug': False
+        'debug': False,
+        'root_directory': None,
+        'views_directory': None,
     }
 
     def __init__(self, name, sub_app=None, **kwargs):
@@ -215,6 +217,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self._locals = threading.local()
         self._locals.request = None
         self._locals.response = None
+
+        # Call other __init__ functions - this is needed for mixins to work.
+        super(HobokenBaseApplication, self).__init__()
 
     @property
     def request(self):
