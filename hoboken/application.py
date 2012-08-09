@@ -2,6 +2,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 # Stdlib dependencies
+import os
 import sys
 import re
 import urllib
@@ -183,6 +184,14 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self.sub_app = sub_app
         self.config = objdict(self.DEFAULT_CONFIG)
         self.config.update(kwargs)
+
+        # If we're missing config values, we try and determine them here.
+        if self.config.root_directory is None:
+            import __main__
+            self.config.root_directory = os.path.dirname(os.path.abspath(__main__.__file__))
+
+        if self.config.views_directory is None:
+            self.config.views_directory = os.path.join(self.config.root_directory, "views")
 
         # Routes array. We split this by method, both for speed and simplicity.
         self.routes = {}

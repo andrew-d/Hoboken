@@ -118,13 +118,17 @@ class HobokenRedirectMixin(object):
 class HobokenRenderMixin(object):
     def __init__(self, *args, **kwargs):
         import shift
-        self._shift = shift.Shift()
+        template_root = self.config.views_directory or 'views'
+        self._shift = shift.Shift(template_root=template_root)
         super(HobokenRenderMixin, self).__init__(*args, **kwargs)
 
     def render(self, template_file, context=None):
-        template = self._shift.new(template_file)
+        template = self.load_template(template_file)
         if template is None:
             return None
-
         return template.render(context=context)
+
+    def load_template(self, template_file):
+        template = self._shift.new(template_file)
+        return template
 
