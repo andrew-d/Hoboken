@@ -155,17 +155,32 @@ def is_route(func):
     return get_func_attr(func, 'hoboken.route', default=False)
 
 
+class objdict(dict):
+    def __setattr__(self, key, val):
+        self[key] = val
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __delattr__(self, key):
+        del self[key]
+
+
 class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     __metaclass__ = HobokenMetaclass
 
     # These are the supported HTTP methods.  They can be overridden in
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
+    DEFAULT_CONFIG = {
+        'debug': False
+    }
 
-    def __init__(self, name, sub_app=None, debug=False):
+    def __init__(self, name, sub_app=None, **kwargs):
         self.name = name
         self.sub_app = sub_app
-        self.debug = debug
+        self.config = objdict(self.DEFAULT_CONFIG)
+        self.config.update(kwargs)
 
         # Routes array. We split this by method, both for speed and simplicity.
         self.routes = {}
@@ -188,7 +203,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-        if self.debug:
+        if self.config.debug:
             self.logger.setLevel(logging.DEBUG)
             handler.setLevel(logging.DEBUG)
         else:
@@ -496,7 +511,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     def on_exception(self, exception):
         self.response.status_code = 500
-        if self.debug:
+        if self.config.debug:
             # Format the current traceback
             tb = traceback.format_exc()
 
@@ -528,7 +543,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         """
 
         body = []
-        body.append("Application {0} (Debug: {1})".format(self.name, self.debug))
+        body.append("Application {0} (Debug: {1})".format(self.name, self.config.debug))
         body.append("")
 
         def dump_filter_array(arr):
@@ -563,5 +578,5 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         return '\n'.join(body)
 
     def __repr__(self):
-        return "HobokenApplication(name={!r}, debug={!r})".format(self.name, self.debug)
+        return "HobokenApplication(name={!r}, debug={!r})".format(self.name, self.config.debug)
 

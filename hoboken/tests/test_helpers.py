@@ -12,7 +12,7 @@ from mock import patch, MagicMock
 class TestLastModified(HobokenTestCase):
     def after_setup(self):
         self.time = datetime.datetime(year=2012, month=7, day=15)
-        self.app.debug = True
+        self.app.config.debug = True
 
         @self.app.get("/resource")
         def resource():
@@ -79,7 +79,7 @@ class TestLastModified(HobokenTestCase):
 class TestETag(HobokenTestCase):
     def after_setup(self):
         self.etag = 'some etag'
-        self.app.debug = True
+        self.app.config.debug = True
 
         @self.app.get("/resource")
         def resource():

@@ -129,7 +129,7 @@ class TestHaltHelper(HobokenTestCase):
             halt(code=self.halt_code, text=self.halt_body)
             return 'bad'
 
-        self.app.debug = True
+        self.app.config.debug = True
 
     def assert_halts_with(self, code, body, *args, **kwargs):
         """Helper function to set the halt value and assert"""
@@ -175,7 +175,7 @@ class TestPassHelper(HobokenTestCase):
         def pass_before_route(splat):
             self.app.response.text += 'foo'
 
-        self.app.debug = True
+        self.app.config.debug = True
 
     def test_pass_route(self):
         self.assert_body_is('good', path='/aroute/')
@@ -204,7 +204,7 @@ class TestRedirectHelper(HobokenTestCase):
         def redirect_func():
             self.app.redirect('/foo', status_code=self.redirect_code)
 
-        self.app.debug = True
+        self.app.config.debug = True
 
     def test_redirect(self):
         req = Request.blank("/upload", method='POST')
@@ -364,6 +364,18 @@ class TestMiscellaneousMethods(HobokenTestCase):
 
         self.assert_equal(resp.status_code, 405)
 
+class TestConfig(HobokenTestCase):
+    def test_can_get_set_values(self):
+        self.app.config.foo = 'asdf'
+        self.assert_equal(self.app.config.foo, 'asdf')
+        self.assert_equal(self.app.config['foo'], 'asdf')
+
+    def test_can_delete_values(self):
+        self.app.config.foo = 'bar'
+        del self.app.config.foo
+
+        self.assert_true('foo' not in self.app.config)
+
 
 def suite():
     suite = unittest.TestSuite()
@@ -379,6 +391,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestRoute))
     suite.addTest(unittest.makeSuite(TestMatcherTypes))
     suite.addTest(unittest.makeSuite(TestMiscellaneousMethods))
+    suite.addTest(unittest.makeSuite(TestConfig))
 
     return suite
 

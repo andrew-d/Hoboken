@@ -26,4 +26,5 @@ exclude_lines =
 
     # Exclude stuff for debugging
     if self\.debug:
+    if self\.config\.debug:
 

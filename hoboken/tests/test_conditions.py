@@ -65,7 +65,7 @@ class TestAcceptsCondition(HobokenTestCase):
         def accepts_two():
             return 'two'
 
-        self.app.debug = True
+        self.app.config.debug = True
 
     def test_plain_accept(self):
         self.assert_body_is("html", accepts="text/html")
