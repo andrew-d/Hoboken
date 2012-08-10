@@ -186,7 +186,13 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # If we're missing config values, we try and determine them here.
         if self.config.root_directory is None:
             import __main__
-            self.config.root_directory = os.path.dirname(os.path.abspath(__main__.__file__))
+
+            # Get the file name if it exists.  It won't in, for example, the interactive console.
+            if hasattr(__main__, "__file__"):
+                self.config.root_directory = os.path.dirname(os.path.abspath(__main__.__file__))
+            else:               # pragma: no cover
+                self.config.root_directory = os.path.dirname(os.path.abspath("."))
+
 
         if self.config.views_directory is None:
             self.config.views_directory = os.path.join(self.config.root_directory, "views")

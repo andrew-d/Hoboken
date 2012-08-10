@@ -5,6 +5,7 @@ from .. import HobokenApplication, condition
 from ..application import HobokenBaseApplication, Route, halt, pass_route
 from ..matchers import RegexMatcher
 from ..exceptions import *
+import os
 import re
 import sys
 import unittest
@@ -375,6 +376,11 @@ class TestConfig(HobokenTestCase):
         del self.app.config.foo
 
         self.assert_true('foo' not in self.app.config)
+
+    def test_will_fill_missing_views_dir(self):
+        app = HobokenApplication('', root_directory='foo')
+        expected_views = os.path.join('foo', 'views')
+        self.assert_equal(app.config.views_directory, expected_views)
 
 
 class TestInheritance(HobokenTestCase):
