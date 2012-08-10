@@ -32,7 +32,10 @@ setup(name='Hoboken',
           'Mock',
           'PyYAML'
       ],
-      packages=['hoboken'],
+      packages=[
+          'hoboken',
+          'hoboken.tests',
+      ],
       classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',

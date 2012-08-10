@@ -7,8 +7,8 @@ TODO list - a centralized list of stuff I'd like to do
     - I like the 'something else' option, since we can then do stuff like getting config from a Python file, a config file, or a user-provided dict() - which might just be dict(foo=bar) in the standard kwargs style.
     - Should actually provide options for configuring from, at least, a config file (ini-style/other?) and from a dict.  From a python module/file is also handy.
     - Config options:
-        - debug
-        - template directory
+        * debug
+        * template directory
     - Future config options:
         - static directory - so we can serve statics
         - default charset/encoding?
@@ -36,7 +36,7 @@ TODO list - a centralized list of stuff I'd like to do
         * finally, the matcher can have a reverse(args, kwargs) function that will use those parameters to return a given path
         * default matcher should be HobokenPathMatcher, which uses the standard splat (*)/param (:param) matching style.  move the logic out of the Hoboken class.
     * TODO: tests for this
- - Integrate with Shift
+ * Integrate with Shift
  - Integrate with itsdangerous to provide secure cookie support
  - Session support - should allow hooking into this, so we can use e.g. beaker, or something like dogpile, just a cookie, etc
  * Test URL params/args in before()/after()/condition functions
@@ -49,7 +49,7 @@ TODO list - a centralized list of stuff I'd like to do
         - Stuff like assert_has_header, assert_body_is, etc.
         - Other stuff?
  - More logging
- - Automation (e.g. bump version, test, deploy, etc. - as a Fabfile?)
+ * Automation (e.g. bump version, test, deploy, etc. - as a Fabfile?)
  - Upload to PyPI
    - Fix author/author_email
    * MANIFEST.in
