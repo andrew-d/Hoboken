@@ -7,7 +7,7 @@ try:
 except ImportError:
     import simplejson as json
 
-from .six import PY3, string_types, binary_type, text_type
+from .six import PY3, string_types, binary_type, text_type, iteritems
 
 
 class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
@@ -28,12 +28,7 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
 
     def recursive_escape(self, value):
         if isinstance(value, dict):
-            new_value = {}
-            for key in value:
-                escaped_key = self.recursive_escape(key)
-                escaped_value = self.recursive_escape(value[key])
-
-                new_value[escaped_key] = escaped_value
+            new_value = dict((self.recursive_escape(k), self.recursive_escape(v)) for k, v in iteritems(value))
         elif isinstance(value, list):
             new_value = list(self.recursive_escape(x) for x in value)
         elif isinstance(value, tuple):
