@@ -28,3 +28,6 @@ exclude_lines =
     if self\.debug:
     if self\.config\.debug:
 
+    # Ignore import exceptions
+    except ImportError:
+

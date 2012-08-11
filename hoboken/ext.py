@@ -4,10 +4,10 @@ import re
 import sys
 try:
     import json
-except:
+except ImportError:
     import simplejson as json
 
-from .six import PY3, text_type
+from .six import PY3, string_types, binary_type, text_type
 
 
 class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
@@ -40,22 +40,17 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
             new_value = tuple(self.recursive_escape(x) for x in value)
         else:
             # Need to check for different string types on different versions of Python.
-            if sys.version_info[0] >= 3:
-                if isinstance(value, bytes):
-                    regex = re.compile(b'[</>]')
-                    prefix = b'\\u'
-                elif isinstance(value, str):
-                    regex = re.compile('[</>]')
-                    prefix = '\\u'
-            else:
-                if isinstance(value, basestring):
-                    regex = re.compile('[</>]')
-                    prefix = '\\u'
+            if isinstance(value, string_types):
+                regex = re.compile('[</>]')
+                prefix = '\\u'
+            elif isinstance(value, binary_type):        # pragma: no cover
+                regex = re.compile(b'[</>]')
+                prefix = b'\\u'
 
             def string_escaper(m):
                 val = m.group(0)
                 escaped = self._byte_to_hex(ord(val), fill=4)
-                if sys.version_info[0] >= 3 and isinstance(val, bytes):
+                if PY3 and isinstance(val, bytes):      # pragma: no cover
                     escaped = escaped.encode('latin-1')
                 return prefix + escaped
 
@@ -73,9 +68,7 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
             value = self.recursive_escape(value)
 
         # Dump the value.
-        dumped_value = json.dumps(value, indent=self.config.json_indent) + b"\n"
-        if isinstance(dumped_value, text_type):
-            dumped_value = dumped_value.encode('latin-1')
+        dumped_value = json.dumps(value, indent=self.config.json_indent) + "\n"
 
         resp.body = dumped_value
         resp.content_type = 'application/json'
