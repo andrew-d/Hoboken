@@ -4,7 +4,7 @@
 # Change to True some day?
 branch = False
 # branch = True
-omit = *compat.py
+omit = *six.py
 
 [report]
 # Regexes for lines to exclude from consideration

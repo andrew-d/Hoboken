@@ -6,6 +6,8 @@ import time
 import datetime
 import webob
 
+from .six import iteritems
+
 
 class HobokenCachingMixin(object):
     """
@@ -68,7 +70,7 @@ class HobokenCachingMixin(object):
                 halt(status_code=412)
 
     def set_cache_control(self, **kwargs):
-        for key, val in kwargs.items():
+        for key, val in iteritems(kwargs):
             setattr(self.response.cache_control, key, val)
 
     def set_expires(self, amount, **kwargs):

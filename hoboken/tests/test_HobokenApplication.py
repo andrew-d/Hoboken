@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from . import HobokenTestCase
+from . import HobokenTestCase, is_python3
 from .. import HobokenApplication, condition
 from ..application import HobokenBaseApplication, Route, halt, pass_route
 from ..matchers import RegexMatcher
@@ -138,7 +138,7 @@ class TestHaltHelper(HobokenTestCase):
 
         # The 'text' attribute of a webob Request only supports unicode
         # strings on Python 2.X, so we need to make this unicode.
-        if sys.version_info[0] < 3:
+        if not is_python3():
             self.halt_body = unicode(body)
         else:
             self.halt_body = body
@@ -364,6 +364,14 @@ class TestMiscellaneousMethods(HobokenTestCase):
         resp = r.get_response(self.app)
 
         self.assert_equal(resp.status_code, 405)
+
+    def test_will_error_on_invalid_body(self):
+        req = mock.MagicMock()
+        resp = mock.MagicMock()
+        value = 123
+
+        with self.assert_raises(ValueError):
+            self.app.on_returned_body(req, resp, value)
 
 class TestConfig(HobokenTestCase):
     def test_can_get_set_values(self):

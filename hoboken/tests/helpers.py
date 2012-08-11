@@ -6,6 +6,8 @@ import types
 import unittest
 import functools
 
+from ..six import iteritems, PY3
+
 
 def ensure_in_path(path):
     """
@@ -70,7 +72,7 @@ def is_pypy():
     return hasattr(sys, 'pypy_version_info')
 
 def is_python3():
-    return sys.version_info[0] >= 3
+    return PY3
 
 
 class _ExceptionCatcher(object):
@@ -163,7 +165,7 @@ def parameters(params_list, name_func=None):
 class ParametrizingMetaclass(type):
     def __new__(klass, name, bases, attrs):
         new_attrs = attrs.copy()
-        for attr_name, attr in attrs.items():
+        for attr_name, attr in iteritems(attrs):
             # We only care about functions
             if not isinstance(attr, types.FunctionType):
                 continue

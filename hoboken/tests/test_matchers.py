@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from . import HobokenTestCase, BaseTestCase
+from . import HobokenTestCase, BaseTestCase, is_python3
 from ..matchers import BasicMatcher, RegexMatcher, HobokenRouteMatcher
 from .helpers import parametrize, parameters
 
@@ -105,7 +105,7 @@ class TestHobokenRouteMatcher(BaseTestCase):
         self.assert_equal(out, param['reverse'])
 
     def test_reversing(self):
-        if sys.version_info[0] >= 3:
+        if is_python3():
             return
 
         unicode_str = b'/f\xc3\xb8\xc3\xb8'.decode('utf-8')

@@ -21,7 +21,19 @@ from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerErro
 from .exceptions import *
 from .matchers import *
 from .objects import *
-from .compat import *
+
+# Compatibility.
+from .six import with_metaclass, text_type, binary_type, string_types, callable, iteritems
+
+
+def get_func_attr(func, attr, default=None, delete=False):
+    if delete:
+        return func.__dict__.pop(attr, default)
+    else:
+        return func.__dict__.get(attr, default)
+
+def set_func_attr(func, attr, value):
+    func.__dict__[attr] = value
 
 
 def condition(condition_func):
@@ -147,11 +159,6 @@ class HobokenMetaclass(type):
         return super(HobokenMetaclass, klass).__new__(klass, name, bases, attrs)
 
 
-def with_metaclass(meta, base=object):
-    """Create a base class with a metaclass."""
-    return meta("NewBase", (base,), {})
-
-
 def is_route(func):
     return get_func_attr(func, 'hoboken.route', default=False)
 
@@ -262,20 +269,20 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self.sub_app = subapp
 
     def _make_route(self, match, func):
-        if isinstance(match, BaseStringType):
+        if isinstance(match, string_types):
             matcher = HobokenRouteMatcher(match)
         elif isinstance(match, RegexType):
             # match is a regex, so we extract any named groups.
             keys = [None] * match.groups
             types = [False] * match.groups
-            for name, index in match.groupindex.items():
+            for name, index in iteritems(match.groupindex):
                 types[index - 1] = True
                 keys[index - 1] = name
 
             # Append the route with these keys.
             matcher = RegexMatcher(match, types, keys)
 
-        elif hasattr(match, "match") and iscallable(getattr(match, "match")):
+        elif hasattr(match, "match") and callable(getattr(match, "match")):
             # Don't know what type it is, but it has a callable "match"
             # attribute, so we use that.
             matcher = match
@@ -408,18 +415,13 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         route function into the request body.  Override this in a subclass
         to customize how values are returned.
         """
-        if sys.version_info[0] >= 3:        # pragma: no cover
-            if isinstance(value, bytes):
-                resp.body = value
-            elif isinstance(value, str):
-                resp.text = value
-            else:
-                raise ValueError("Unknown return type: {0!r}".format(type(value)))
-        else:                               # pragma: no cover
-            if isinstance(value, unicode):
-                resp.text = value
-            else:
-                resp.body = value
+        print('value is: {0!r}, {1}'.format(value, type(value)))
+        if isinstance(value, text_type):
+            resp.text = value
+        elif isinstance(value, binary_type):
+            resp.body = value
+        else:
+            raise ValueError("Unknown return type: {0!r}".format(type(value)))
 
     def wsgi_entrypoint(self, environ, start_response):
         try:
@@ -488,7 +490,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
         except HaltRoutingException as ex:
             # For each attribute in the given kwargs, send it.
-            for attr, val in ex.kwargs.items():
+            for attr, val in iteritems(ex.kwargs):
                 if val is not None:
                     setattr(response, attr, val)
 

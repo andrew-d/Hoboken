@@ -7,7 +7,12 @@ import sys
 
 # In-package dependencies
 from .exceptions import *
-from .compat import *
+
+# Compatibility.
+from .six import string_types, PY3
+
+RegexType = type(re.compile(""))
+RegexMatchType = type(re.compile(".*").match("asdf"))
 
 
 class AbstractMatcher(object):
@@ -72,7 +77,7 @@ class RegexMatcher(AbstractMatcher):
         # We handle regexes and string patterns for regexes here.
         if isinstance(regex, RegexType):
             self.re = regex
-        elif isinstance(regex, BaseStringType):     # pragma: no cover
+        elif isinstance(regex, string_types):     # pragma: no cover
             try:
                 self.re = re.compile(regex)
             except re.error:
@@ -249,7 +254,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         # 2, we take the input as-is if it's a str, or encode to utf-8 if it's
         # a unicode value.  On Python 3, we encode it as bytes (the input must
         # be a string on Python 3) using utf-8.
-        if sys.version_info[0] >= 3:        # pragma: no cover
+        if PY3:        # pragma: no cover
             path = path.encode('utf-8')
         else:                               # pragma: no cover
             if isinstance(path, unicode):

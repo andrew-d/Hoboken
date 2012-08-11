@@ -75,6 +75,7 @@ def suite():
     from .test_helpers import suite as suite_5
     from .test_routing import suite as suite_6
     from .test_request_response import suite as suite_7
+    from .test_ext import suite as suite_8
 
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
@@ -84,6 +85,7 @@ def suite():
     suite.addTest(suite_5())
     suite.addTest(suite_6())
     suite.addTest(suite_7())
+    suite.addTest(suite_8())
 
     return suite
 

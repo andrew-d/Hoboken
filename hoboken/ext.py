@@ -7,6 +7,8 @@ try:
 except:
     import simplejson as json
 
+from .six import PY3, text_type
+
 
 class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
     """
@@ -33,9 +35,9 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
 
                 new_value[escaped_key] = escaped_value
         elif isinstance(value, list):
-            new_value = list(recursive_escape(x) for x in value)
+            new_value = list(self.recursive_escape(x) for x in value)
         elif isinstance(value, tuple):
-            new_value = tuple(recursive_escape(x) for x in value)
+            new_value = tuple(self.recursive_escape(x) for x in value)
         else:
             # Need to check for different string types on different versions of Python.
             if sys.version_info[0] >= 3:
@@ -52,7 +54,10 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
 
             def string_escaper(m):
                 val = m.group(0)
-                return prefix + self._byte_to_hex(ord(val), fill=4)
+                escaped = self._byte_to_hex(ord(val), fill=4)
+                if sys.version_info[0] >= 3 and isinstance(val, bytes):
+                    escaped = escaped.encode('latin-1')
+                return prefix + escaped
 
             new_value = regex.sub(string_escaper, value)
 
@@ -68,8 +73,8 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
             value = self.recursive_escape(value)
 
         # Dump the value.
-        dumped_value = json.dumps(value, indent=self.config.json_indent) + "\n"
-        if sys.version_info[0] >= 3:
+        dumped_value = json.dumps(value, indent=self.config.json_indent) + b"\n"
+        if isinstance(dumped_value, text_type):
             dumped_value = dumped_value.encode('latin-1')
 
         resp.body = dumped_value
