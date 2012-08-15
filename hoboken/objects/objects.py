@@ -48,9 +48,9 @@ class WSGIBaseRequest(BaseRequest):
 
     method = _environ_prop('REQUEST_METHOD', 'GET')
     scheme = _environ_prop('wsgi.url_scheme')
-    script_name = _environ_prop('SCRIPT_NAME')
-    path_info = _environ_prop('PATH_INFO')
-    query_string = _environ_prop('QUERY_STRING')
+    script_name = _environ_prop('SCRIPT_NAME', '')
+    path_info = _environ_prop('PATH_INFO', '')
+    query_string = _environ_prop('QUERY_STRING', '')
     http_version = _environ_prop('SERVER_PROTOCOL')
 
     content_length = _environ_converter(_environ_prop('CONTENT_LENGTH', None),
@@ -77,21 +77,34 @@ class WSGIBaseRequest(BaseRequest):
     input_stream = _environ_prop('wsgi.input')
 
 
-class WSGIRequest(object):
+class WSGIRequest(WSGIBaseRequest):
+    _STRIP_PORT = re.compile(r":\d+\Z")
+
+    def __init__(self, *args, **kwargs):
+        super(WSGIRequest, self).__init__(*args, **kwargs)
+
     @property
     def path_info(self):
         """An override of path_info that ensures we always have a leading
         slash.
         """
-        val = super(WSGIRequest, self).path_info()
+        val = super(WSGIRequest, self).path_info
         return '/' + val.lstrip('/')
+
+    @path_info.setter
+    def path_info(self, value):
+        super(WSGIRequest, self).path_info = value
+
+    @path_info.deleter
+    def path_info(self):
+        del super(WSGIRequest, self).path_info
 
     @property
     def host_with_port(self):
-        if self.environ.get('HTTP_HOST'):
-            return self.environ['HTTP_HOST']
+        if self.headers.get('Host'):
+            return self.headers['Host']
         else:
-            host = self.environ['SERVER_NAME']
+            host = self.server_name
 
             if self.scheme == 'https':
                 if self.port != '443':
@@ -99,6 +112,7 @@ class WSGIRequest(object):
             else:
                 if self.port != '80':
                    host += ':' + self.port
+
         return host
 
     @property
@@ -111,12 +125,16 @@ class WSGIRequest(object):
         if len(spl) > 1:
             return int(spl[1])
 
-        if self.environ.get('HTTP_X_FORWARDED_PORT'):
-            return int(self.environ['HTTP_X_FORWARDED_PORT'])
+        if self.headers.get('X-Forwarded-Port'):
+            return int(self.headers['X-Forwarded-Port'])
 
         if self.scheme == 'https':
             return 443
-        # elif 'HTTP_X_FORWARDED_HOST' in 
+
+        if 'X-Forwarded-Host' in self.headers:
+            return 80
+
+        return self.server_port
 
     @property
     def path(self):
@@ -130,15 +148,15 @@ class WSGIRequest(object):
 
         url += self.host_with_port
 
-        url += quote(environ.get('SCRIPT_NAME', ''))
-        url += quote(environ.get('PATH_INFO', ''))
-        if environ.get('QUERY_STRING'):
-            url += '?' + environ['QUERY_STRING']
+        url += quote(self.script_name)
+        url += quote(self.path_info)
+        if len(self.query_string) > 0:
+            url += '?' + self.query_string
 
         return url
 
     @property
-    def secure(self):
+    def is_secure(self):
         return self.scheme == 'https'
 
 
