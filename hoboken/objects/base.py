@@ -1,12 +1,41 @@
-# Future-proofing
 from __future__ import with_statement, absolute_import, print_function
 
-import webob
 
-class Request(webob.BaseRequest):
+class BaseRequest(object):
     """
-    Hoboken's request objects.  Uses WebOb's request object
+    Hoboken's request object.  This class defines the interface that all
+    request objects must follow.
     """
+    def __init__(self):
+        self.http_version = None
+
+        self.url = None
+        self.path = None
+
+        # TODO: do we want these in all cases? i.e. if we're not a WSGI
+        # application, do we care about these?
+        self.script_name = None
+        self.path_info = None
+
+        self.host = None
+        self.port = None
+
+        self.scheme = None
+        self.secure = None
+
+        self.method = None
+        self.query_string = None
+
+        self.accept = None
+        self.cookies = None
+        self.content_length = None
+        self.referrer = None
+        self.user_agent = None
+
+        self.client_ip = None
+
+        self.body = None
+
     @property
     def is_safe(self):
         """
@@ -24,9 +53,9 @@ class Request(webob.BaseRequest):
         return self.is_safe or self.method in ['PUT', 'DELETE']
 
 
-class Response(webob.Response):
+class Response(object):
     """
-    Hoboken's request objects.  Uses WebOb's request object.
+    Hoboken's request object.
     """
     @property
     def is_informational(self):

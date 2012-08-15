@@ -143,3 +143,26 @@ def request_handler():
     param = app.request.urlvars['param']
 
 
+New Request / Response Ideas
+============================
+
+ - BaseRequest class that defines the interface that all request objects must conform to
+ - WSGIRequest subclass that will fill out the request given a WSGI environ
+ - Mixins to add additional functionality
+ - In the short term, maybe just have BaseRequest/mixins, and ignore the non-WSGI case for now?
+
+TODO:
+ - Read-only, read-but-not-modify-underlying, or read-write request objects?
+ - Should be able to modify request somehow
+    - Maybe make it such that the request object is read-only, but if you want to modify the request, you can just change the underlying environ?
+    - Advantages: makes the Request simple
+    - Disadvantages: makes changing harder than necessary (especially headers or anything that requires advanced parsing (e.g. changing the etag that's incoming)).
+    - I like this for now - can always make a read-write version later.
+ - Place logic in WSGIRequest, or in BaseRequest class?  Both?
+ - Compute everything in __init__, on demand, or Werkzeug-like "once but cache"?
+ - What about properties that are dependent on other properties?
+ - Some properties might be read-only?
+ - We need to be able to turn a Request into an 'environ', so that when we're middleware, we can modify the request and pass the changes through.
+
+Another thought:
+ - Base WSGI request that just exposes the various environ variables through properties, and then another layer ontop of that that exposes stuff like full URL, etc. via @properties.  In future, can even have it such that BaseWSGIRequest is NOT a subclass of BaseRequest (i.e. since it may not implement the full API), but the full WSGIRequest is (since the various properties on that will implement the corresponding API).
