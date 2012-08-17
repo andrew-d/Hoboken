@@ -9,7 +9,7 @@ import sys
 from .exceptions import *
 
 # Compatibility.
-from .six import string_types, PY3
+from .six import string_types, text_type, PY3
 
 RegexType = type(re.compile(""))
 RegexMatchType = type(re.compile(".*").match("asdf"))
@@ -250,15 +250,10 @@ class HobokenRouteMatcher(AbstractMatcher):
                 self.group_names[group_num] = match.group(0)[1:].decode('ascii')
                 return br"([^" + Store.ignore + br"/?#]+)"
 
-        # Before doing anything else, we need to deal with encoding.  On Python
-        # 2, we take the input as-is if it's a str, or encode to utf-8 if it's
-        # a unicode value.  On Python 3, we encode it as bytes (the input must
-        # be a string on Python 3) using utf-8.
-        if PY3:        # pragma: no cover
+        # Before we do anything else, we ensure that the input route is a byte
+        # type.  If it's a text type, we encode it as UTF-8.
+        if isinstance(path, text_type):
             path = path.encode('utf-8')
-        else:                               # pragma: no cover
-            if isinstance(path, unicode):
-                path = path.encode('utf-8')
 
         pattern = re.sub(br'[^\?\%\\\/\:\*\w]', encode_character, path)
         pattern = self.MATCH_REGEX_BYTES.sub(convert_match, pattern)
