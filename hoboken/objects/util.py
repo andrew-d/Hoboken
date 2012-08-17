@@ -1,7 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 __all__ = ['_not_given', '_environ_prop', '_environ_converter', '_int_parser',
-           '_int_serializer'
+           '_int_serializer', 'ImmutableList',
            ]
 
 class _NotGiven(object):
@@ -51,3 +51,63 @@ def _int_parser(value):
 
 _int_serializer = str
 
+
+def is_immutable(self):
+    raise TypeError('{0!r} objects are immutable'.format(self.__class__.__name__))
+
+
+class ImmutableListMixin(object):
+    """
+    This mixin makes a list immutable.  Code inspired by some code from
+    Werkzeug.
+    """
+
+    _hash_cache = None
+
+    def __hash__(self):
+        if self._hash_cache is not None:
+            return self._hash_cache
+        rv = self._hash_cache = hash(tuple(self))
+        return rv
+
+    def __reduce_ex__(self, protocol):
+        return type(self), (list(self),)
+
+    def __delitem__(self, key):
+        is_immutable(self)
+
+    def __delslice__(self, i, j):
+        is_immutable(self)
+
+    def __iadd__(self, other):
+        is_immutable(self)
+    __imul__ = __iadd__
+
+    def __setitem__(self, key, value):
+        is_immutable(self)
+
+    def __setslice__(self, i, j, value):
+        is_immutable(self)
+
+    def append(self, item):
+        is_immutable(self)
+    remove = append
+
+    def extend(self, iterable):
+        is_immutable(self)
+
+    def insert(self, pos, value):
+        is_immutable(self)
+
+    def pop(self, index=-1):
+        is_immutable(self)
+
+    def reverse(self):
+        is_immutable(self)
+
+    def sort(self, cmp=None, key=None, reverse=None):
+        is_immutable(self)
+
+
+class ImmutableList(ImmutableListMixin, list):
+    pass

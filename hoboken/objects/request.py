@@ -5,6 +5,13 @@ from .base import BaseRequest
 from .util import *
 from ..six import *
 
+try:
+    import urllib.parse
+    quote = urllib.parse.quote
+except ImportError:
+    import urllib
+    quote = urllib.quote
+
 
 class WSGIHeaders(MutableMapping):
     def __init__(self, environ):
@@ -83,21 +90,14 @@ class WSGIRequest(WSGIBaseRequest):
     def __init__(self, *args, **kwargs):
         super(WSGIRequest, self).__init__(*args, **kwargs)
 
-    @property
+    @WSGIBaseRequest.path_info.getter
     def path_info(self):
-        """An override of path_info that ensures we always have a leading
-        slash.
+        """
+        An override of path_info's getter that ensures we always have a
+        leading slash.
         """
         val = super(WSGIRequest, self).path_info
         return '/' + val.lstrip('/')
-
-    @path_info.setter
-    def path_info(self, value):
-        super(WSGIRequest, self).path_info = value
-
-    @path_info.deleter
-    def path_info(self):
-        del super(WSGIRequest, self).path_info
 
     @property
     def host_with_port(self):
@@ -141,6 +141,13 @@ class WSGIRequest(WSGIBaseRequest):
         return self.script_name + self.path_info
 
     @property
+    def full_path(self):
+        path = self.path
+        if len(self.query_string) > 0:
+            path += '?' + self.query_string
+        return path
+
+    @property
     def url(self):
         """ The full URL of the request."""
         # This code taken from PEP 3333, thanks to Ian Bicking.
@@ -148,8 +155,7 @@ class WSGIRequest(WSGIBaseRequest):
 
         url += self.host_with_port
 
-        url += quote(self.script_name)
-        url += quote(self.path_info)
+        url += quote(self.path)
         if len(self.query_string) > 0:
             url += '?' + self.query_string
 
@@ -159,4 +165,12 @@ class WSGIRequest(WSGIBaseRequest):
     def is_secure(self):
         return self.scheme == 'https'
 
+    def __str__(self):
+        parts = ["{0} {1} {2}".format(self.method, self.full_path,
+                                      self.http_version)]
+
+        for k, v in sorted(self.headers.items()):
+            parts.append("{0}: {1}".format(k, v))
+
+        return "\r\n".join(parts)
 
