@@ -14,18 +14,19 @@ _not_given = _NotGiven()
 def _environ_prop(key, default=_not_given):
     if default is _not_given:
         def getter(self):
-            return self.environ[key]
+            return self._from_wsgi_str(self.environ[key])
         def setter(self, value):
-            self.environ[key] = value
+            self.environ[key] = self._to_wsgi_str(value)
         deleter = None
     else:
         def getter(self):
-            return self.environ.get(key, default)
+            val = self.environ.get(key, default)
+            return self._from_wsgi_str(val)
         def setter(self, value):
             if value is None:
                 self.environ.pop(key, None)
             else:
-                self.environ[key] = value
+                self.environ[key] = self._to_wsgi_str(value)
         def deleter(self):
             del self.environ[key]
 

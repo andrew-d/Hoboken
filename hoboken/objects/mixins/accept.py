@@ -1,4 +1,5 @@
 from __future__ import with_statement, absolute_import, print_function
+import re
 import codecs
 
 from ..util import ImmutableList
@@ -6,15 +7,15 @@ from . import six
 
 
 class AcceptList(ImmutableList):
-    _accept_re = re.compile(r'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')
+    _accept_re = re.compile(br'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')
 
-    def __init__(self, values=()):
-        vals = list(values)
+    def __init__(self, values=None):
+        vals = list(values or ())
         vals.sort(key=lambda v: (v[1], v[0]), reverse=True)
         list.__init__(self, vals)
 
     def _match(self, value, item):
-        return item == '*' or item.lower() == value.lower()
+        return item == b'*' or item.lower() == value.lower()
 
     def __getitem__(self, key):
         if isinstance(key, six.string_types):
@@ -41,53 +42,64 @@ class AcceptList(ImmutableList):
         for value, quality in self:
             it = value
             if quality != 1:
-                it = "{0};q={1}".format(value, quality)
+                it = value + b';q=' + quality
             result.append(it)
-        return ','.join(result)
+        return b','.join(result)
 
     @classmethod
     def parse(klass, value):
-        # TODO
-        pass
+        if not value:
+            return None
+
+        ret = []
+        for match in klass._accept_re.finditer(value):
+            quality = match.group(2)
+            if not quality:
+                quality = 1
+            else:
+                quality = min(max(float(quality), 0), 1)
+            ret.append((match.group(1), quality))
+
+        return ret
 
 
 class MIMEAccept(AcceptList):
     def _match(self, value, item):
         def _normalize(x):
             x = x.lower()
-            if x == '*':
-                return ('*', '*')
+            if x == b'*':
+                return (b'*', b'*')
             else:
-                return x.split('/', 1)
+                return x.split(b'/', 1)
 
-        if '/' not in value:
+        if b'/' not in value:
             raise ValueError('Invalid mimetype {0!r}'.format(value))
         value_type, value_subtype = _normalize(value)
-        if value_type == '*' and value_subtype != '*':
+        if value_type == b'*' and value_subtype != b'*':
             raise ValueError('Invalid mimetype {0!r}'.format(value))
 
-        if '/' not in item:
+        if b'/' not in item:
             return False
         item_type, item_subtype = _normalize(item)
-        if item_type == '*' and item_subtype != '*':
+        if item_type == b'*' and item_subtype != b'*':
             return False
 
         return (
-            (item_type == item_subtype == '*' or
-             value_type == value_subtype == '*') or
-            (item_type == value_type and (item_subtype == '*' or
-                                          value_subtype == '*' or
+            (item_type == item_subtype == b'*' or
+             value_type == value_subtype == b'*') or
+            (item_type == value_type and (item_subtype == b'*' or
+                                          value_subtype == b'*' or
                                           item_subtype == value_subtype))
         )
 
 
 class LanguageAccept(AcceptList):
-    self._locale_re = re.compile(r'[_-]')
+    _locale_re = re.compile(br'[_-]')
     def _match(self, value, item):
         def _normalize(language):
             return self._locale_re.split(language.lower())
 
-        return item == '*' or _normalize(value) == _normalize(item)
+        return item == b'*' or _normalize(value) == _normalize(item)
 
 
 class CharsetAccept(AcceptList):
@@ -98,7 +110,7 @@ class CharsetAccept(AcceptList):
             except LookupError:
                 return name.lower()
 
-        return item == '*' or _normalize(value) == _normalize(item)
+        return item == b'*' or _normalize(value) == _normalize(item)
 
 
 class WSGIAcceptMixin(object):
@@ -111,21 +123,40 @@ class WSGIAcceptMixin(object):
 
     @property
     def accept_mimetypes(self):
-        vals = AcceptList.parse(self.headers['Accept'])
+        vals = AcceptList.parse(self.headers.get('Accept'))
         return MIMEAccept(vals)
 
     @property
     def accept_charsets(self):
-        vals = AcceptList.parse(self.headers['Accept-Charset'])
+        vals = AcceptList.parse(self.headers.get('Accept-Charset'))
         return CharsetAccept(vals)
 
     @property
     def accept_encodings(self):
-        vals = AcceptList.parse(self.headers['Accept-Encoding'])
+        vals = AcceptList.parse(self.headers.get('Accept-Encoding'))
         return AcceptList(vals)
 
     @property
     def accept_languages(self):
-        vals = AcceptList.parse(self.headers['Accept-Language'])
+        vals = AcceptList.parse(self.headers.get('Accept-Language'))
         return LanguageAccept(vals)
+
+    # Helper functions that test common accept values.
+    @property
+    def accepts_json(self):
+        return b'application/json' in self.accept_mimetypes
+
+    @property
+    def accepts_xhtml(self):
+        return (
+            b'application/xhtml+xml' in self.accept_mimetypes or
+            b'application/xml' in self.accept_mimetypes
+        )
+
+    @property
+    def accepts_html(self):
+        return (
+            b'text/html' in self.accept_mimetypes or
+            self.accepts_xhtml
+        )
 
