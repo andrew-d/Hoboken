@@ -220,6 +220,7 @@ class WSGIRequest(WSGIBaseRequest):
 
 
 from .mixins.accept import WSGIAcceptMixin
+from .mixins.cache import WSGICacheMixin
 
-class WSGIFullRequest(WSGIRequest, WSGIAcceptMixin):
+class WSGIFullRequest(WSGIRequest, WSGIAcceptMixin, WSGICacheMixin):
     pass
