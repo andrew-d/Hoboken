@@ -41,6 +41,10 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
             elif isinstance(value, binary_type):        # pragma: no cover
                 regex = re.compile(b'[</>]')
                 prefix = b'\\u'
+            else:
+                # Not anything we want to escape, so just return the value
+                # as-is without modification.
+                return value
 
             def string_escaper(m):
                 val = m.group(0)

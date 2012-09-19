@@ -62,6 +62,11 @@ class TestHobokenJsonApplication(BaseTestCase):
 
         json_mock.assert_called_with({'value': value}, indent=self.app.config.json_indent)
 
+    def test_will_handle_non_escapable(self):
+        val = {"no_escape" : 0}
+        output = {"no_escape": 0}
+        self.assert_equal(self.app.recursive_escape(val), output)
+
 
 def suite():
     suite = unittest.TestSuite()
