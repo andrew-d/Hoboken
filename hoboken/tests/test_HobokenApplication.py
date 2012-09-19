@@ -390,6 +390,25 @@ class TestConfig(HobokenTestCase):
         expected_views = os.path.join('foo', 'views')
         self.assert_equal(app.config.views_directory, expected_views)
 
+    def test_vars(self):
+        app = HobokenApplication('')
+
+        @app.get("/one")
+        def one():
+            app.vars.foo = 'bar'
+
+        @app.get("/two")
+        def two():
+            self.assert_true('foo' not in app.vars)
+
+        r = Request.blank("/one")
+        resp = r.get_response(app)
+
+        self.assert_true('foo' not in app.vars)
+
+        r = Request.blank("/two")
+        resp = r.get_response(app)
+
 
 class TestInheritance(HobokenTestCase):
     def test_mixin_init_called(self):

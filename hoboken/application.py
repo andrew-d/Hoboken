@@ -237,6 +237,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self._locals = threading.local()
         self._locals.request = None
         self._locals.response = None
+        self._locals.config = objdict()
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
@@ -264,6 +265,14 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     @response.deleter
     def response(self):
         self._locals.response = None
+
+    @property
+    def vars(self):
+        return self._locals.config
+
+    @vars.deleter
+    def vars(self):
+        self._locals.config = objdict()
 
     def set_subapp(self, subapp):
         self.sub_app = subapp
@@ -440,6 +449,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # After each request, we remove the request and response objects.
             del self.request
             del self.response
+
+            # We also reset our request config.
+            del self.vars
 
     def _run_routes(self, method):
         # Since these are thread-locals, we grab them as locals.
