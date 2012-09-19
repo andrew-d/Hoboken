@@ -23,6 +23,9 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
         if 'json_escape' not in self.config:
             self.config.json_escape = True
 
+        if 'json_wrap' not in self.config:
+            self.config.json_wrap = True
+
     def _byte_to_hex(self, val, fill=2):
         return hex(val)[2:].zfill(fill).upper()
 
@@ -60,7 +63,14 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
 
     def on_returned_body(self, request, resp, value):
         if not isinstance(value, dict):
-            value = {"value": value}
+            if self.config.json_wrap:
+                value = {"value": value}
+            else:
+                # If we haven't been told to, we don't wrap the returned value,
+                # and just set the body as-is.  We don't touch the
+                # Content-Type, either.
+                resp.body = value
+                return
 
         # Escape if specified.
         if self.config.json_escape:

@@ -62,6 +62,16 @@ class TestHobokenJsonApplication(BaseTestCase):
 
         json_mock.assert_called_with({'value': value}, indent=self.app.config.json_indent)
 
+    def test_will_not_encapsulate_if_requested(self):
+        self.app.config.json_wrap = False
+
+        request_mock = MagicMock()
+        response_mock = MagicMock()
+        value = b'some val'
+
+        self.app.on_returned_body(request_mock, response_mock, value)
+        self.assert_equal(value, response_mock.body)
+
     def test_will_handle_non_escapable(self):
         val = {"no_escape" : 0}
         output = {"no_escape": 0}
