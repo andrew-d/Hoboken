@@ -123,33 +123,29 @@ class TestHaltHelper(HobokenTestCase):
 
         @self.app.before("/before/halt")
         def before_halt_func():
-            halt(code=self.halt_code, text=self.halt_body)
+            halt(code=self.halt_code, body=self.halt_body)
 
         @self.app.get("/halts")
         def halts():
-            halt(code=self.halt_code, text=self.halt_body)
+            halt(code=self.halt_code, body=self.halt_body)
             return 'bad'
 
         self.app.config.debug = True
 
-    def assert_halts_with(self, code, body, *args, **kwargs):
+    def assert_halts_with(self, code, body, path):
         """Helper function to set the halt value and assert"""
         self.halt_code = code
-
-        # The 'text' attribute of a webob Request only supports unicode
-        # strings on Python 2.X, so we need to make this unicode.
-        if not is_python3():
-            self.halt_body = unicode(body)
-        else:
-            self.halt_body = body
-
-        self.assert_body_is(body, *args, **kwargs)
+        self.halt_body = body
+        req = Request.blank(path)
+        resp = req.get_response(self.app)
+        self.assert_equal(resp.status_int, 200)
+        self.assert_equal(resp.body, body)
 
     def test_before_can_halt(self):
-        self.assert_halts_with(200, 'foobar', path='/before/halt')
+        self.assert_halts_with(200, b'foobar', '/before/halt')
 
     def test_body_can_halt(self):
-        self.assert_halts_with(200, 'good', path='/halts')
+        self.assert_halts_with(200, b'good', '/halts')
 
 
 class TestPassHelper(HobokenTestCase):
@@ -203,7 +199,7 @@ class TestRedirectHelper(HobokenTestCase):
 
         @self.app.get("/redirect")
         def redirect_func():
-            self.app.redirect('/foo', status_code=self.redirect_code)
+            self.app.redirect('/foo', code=self.redirect_code)
 
         self.app.config.debug = True
 
