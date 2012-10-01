@@ -12,3 +12,7 @@ install:
 
 script: sudo python setup.py test
 
+branches:
+    only:
+        - master
+

@@ -42,8 +42,9 @@ class HaltRoutingException(HobokenUserException):
     arguments to be set on the Response() object.  It simply stores them for
     use by the application.
     """
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, code, body, headers):
+        self.code = code
+        self.body = body
+        self.headers = headers
         super(HaltRoutingException, self).__init__()
 

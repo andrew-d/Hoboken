@@ -23,48 +23,37 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
         if 'json_escape' not in self.config:
             self.config.json_escape = True
 
-    def _byte_to_hex(self, val, fill=2):
-        return hex(val)[2:].zfill(fill).upper()
-
-    def recursive_escape(self, value):
-        if isinstance(value, dict):
-            new_value = dict((self.recursive_escape(k), self.recursive_escape(v)) for k, v in iteritems(value))
-        elif isinstance(value, list):
-            new_value = list(self.recursive_escape(x) for x in value)
-        elif isinstance(value, tuple):
-            new_value = tuple(self.recursive_escape(x) for x in value)
-        else:
-            # Need to check for different string types on different versions of Python.
-            if isinstance(value, string_types):
-                regex = re.compile('[</>]')
-                prefix = '\\u'
-            elif isinstance(value, binary_type):        # pragma: no cover
-                regex = re.compile(b'[</>]')
-                prefix = b'\\u'
-
-            def string_escaper(m):
-                val = m.group(0)
-                escaped = self._byte_to_hex(ord(val), fill=4)
-                if PY3 and isinstance(val, bytes):      # pragma: no cover
-                    escaped = escaped.encode('latin-1')
-                return prefix + escaped
-
-            new_value = regex.sub(string_escaper, value)
-
-        return new_value
-
+        if 'json_wrap' not in self.config:
+            self.config.json_wrap = True
 
     def on_returned_body(self, request, resp, value):
         if not isinstance(value, dict):
-            value = {"value": value}
-
-        # Escape if specified.
-        if self.config.json_escape:
-            value = self.recursive_escape(value)
+            if self.config.json_wrap:
+                value = {"value": value}
+            else:
+                # If we haven't been told to, we don't wrap the returned value,
+                # and just set the body as-is.  We don't touch the
+                # Content-Type, either.
+                resp.body = value
+                return
 
         # Dump the value.
         dumped_value = json.dumps(value, indent=self.config.json_indent) + "\n"
 
+        # Escape if specified.
+        if self.config.json_escape:
+            # The escape here is fairly hacky, since Python doesn't let us
+            # override the encoding of built-in objects.
+            dumped_value = self.escape_string(dumped_value)
+
         resp.body = dumped_value
         resp.content_type = 'application/json'
+
+    def escape_string(self, string):
+        escapes = {'&': '\\u0026', '>': '\\u003E', '<': '\\u003C'}
+        def encoder(match):
+            v = match.group(0)
+            return escapes[v]
+
+        return re.sub(r"[&<>]", encoder, string)
 

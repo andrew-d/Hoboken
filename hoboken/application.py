@@ -54,12 +54,13 @@ def condition(condition_func):
     return internal_decorator
 
 
-def halt(*args, **kwargs):
+def halt(code=None, body=None, headers=None):
     """
-    This function halts routing, and returns immediately.  If the code or body
-    parameters are given, this will set those values on the response.
+    This function halts routing, and returns immediately.  If the code, body
+    or headers parameters are given, this will set those values on the
+    response.
     """
-    raise HaltRoutingException(*args, **kwargs)
+    raise HaltRoutingException(code, body, headers)
 
 
 def pass_route():
@@ -237,6 +238,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self._locals = threading.local()
         self._locals.request = None
         self._locals.response = None
+        self._locals.config = objdict()
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
@@ -264,6 +266,14 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     @response.deleter
     def response(self):
         self._locals.response = None
+
+    @property
+    def vars(self):
+        return self._locals.config
+
+    @vars.deleter
+    def vars(self):
+        self._locals.config = objdict()
 
     def set_subapp(self, subapp):
         self.sub_app = subapp
@@ -328,13 +338,12 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         path = route.reverse(*args, **kwargs)
         return path
 
-    def redirect(self, location, *args, **kwargs):
+    def redirect(self, location, code=None, body=None, headers=None):
         """
         This is a helper function for redirection.
         """
 
         # If a code is specified, we take that.
-        code = kwargs.pop('status_code', None)
         if code is None:
             # If no code, we send a 303 if it's supported and we aren't already using GET.
             if self.request.http_version == 'HTTP/1.1' and self.request.method != 'GET':
@@ -342,14 +351,14 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             else:
                 code = 302
 
-        # Re-set the code parameter.
-        kwargs['status_code'] = code
+        # Ensure we have the 'headers' dict.
+        headers = headers or {}
 
         # Set the 'location' argument, which in turn sets the 'Location' header.
-        kwargs['location'] = location
+        headers['Location'] = location
 
         # Halt routing with these parameters.
-        halt(*args, **kwargs)
+        halt(code=code, body=body, headers=headers)
 
     def _decorate_and_route(self, method, match):
         def internal_decorator(func):
@@ -441,6 +450,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             del self.request
             del self.response
 
+            # We also reset our request config.
+            del self.vars
+
     def _run_routes(self, method):
         # Since these are thread-locals, we grab them as locals.
         request = self.request
@@ -489,10 +501,19 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
                 matched = self._run_routes('GET')
 
         except HaltRoutingException as ex:
-            # For each attribute in the given kwargs, send it.
-            for attr, val in iteritems(ex.kwargs):
-                if val is not None:
-                    setattr(response, attr, val)
+            # Set the various parameters.
+            if ex.code is not None:
+                response.status_code = ex.code
+
+            if ex.body is not None:
+                # We pass the body through to on_returned_body.
+                self.on_returned_body(request, response, ex.body)
+
+            if ex.headers is not None:
+                # Set each header.
+                for header, value in iteritems(ex.headers):
+                    # Set this header.
+                    response.headers[header] = value
 
             # Must set this, or we get clobbered by the 404 handler.
             matched = True

@@ -35,13 +35,13 @@ class HobokenCachingMixin(object):
         if self.response.status_int == 200 and self.request.if_modified_since is not None:
             time_val = time.mktime(self.request.if_modified_since.timetuple())
             if time_val >= timestamp:
-                halt(status_code=304)
+                halt(code=304)
 
         if ((self.response.is_success or self.response.status_int == 412) and
              self.request.if_unmodified_since is not None):
             time_val = time.mktime(self.request.if_unmodified_since.timetuple())
             if time_val < timestamp:
-                halt(status_code=412)
+                halt(code=412)
 
     def check_etag(self, etag, new_resource=False, weak=False):
         """
@@ -63,11 +63,11 @@ class HobokenCachingMixin(object):
         if self.response.is_success or self.response.status_int == 304:
             if self.request.if_none_match is not webob.etag.NoETag and etag_matches(self.request.if_none_match):
                 if self.request.is_safe:
-                    halt(status_code=304)
+                    halt(code=304)
                 else:
-                    halt(status_code=412)
+                    halt(code=412)
             elif self.request.if_match is not webob.etag.AnyETag and not etag_matches(self.request.if_match):
-                halt(status_code=412)
+                halt(code=412)
 
     def set_cache_control(self, **kwargs):
         for key, val in iteritems(kwargs):
@@ -105,16 +105,16 @@ class HobokenRedirectMixin(object):
         #     <html><body onload="history.go(-1);">Please go back one page</body></html>
         #     """
 
-        #     halt(status_code=200, text=body_text)
+        #     halt(code=200, body=body_value)
         else:
             return False
 
-    def redirect_to(self, func, status_code=None, *args, **kwargs):
+    def redirect_to(self, func, code=None, *args, **kwargs):
         """
         This is a helper function to redirect to another route.
         """
         location = self.url_for(func, *args, **kwargs)
-        self.redirect(location, status_code=status_code)
+        self.redirect(location, code=code)
 
 
 class HobokenRenderMixin(object):
