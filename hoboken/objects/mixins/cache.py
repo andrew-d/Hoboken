@@ -158,7 +158,7 @@ class ResponseCacheObject(CacheObject):
 
 class WSGICacheMixin(object):
     def __init__(self, *args, **kwargs):
-        super(WSGIAcceptMixin, self).__init__(*args, **kwargs)
+        super(WSGICacheMixin, self).__init__(*args, **kwargs)
         self._cache_object = CacheObject(self)
 
     @property
