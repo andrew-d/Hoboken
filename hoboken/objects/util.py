@@ -1,7 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
-           '_int_serializer', 'ImmutableList',
+           '_int_serializer', 'cached_property', 'ImmutableList',
            ]
 
 class MissingObject(object):
@@ -130,3 +130,4 @@ class ImmutableListMixin(object):
 
 class ImmutableList(ImmutableListMixin, list):
     pass
+
