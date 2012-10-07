@@ -2,6 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 from . import six
+from ..util import cached_property
 
 class _boolean_property(object):
     def __init__(self, property_name):
@@ -90,8 +91,8 @@ class CacheObject(object):
         properties = klass.parse_value(header_value)
         return klass(http_obj, initial_properties=properties)
 
-    @staticmethod
-    def parse_value(value):
+    @classmethod
+    def parse_value(klass, header_value):
         properties = {}
         for match in klass.TOKEN_RE.finditer(header_value):
             print(repr(match.groups()))
@@ -156,21 +157,32 @@ class ResponseCacheObject(CacheObject):
     max_age = _value_property('max-age')
     s_max_age = _value_property('s-maxage')
 
-class WSGICacheMixin(object):
+class WSGIRequestCacheMixin(object):
     def __init__(self, *args, **kwargs):
-        super(WSGICacheMixin, self).__init__(*args, **kwargs)
-        self._cache_object = CacheObject(self)
+        super(WSGIRequestCacheMixin, self).__init__(*args, **kwargs)
 
-    @property
+    @cached_property
     def cache_control(self):
-        return self._cache_object
+        header_val = self.headers.get('Cache-Control', '')
+        cache_object = RequestCacheObject.parse(self, header_val)
+        return cache_object
 
-    # TODO:
-    #   - Need to handle request vs. response directives
-    #   - Accessors like, e.g.: response.cache.max_age = 1234, or request.cache.no_cache = True
-    #   - The 'Age' HTTP header
-    #   - The 'Expires' HTTP header
-    #   - 'Pragma: no-cache' --> 'Cache-Control: no-cache'
-    #   - The 'Vary' HTTP header
-    #   - 
+class WSGIResponseCacheMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(WSGIResponseCacheMixin, self).__init__(*args, **kwargs)
+
+    @cached_property
+    def cache_control(self):
+        header_val = self.headers.get('Cache-Control', '')
+        cache_object = ResponseCacheObject.parse(self, header_val)
+        return cache_object
+
+# TODO:
+#   - Need to handle request vs. response directives
+#   - Accessors like, e.g.: response.cache.max_age = 1234, or request.cache.no_cache = True
+#   - The 'Age' HTTP header
+#   - The 'Expires' HTTP header
+#   - 'Pragma: no-cache' --> 'Cache-Control: no-cache'
+#   - The 'Vary' HTTP header
+#   - 
 
