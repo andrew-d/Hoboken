@@ -5,6 +5,7 @@ import codecs
 from ..util import ImmutableList
 from . import six
 
+__all__ = ['WSGIAcceptMixin']
 
 class AcceptList(ImmutableList):
     _accept_re = re.compile(br'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')

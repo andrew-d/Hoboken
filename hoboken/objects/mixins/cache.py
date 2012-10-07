@@ -4,6 +4,8 @@ import re
 from . import six
 from ..util import cached_property
 
+__all__ = ['WSGIRequestCacheMixin', 'WSGIResponseCacheMixin']
+
 class _boolean_property(object):
     def __init__(self, property_name):
         self.name = property_name
@@ -35,16 +37,15 @@ class _value_property(object):
 
 
 class CacheObject(object):
-    QUOTE_RE = re.compile(r'[^a-zA-Z0-9._-]')
-    # TOKEN_RE = re.compile(
-    #                       r'([a-zA-Z][a-zA-Z_-]*)           # The directive name'
-    #                       r'\s*                             # Any amount of whitespace'
-    #                       r'(?:=                            # Equals sign'
-    #                       r'  (?:"([^"]*)"|([^ \t",;]*))    # Either a quoted value, or some string of chars without whitespace or quotes'
-    #                       r')?                              # Value is optional'
-    #                      , re.VERBOSE)
-    TOKEN_RE = re.compile(r'([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|([^ \t",;]*)))?')
-
+    QUOTE_RE = re.compile(br'[^a-zA-Z0-9._-]')
+    TOKEN_RE = re.compile(
+        br'([a-zA-Z][a-zA-Z_-]*)'   # The directive name
+        br'\s*'                     # Any amount of whitespace
+        br'(?:='                    # Equals sign
+            br'(?:"([^"]*)"|'       # Either a quoted string...
+            br'([^ \t",;]*))'       # ... or a non-quoted string.
+        br')?'                      # Value is optional
+    )
 
     def __init__(self, http_obj, initial_properties={}):
         self.http_obj = http_obj
@@ -147,7 +148,7 @@ class ResponseCacheObject(CacheObject):
     #   - proxy_revalidate
 
     public = _boolean_property('public')
-    no_cache = _boolean_property('no-cache')
+    no_cache = _boolean_property('no-cache')                # FIXME: this doesn't handle a value
     no_store = _boolean_property('no-store')
     no_transform = _boolean_property('no-transform')
     must_revalidate = _boolean_property('must-revalidate')
@@ -156,6 +157,7 @@ class ResponseCacheObject(CacheObject):
     private = _value_property('private')
     max_age = _value_property('max-age')
     s_max_age = _value_property('s-maxage')
+    s_maxage = s_max_age
 
 class WSGIRequestCacheMixin(object):
     def __init__(self, *args, **kwargs):
@@ -178,11 +180,9 @@ class WSGIResponseCacheMixin(object):
         return cache_object
 
 # TODO:
-#   - Need to handle request vs. response directives
-#   - Accessors like, e.g.: response.cache.max_age = 1234, or request.cache.no_cache = True
 #   - The 'Age' HTTP header
 #   - The 'Expires' HTTP header
 #   - 'Pragma: no-cache' --> 'Cache-Control: no-cache'
 #   - The 'Vary' HTTP header
-#   - 
+#   - Investigate whether deleting a property works
 
