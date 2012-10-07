@@ -1,18 +1,18 @@
 from __future__ import with_statement, absolute_import, print_function
 
-__all__ = ['_not_given', '_environ_prop', '_environ_converter', '_int_parser',
+__all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
            '_int_serializer', 'ImmutableList',
            ]
 
-class _NotGiven(object):
+class MissingObject(object):
     def __repr__(self):
-        return "<not given>"
+        return "<missing>"
 
-_not_given = _NotGiven()
+missing = MissingObject()
 
 
-def _environ_prop(key, default=_not_given):
-    if default is _not_given:
+def _environ_prop(key, default=missing):
+    if default is missing:
         def getter(self):
             return self._from_wsgi_str(self.environ[key])
         def setter(self, value):
@@ -51,6 +51,24 @@ def _int_parser(value):
     return int(value)
 
 _int_serializer = str
+
+
+class cached_property(object):
+    def __init__(self, func):
+        self.func = func
+        self.__name__ = func.__name__
+        self.__doc__ = func.__doc__
+        self.__module__ = func.__module__
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+
+        value = obj.__dict__.get(self.__name__, missing)
+        if value is missing:
+            value = self.func(obj)
+            obj.__dict__[self.__name__] = value
+        return value
 
 
 def is_immutable(self):
