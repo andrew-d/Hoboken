@@ -221,8 +221,16 @@ class WSGIRequest(WSGIBaseRequest):
         return b"\r\n".join(parts)
 
 
+# TODO: do we really want this as a mixin?
+class RequestVarsMixin(object):
+    def __init__(self, *args, **kwargs):
+        self.urlvars = []
+        self.urlvars = {}
+        super(RequestVarsMixin, self).__init__(*args, **kwargs)
+
+
 from .mixins.accept import WSGIAcceptMixin
 from .mixins.cache import WSGIRequestCacheMixin
 
-class WSGIFullRequest(WSGIRequest, WSGIAcceptMixin, WSGIRequestCacheMixin):
+class WSGIFullRequest(WSGIRequest, WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin):
     pass
