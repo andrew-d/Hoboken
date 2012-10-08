@@ -2,7 +2,7 @@
 
 from . import BaseTestCase
 import unittest
-from mock import Mock, patch
+from mock import MagicMock, Mock, patch
 
 from hoboken.objects.request import *
 
@@ -101,11 +101,50 @@ class TestWSGIRequest(BaseTestCase):
 
     def test_path(self):
         class TestClass(object):
-            script_name = 'script/'
-            path_info = 'path_info'
+            script_name = b'script/'
+            path_info = b'path_info'
 
         c = TestClass()
-        self.assert_equal(WSGIRequest.path.fget(c), 'script/path_info')
+
+        self.assert_equal(WSGIRequest.path.__get__(c), 'script/path_info')
+
+    def test_full_path(self):
+        class TestClass(object):
+            path = b'script/path_info'
+            query_string = b''
+
+        c = TestClass()
+
+        self.assert_equal(WSGIRequest.full_path.__get__(c), 'script/path_info')
+
+        c.query_string = b'foo=bar'
+        self.assert_equal(WSGIRequest.full_path.__get__(c), 'script/path_info?foo=bar')
+
+    def test_url(self):
+        class TestClass(object):
+            scheme = b'http'
+            host_with_port = b'localhost:1234'
+            path = b'script/path_info'
+            query_string = b''
+
+        c = TestClass()
+
+        self.assert_equal(WSGIRequest.url.__get__(c), 'http://localhost:1234/script/path_info')
+
+        c.query_string = b'foo=bar'
+        self.assert_equal(WSGIRequest.url.__get__(c), 'http://localhost:1234/script/path_info?foo=bar')
+
+    def test_is_secure(self):
+        class TestClass(object):
+            scheme = 'http'
+
+        c = TestClass()
+        self.assert_false(WSGIRequest.is_secure.__get__(c))
+
+        c.scheme = 'https'
+        self.assert_true(WSGIRequest.is_secure.__get__(c))
+
+
 
 
 def suite():

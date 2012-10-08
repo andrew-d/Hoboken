@@ -198,7 +198,9 @@ class WSGIRequest(WSGIBaseRequest):
 
         url += self.host_with_port
 
-        url += quote(self.path)
+        path = '/' + self.path.lstrip(b'/')
+
+        url += quote(path)
         if len(self.query_string) > 0:
             url += b'?' + self.query_string
 
