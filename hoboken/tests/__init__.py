@@ -77,6 +77,8 @@ def suite():
     from .test_request_response import suite as suite_7
     from .test_ext import suite as suite_8
 
+    from .objects import suite as suite_objects
+
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
     suite.addTest(suite_2())
@@ -87,6 +89,8 @@ def suite():
     suite.addTest(suite_7())
     suite.addTest(suite_8())
 
+    suite.addTest(suite_objects())
+
     return suite
 
 
@@ -94,10 +98,7 @@ def main():
     """
     This runs the our tests, suitable for a command-line application
     """
-    try:
-        unittest.main(defaultTest='suite')
-    except Exception as e:
-        print("Exception: {0!s}".format(e))
+    unittest.main(defaultTest='suite')
 
 if __name__ == "__main__":
     main()
