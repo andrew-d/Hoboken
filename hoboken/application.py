@@ -20,7 +20,8 @@ from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerErro
 # In-package dependencies
 from .exceptions import *
 from .matchers import *
-from .objects import *
+from .objects import WSGIFullRequest as Request
+from .objects import WSGIFullResponse as Response
 
 # Compatibility.
 from .six import with_metaclass, text_type, binary_type, string_types, callable, iteritems
