@@ -43,6 +43,29 @@ class TestWSGIHeaders(BaseTestCase):
         self.assert_equal(self.h.keys(), ['Header', 'Other-Header'])
 
 
+class TestWSGIBaseRequest(BaseTestCase):
+    def test_non_dict_environ(self):
+        with self.assert_raises(ValueError):
+            r = WSGIBaseRequest([])
+
+    def test_headers_accessor_get(self):
+        environ = {"HTTP_HEADER": "foo"}
+        r = WSGIBaseRequest(environ)
+
+        self.assert_equal(r.headers[b'Header'], b'foo')
+
+    def test_headers_accessor_set(self):
+        environ = {"HTTP_HEADER": "foo"}
+        r = WSGIBaseRequest(environ)
+
+        self.assert_equal(r.headers[b'Header'], b'foo')
+
+        new_environ = {b'Header': b'bar', b'New-Header': b'baz'}
+        r.headers = new_environ
+        self.assert_equal(r.headers[b'Header'], b'bar')
+        self.assert_equal(r.headers[b'New-Header'], b'baz')
+
+
 class TestWSGIRequest(BaseTestCase):
     def setup(self):
         self.environ = {
@@ -150,6 +173,7 @@ class TestWSGIRequest(BaseTestCase):
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestWSGIHeaders))
+    suite.addTest(unittest.makeSuite(TestWSGIBaseRequest))
     suite.addTest(unittest.makeSuite(TestWSGIRequest))
 
     return suite
