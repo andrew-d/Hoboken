@@ -168,8 +168,6 @@ class TestWSGIRequest(BaseTestCase):
         self.assert_true(WSGIRequest.is_secure.__get__(c))
 
 
-
-
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestWSGIHeaders))

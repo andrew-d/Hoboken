@@ -98,7 +98,9 @@ def main():
     """
     This runs the our tests, suitable for a command-line application
     """
-    unittest.main(defaultTest='suite')
+    unittest.main(defaultTest='suite', exit=False)
+    print("Number of assertions: {0}".format(BaseTestCase.number_of_assertions))
+    print("")
 
 if __name__ == "__main__":
     main()

@@ -101,23 +101,30 @@ class BaseTestCase(unittest.TestCase):
     This TestCase subclass adds some useful aliases for the camelCased names
     in the standard library (like nose).
     """
+    number_of_assertions = 0
 
     def assert_equal(self, x, y):
+        BaseTestCase.number_of_assertions += 1
         return self.assertEqual(x, y)
 
     def assert_not_equal(self, x, y):
+        BaseTestCase.number_of_assertions += 1
         return self.assertNotEqual(x, y)
 
     def assert_true(self, x):
+        BaseTestCase.number_of_assertions += 1
         return self.assertTrue(x)
 
     def assert_false(self, x):
+        BaseTestCase.number_of_assertions += 1
         return self.assertFalse(x)
 
     def assert_in(self, x, y):
+        BaseTestCase.number_of_assertions += 1
         assert x in y, "{0!r} is not in {1!r}".format(x, y)
 
     def assert_raises(self, exception, callable=None, *args, **kwargs):
+        BaseTestCase.number_of_assertions += 1
         catcher = _ExceptionCatcher(self, exception)
         if callable is None:
             return catcher
@@ -125,6 +132,7 @@ class BaseTestCase(unittest.TestCase):
             callable(*args, **kwargs)
 
     def assert_is_instance(self, obj, type):
+        BaseTestCase.number_of_assertions += 1
         assert isinstance(obj, type), "{0!r} is not an instance of type {1!r}".format(obj, type)
 
     def setup(self):
