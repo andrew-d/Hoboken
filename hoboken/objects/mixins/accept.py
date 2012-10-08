@@ -5,8 +5,6 @@ import codecs
 from ..util import ImmutableList
 from . import six
 
-__all__ = ['WSGIAcceptMixin']
-
 class AcceptList(ImmutableList):
     _accept_re = re.compile(br'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')
 
@@ -43,9 +41,9 @@ class AcceptList(ImmutableList):
         for value, quality in self:
             it = value
             if quality != 1:
-                it = value + b';q=' + quality
+                it = value + b';q=' + str(quality)
             result.append(it)
-        return b','.join(result)
+        return b', '.join(result)
 
     @classmethod
     def parse(klass, value):
@@ -56,12 +54,12 @@ class AcceptList(ImmutableList):
         for match in klass._accept_re.finditer(value):
             quality = match.group(2)
             if not quality:
-                quality = 1
+                quality = 1.0
             else:
-                quality = min(max(float(quality), 0), 1)
+                quality = min(max(float(quality), 0.0), 1.0)
             ret.append((match.group(1), quality))
 
-        return ret
+        return klass(ret)
 
 
 class MIMEAccept(AcceptList):
