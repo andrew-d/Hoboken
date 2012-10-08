@@ -16,10 +16,12 @@ def suite():
     # Import test suites here.
     from .util import suite as suite_1
     from .request import suite as suite_2
+    from .mixins_accept import suite as suite_3
 
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
     suite.addTest(suite_2())
+    suite.addTest(suite_3())
 
     return suite
 
