@@ -206,10 +206,6 @@ class WSGIRequest(WSGIBaseRequest):
 
         return url
 
-    @property
-    def is_secure(self):
-        return self.scheme == b'https'
-
     def __str__(self):
         parts = [self.method + b' ' +
                  self.full_path + b' ' +

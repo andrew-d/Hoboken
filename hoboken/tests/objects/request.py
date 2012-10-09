@@ -44,19 +44,30 @@ class TestWSGIHeaders(BaseTestCase):
 
 
 class TestWSGIBaseRequest(BaseTestCase):
+    def setup(self):
+        # Note that we can't directly instantiate a WSGIBaseRequest, since
+        # it's still abstract.
+        class ImplClass(WSGIBaseRequest):
+            host = None
+            path = None
+            port = None
+            url = None
+
+        self.C = ImplClass
+
     def test_non_dict_environ(self):
         with self.assert_raises(ValueError):
-            r = WSGIBaseRequest([])
+            r = self.C([])
 
     def test_headers_accessor_get(self):
         environ = {"HTTP_HEADER": "foo"}
-        r = WSGIBaseRequest(environ)
+        r = self.C(environ)
 
         self.assert_equal(r.headers[b'Header'], b'foo')
 
     def test_headers_accessor_set(self):
         environ = {"HTTP_HEADER": "foo"}
-        r = WSGIBaseRequest(environ)
+        r = self.C(environ)
 
         self.assert_equal(r.headers[b'Header'], b'foo')
 

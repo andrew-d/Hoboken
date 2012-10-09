@@ -1,39 +1,55 @@
 from __future__ import with_statement, absolute_import, print_function
 
+from abc import ABCMeta, abstractproperty
+from ..six import with_metaclass
 
-class BaseRequest(object):
+
+class BaseRequest(with_metaclass(ABCMeta)):
     """
     Hoboken's request object.  This class defines the interface that all
     request objects must follow.
     """
-    http_version = None
+    @abstractproperty
+    def http_version(self):
+        pass
 
-    url = None
-    path = None
+    @abstractproperty
+    def url(self):
+        pass
+    @abstractproperty
+    def path(self):
+        pass
 
     # TODO: do we want these in all cases? i.e. if we're not a WSGI
     # application, do we care about these?
-    script_name = None
-    path_info = None
+    @abstractproperty
+    def script_name(self):
+        pass
+    @abstractproperty
+    def path_info(self):
+        pass
 
-    host = None
-    port = None
+    @abstractproperty
+    def host(self):
+        pass
+    @abstractproperty
+    def port(self):
+        pass
 
-    scheme = None
-    secure = None
+    @abstractproperty
+    def scheme(self):
+        pass
 
-    method = None
-    query_string = None
+    @abstractproperty
+    def method(self):
+        pass
+    @abstractproperty
+    def query_string(self):
+        pass
 
-    accept = None
-    cookies = None
-    content_length = None
-    referrer = None
-    user_agent = None
-
-    client_ip = None
-
-    body = None
+    @abstractproperty
+    def input_stream(self):
+        pass
 
     @property
     def is_safe(self):
@@ -51,11 +67,22 @@ class BaseRequest(object):
         """
         return self.is_safe or self.method in ['PUT', 'DELETE']
 
+    @property
+    def is_secure(self):
+        """Returns true if the request is made using HTTPS."""
+        return self.scheme == b'https'
 
-class Response(object):
+
+
+class Response(with_metaclass(ABCMeta)):
     """
     Hoboken's request object.
     """
+    @abstractproperty
+    def status_int(self):
+        pass
+
+
     @property
     def is_informational(self):
         return 100 <= self.status_int <= 199
