@@ -4,8 +4,6 @@ import re
 from . import six
 from ..util import cached_property
 
-__all__ = ['WSGIRequestCacheMixin', 'WSGIResponseCacheMixin']
-
 class _boolean_property(object):
     def __init__(self, property_name):
         self.name = property_name
@@ -96,7 +94,6 @@ class CacheObject(object):
     def parse_value(klass, header_value):
         properties = {}
         for match in klass.TOKEN_RE.finditer(header_value):
-            print(repr(match.groups()))
             name = match.group(1)
             value = match.group(2) or match.group(3) or None
             if value:
