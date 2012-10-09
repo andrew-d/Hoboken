@@ -1,6 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
+from numbers import Number
 from . import six
 from ..util import cached_property
 
@@ -77,13 +78,18 @@ class CacheObject(object):
                 parts.append(name)
                 continue
 
-            value = str(value)
+            # Convert numbers to strings, and text (unicode/str) to bytes.
+            if isinstance(value, Number):
+                value = str(value)
+            if isinstance(value, six.text_type):
+                value = value.encode('latin-1')
+
             if self.QUOTE_RE.search(value):
-                value = '"{0}"'.format(value)
+                value = b'"' + value + b'"'
 
-            parts.append("{0}={1}".format(name, value))
+            parts.append(name + b'=' + value)
 
-        return ', '.join(parts)
+        return b', '.join(parts)
 
     @classmethod
     def parse(klass, http_obj, header_value):
@@ -109,7 +115,7 @@ class CacheObject(object):
         return properties
 
     def __repr__(self):
-        return 'CacheObject("{0}")'.format(self._serialize_cache_control())
+        return 'CacheObject({0})'.format(self._serialize_cache_control())
 
 
 class RequestCacheObject(CacheObject):
@@ -162,7 +168,7 @@ class WSGIRequestCacheMixin(object):
 
     @cached_property
     def cache_control(self):
-        header_val = self.headers.get('Cache-Control', '')
+        header_val = self.headers.get('Cache-Control', b'')
         cache_object = RequestCacheObject.parse(self, header_val)
         return cache_object
 
@@ -172,7 +178,7 @@ class WSGIResponseCacheMixin(object):
 
     @cached_property
     def cache_control(self):
-        header_val = self.headers.get('Cache-Control', '')
+        header_val = self.headers.get('Cache-Control', b'')
         cache_object = ResponseCacheObject.parse(self, header_val)
         return cache_object
 

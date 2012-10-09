@@ -19,17 +19,17 @@ class TestWSGIHeaders(BaseTestCase):
         self.assert_equal(self.h._realname('header'), 'HTTP_HEADER')
         self.assert_equal(self.h._realname('dash-header'), 'HTTP_DASH_HEADER')
 
-        self.assert_equal(self.h._realname(b'byte-header'), b'HTTP_BYTE_HEADER')
+        self.assert_equal(self.h._realname(b'byte-header'), 'HTTP_BYTE_HEADER')
 
     def test_get_item(self):
-        self.assert_equal(self.h['header'], 'value')
+        self.assert_equal(self.h['header'], b'value')
 
     def test_set_item(self):
         self.h['foo'] = 'bar'
-        self.assert_equal(self.h['foo'], 'bar')
+        self.assert_equal(self.h['foo'], b'bar')
 
         self.h['header'] = 'baz'
-        self.assert_equal(self.h['header'], 'baz')
+        self.assert_equal(self.h['header'], b'baz')
 
     def test_delete_item(self):
         del self.h['header']
@@ -99,27 +99,27 @@ class TestWSGIRequest(BaseTestCase):
 
     def test_host_with_port(self):
         self.r.headers[b'Host'] = 'foo:81'
-        self.assert_equal(self.r.host_with_port, 'foo:81')
+        self.assert_equal(self.r.host_with_port, b'foo:81')
         del self.r.headers[b'Host']
 
     def test_host_with_port_no_header(self):
-        self.assert_equal(self.r.host_with_port, 'localhost')
+        self.assert_equal(self.r.host_with_port, b'localhost')
         self.environ['SERVER_PORT'] = '81'
-        self.assert_equal(self.r.host_with_port, 'localhost:81')
+        self.assert_equal(self.r.host_with_port, b'localhost:81')
 
     def test_host_with_port_no_header_https(self):
         self.environ['wsgi.url_scheme'] = 'https'
         self.environ['SERVER_PORT'] = '443'
 
-        self.assert_equal(self.r.host_with_port, 'localhost')
+        self.assert_equal(self.r.host_with_port, b'localhost')
         self.environ['SERVER_PORT'] = '444'
-        self.assert_equal(self.r.host_with_port, 'localhost:444')
+        self.assert_equal(self.r.host_with_port, b'localhost:444')
 
     def test_host(self):
-        self.assert_equal(self.r.host, 'localhost')
+        self.assert_equal(self.r.host, b'localhost')
 
         self.environ['SERVER_PORT'] = '444'
-        self.assert_equal(self.r.host, 'localhost')
+        self.assert_equal(self.r.host, b'localhost')
 
     def test_port(self):
         self.environ['SERVER_PORT'] = '444'
@@ -140,7 +140,7 @@ class TestWSGIRequest(BaseTestCase):
 
         c = TestClass()
 
-        self.assert_equal(WSGIRequest.path.__get__(c), 'script/path_info')
+        self.assert_equal(WSGIRequest.path.__get__(c), b'script/path_info')
 
     def test_full_path(self):
         class TestClass(object):
@@ -149,10 +149,10 @@ class TestWSGIRequest(BaseTestCase):
 
         c = TestClass()
 
-        self.assert_equal(WSGIRequest.full_path.__get__(c), 'script/path_info')
+        self.assert_equal(WSGIRequest.full_path.__get__(c), b'script/path_info')
 
         c.query_string = b'foo=bar'
-        self.assert_equal(WSGIRequest.full_path.__get__(c), 'script/path_info?foo=bar')
+        self.assert_equal(WSGIRequest.full_path.__get__(c), b'script/path_info?foo=bar')
 
     def test_url(self):
         class TestClass(object):
@@ -163,19 +163,19 @@ class TestWSGIRequest(BaseTestCase):
 
         c = TestClass()
 
-        self.assert_equal(WSGIRequest.url.__get__(c), 'http://localhost:1234/script/path_info')
+        self.assert_equal(WSGIRequest.url.__get__(c), b'http://localhost:1234/script/path_info')
 
         c.query_string = b'foo=bar'
-        self.assert_equal(WSGIRequest.url.__get__(c), 'http://localhost:1234/script/path_info?foo=bar')
+        self.assert_equal(WSGIRequest.url.__get__(c), b'http://localhost:1234/script/path_info?foo=bar')
 
     def test_is_secure(self):
         class TestClass(object):
-            scheme = 'http'
+            scheme = b'http'
 
         c = TestClass()
         self.assert_false(WSGIRequest.is_secure.__get__(c))
 
-        c.scheme = 'https'
+        c.scheme = b'https'
         self.assert_true(WSGIRequest.is_secure.__get__(c))
 
 

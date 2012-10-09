@@ -17,7 +17,9 @@ class AcceptList(ImmutableList):
         return item == b'*' or item.lower() == value.lower()
 
     def __getitem__(self, key):
-        if isinstance(key, six.string_types):
+        if isinstance(key, six.text_type):
+            return self.quality(key.encode('utf-8'))
+        elif isinstance(key, six.binary_type):
             return self.quality(key)
         else:
             return list.__getitem__(self, key)
@@ -36,12 +38,15 @@ class AcceptList(ImmutableList):
 
         return False
 
-    def __str__(self):
+    def to_bytes(self):
         result = []
         for value, quality in self:
             it = value
             if quality != 1:
-                it = value + b';q=' + str(quality)
+                q = str(quality)
+                if six.PY3:
+                    q = q.encode('latin-1')
+                it = value + b';q=' + q
             result.append(it)
         return b', '.join(result)
 
@@ -105,6 +110,8 @@ class CharsetAccept(AcceptList):
     def _match(self, value, item):
         def _normalize(name):
             try:
+                if six.PY3 and isinstance(name, bytes):
+                    name = name.decode('utf-8')
                 return codecs.lookup(name).name
             except LookupError:
                 return name.lower()

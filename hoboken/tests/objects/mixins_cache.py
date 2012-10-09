@@ -55,24 +55,38 @@ class TestValueProperty(BaseTestCase):
 
 class TestCacheObject(BaseTestCase):
     def test_parse_value(self):
-        props = CacheObject.parse_value("no-cache, no-store, max-age=123")
-        self.assert_equal(props, {"no-cache": True, "no-store": True, "max-age": 123})
+        props = CacheObject.parse_value(b"no-cache, no-store, max-age=123")
+        self.assert_equal(props, {b"no-cache": True, b"no-store": True, b"max-age": 123})
 
     def test_parse(self):
         http_obj = object()
-        o = CacheObject.parse(http_obj, "no-cache, no-store, max-age=123")
+        o = CacheObject.parse(http_obj, b"no-cache, no-store, max-age=123")
         self.assert_is_instance(o, CacheObject)
 
     def test_serialize_cache_control(self):
         m = CacheObject(None, initial_properties={
-            "no-cache": True,
-            "no-store": True,
-            "max-age": 123,
+            b"no-cache": True,
+            b"no-store": True,
+            b"max-age": 123,
         })
-        self.assert_equal(m._serialize_cache_control(), "max-age=123, no-cache, no-store")
+        self.assert_equal(m._serialize_cache_control(), b"max-age=123, no-cache, no-store")
 
-        n = CacheObject(None, initial_properties={'quoted': 'foo and bar'})
-        self.assert_equal(n._serialize_cache_control(), 'quoted="foo and bar"')
+        n = CacheObject(None, initial_properties={b'quoted': b'foo and bar'})
+        self.assert_equal(n._serialize_cache_control(), b'quoted="foo and bar"')
+
+
+class TestWSGIRequestCacheMixin(BaseTestCase):
+    def test_cache_control(self):
+        r = WSGIRequestCacheMixin()
+        r.headers = {}
+        self.assert_is_instance(r.cache_control, RequestCacheObject)
+
+
+class TestWSGIResponseCacheMixin(BaseTestCase):
+    def test_cache_control(self):
+        r = WSGIResponseCacheMixin()
+        r.headers = {}
+        self.assert_is_instance(r.cache_control, ResponseCacheObject)
 
 
 def suite():
@@ -80,5 +94,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestBooleanProperty))
     suite.addTest(unittest.makeSuite(TestValueProperty))
     suite.addTest(unittest.makeSuite(TestCacheObject))
+    suite.addTest(unittest.makeSuite(TestWSGIRequestCacheMixin))
+    suite.addTest(unittest.makeSuite(TestWSGIResponseCacheMixin))
 
     return suite
