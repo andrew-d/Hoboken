@@ -6,7 +6,7 @@ import types
 import unittest
 import functools
 
-from ..six import iteritems, PY3
+from hoboken.six import iteritems, PY3
 
 
 def ensure_in_path(path):
