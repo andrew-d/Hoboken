@@ -43,6 +43,7 @@ class BaseRequest(with_metaclass(ABCMeta)):
     @abstractproperty
     def method(self):
         pass
+
     @abstractproperty
     def query_string(self):
         pass
@@ -76,11 +77,51 @@ class BaseRequest(with_metaclass(ABCMeta)):
 
 class Response(with_metaclass(ABCMeta)):
     """
-    Hoboken's request object.
+    Hoboken's response object.
     """
     @abstractproperty
     def status_int(self):
         pass
+
+    @abstractproperty
+    def status_text(self):
+        pass
+
+    @abstractproperty
+    def status(self):
+        pass
+
+    @abstractproperty
+    def headers(self):
+        pass
+
+    # Response body
+    # -------------------------------------------
+
+    @abstractproperty
+    def response_iter(self):
+        """
+        The base iterator for a response.
+        """
+        # TODO: we can do stuff like checking isinstance(types.GeneratorType),
+        # or isinstance(collections.Iterable) to pick the appropriate behaviour
+        # We need to handle all of the following:
+        #   - strings
+        #   - bytes
+        #   - lists / generic iterators / generators
+        #   - file-like objects
+        pass
+
+    # TODO: move these to mixins
+    # @abstractproperty
+    # def body(self):
+    #     """Bytes-based body"""
+    #     pass
+
+    # @abstractproperty
+    # def text(self):
+    #     """Text / unicode body, encoded by charset."""
+    #     pass
 
 
     @property
