@@ -3,22 +3,8 @@ import re
 from collections import MutableMapping
 from .base import BaseRequest
 from .util import *
+from .http import quote, unquote
 from ..six import *
-
-try:
-    import urllib.parse
-    _quote = urllib.parse.quote
-except ImportError:
-    import urllib
-    _quote = urllib.quote
-
-
-# TODO: replace this with one that works on bytes
-def quote(value):
-    quoted = _quote(value)
-    if isinstance(quoted, text_type):
-        quoted = quoted.encode('latin-1')
-    return quoted
 
 
 class WSGIHeaders(MutableMapping):
