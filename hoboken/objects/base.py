@@ -21,13 +21,19 @@ class BaseRequest(with_metaclass(ABCMeta)):
         pass
 
     # TODO: do we want these in all cases? i.e. if we're not a WSGI
-    # application, do we care about these?
+    # application, do we care about these? possibly rename these to the names
+    # below:
+    # mount_point: where the script is mounted - i.e. "/" in the script is what
+    #              path for the user?
+    # script_path: the part of the path that the current application cares
+    #              about
     @abstractproperty
     def script_name(self):
         pass
     @abstractproperty
     def path_info(self):
         pass
+
 
     @abstractproperty
     def host(self):
@@ -75,7 +81,7 @@ class BaseRequest(with_metaclass(ABCMeta)):
 
 
 
-class Response(with_metaclass(ABCMeta)):
+class BaseResponse(with_metaclass(ABCMeta)):
     """
     Hoboken's response object.
     """
