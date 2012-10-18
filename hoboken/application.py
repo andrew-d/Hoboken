@@ -452,7 +452,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             del self.response
 
             # We also reset our request config.
-            del self.vars
+            del self.g
 
     def _run_routes(self, method):
         # Since these are thread-locals, we grab them as locals.

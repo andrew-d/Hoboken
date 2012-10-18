@@ -386,21 +386,21 @@ class TestConfig(HobokenTestCase):
         expected_views = os.path.join('foo', 'views')
         self.assert_equal(app.config.views_directory, expected_views)
 
-    def test_vars(self):
+    def test_g(self):
         app = HobokenApplication('')
 
         @app.get("/one")
         def one():
-            app.vars.foo = 'bar'
+            app.g.foo = 'bar'
 
         @app.get("/two")
         def two():
-            self.assert_true('foo' not in app.vars)
+            self.assert_true('foo' not in app.g)
 
         r = Request.blank("/one")
         resp = r.get_response(app)
 
-        self.assert_true('foo' not in app.vars)
+        self.assert_true('foo' not in app.g)
 
         r = Request.blank("/two")
         resp = r.get_response(app)
