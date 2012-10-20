@@ -62,7 +62,13 @@ TODO list - a centralized list of stuff I'd like to do
    - Larger app (todo list like everyone else?)
  - Integration examples
    - Some sort of DB (SqlAlchemy?)
-
+ - Plugin architecture
+   - Should have some sort of form validation, e.g. WTForms
+ - Possibilities:
+   - WSGI adapters like Bottle, so we can call run(server='foo')
+   - Proxy objects that we can import, so we can "from hoboken.proxy import request", which will be transparently bound to "app.request" - will save on typing
+   - MAYBE standardize on a single template engine?  Shift is handy, but perhaps not worth the complexity
+   - Some sort of asset pipeline would be nice
 
 Longer-Term TODOs
 ===========================================================
