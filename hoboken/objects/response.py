@@ -1,6 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 import re
 from numbers import Number
+import collections
 
 from .base import BaseResponse
 from .headers import WSGIHeaders
@@ -12,6 +13,7 @@ class WSGIBaseResponse(BaseResponse):
         super(WSGIBaseResponse, self).__init__(*args, **kwargs)
 
         self._status_code = 200
+        self._response_iter = [b'']
         self.charset = charset
 
     @property
@@ -55,9 +57,15 @@ class WSGIBaseResponse(BaseResponse):
 
     @property
     def response_iter(self):
-        pass
+        return self._response_iter
 
     @response_iter.setter
     def response_iter(self, val):
-        pass
+        # This thing should be iterable.
+        if not isinstance(val, collections.Iterable):
+            raise ValueError("Values assigned to response_iter must be "
+                             "iterable, not {0!s}".format(type(val))
+                             )
+
+        self._response_iter = val
 

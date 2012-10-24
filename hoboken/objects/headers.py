@@ -1,5 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 from collections import MutableMapping
+from hoboken.six import PY3, iterkeys
 
 class WSGIHeaders(MutableMapping):
     def __init__(self, environ):

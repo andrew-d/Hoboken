@@ -71,6 +71,7 @@ class WSGIBaseRequest(BaseRequest):
         self.headers.update(value)
 
     headers = property(_headers_getter, _headers_setter)
+    del _headers_getter, _headers_setter
 
     input_stream = _environ_prop('wsgi.input')
 
@@ -176,5 +177,5 @@ class RequestVarsMixin(object):
 from .mixins.accept import WSGIAcceptMixin
 from .mixins.cache import WSGIRequestCacheMixin
 
-class WSGIFullRequest(WSGIRequest, WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin):
+class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin, WSGIRequest):
     pass

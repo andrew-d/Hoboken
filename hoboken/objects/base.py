@@ -58,6 +58,8 @@ class BaseRequest(with_metaclass(ABCMeta)):
     def input_stream(self):
         pass
 
+
+    # TODO: do these belong here?
     @property
     def is_safe(self):
         """
@@ -109,27 +111,9 @@ class BaseResponse(with_metaclass(ABCMeta)):
         """
         The base iterator for a response.
         """
-        # TODO: we can do stuff like checking isinstance(types.GeneratorType),
-        # or isinstance(collections.Iterable) to pick the appropriate behaviour
-        # We need to handle all of the following:
-        #   - strings
-        #   - bytes
-        #   - lists / generic iterators / generators
-        #   - file-like objects
         pass
 
-    # TODO: move these to mixins
-    # @abstractproperty
-    # def body(self):
-    #     """Bytes-based body"""
-    #     pass
-
-    # @abstractproperty
-    # def text(self):
-    #     """Text / unicode body, encoded by charset."""
-    #     pass
-
-
+    # TODO: do these belong here?
     @property
     def is_informational(self):
         return 100 <= self.status_int <= 199
