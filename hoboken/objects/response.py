@@ -6,6 +6,7 @@ import collections
 from .base import BaseResponse
 from .headers import WSGIHeaders
 from .constants import status_reasons, status_generic_reasons
+from ..util import iter_close
 
 
 class WSGIBaseResponse(BaseResponse):
@@ -68,4 +69,7 @@ class WSGIBaseResponse(BaseResponse):
                              )
 
         self._response_iter = val
+
+    def close(self):
+        iter_close(self._response_iter)
 

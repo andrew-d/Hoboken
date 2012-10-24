@@ -1,7 +1,10 @@
 from __future__ import with_statement, absolute_import, print_function
 
+from .six import callable
+
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
            '_int_serializer', 'cached_property', 'ImmutableList', 'ssuper',
+           'iter_close',
            ]
 
 class MissingObject(object):
@@ -150,4 +153,9 @@ class ssuper(super):
                 desc = tmp.__dict__[name]
                 desc.__set__(self.__self__, value)
                 return
+
+
+def iter_close(iter):
+    if hasattr(iter, 'close') and callable(iter.close):
+        iter.close()
 
