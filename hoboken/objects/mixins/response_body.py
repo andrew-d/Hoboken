@@ -1,6 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from hoboken.util import cached_property, ssuper, iter_close
+from hoboken.objects.util import cached_property, ssuper, iter_close
 from hoboken.six import binary_type, callable
 
 
@@ -30,5 +30,8 @@ class ResponseBodyMixin(object):
     @property
     def body_file(self):
         """The response body as a file-like object."""
+        # TODO: implement
+        # TODO: do we want to have our response_iter handle file-like objects,
+        # or have it as a body_file.setter?
         pass
 

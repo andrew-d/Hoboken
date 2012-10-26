@@ -1,10 +1,11 @@
 from __future__ import with_statement, absolute_import, print_function
+from io import RawIOBase
 
 from hoboken.six import callable
 
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
            '_int_serializer', 'cached_property', 'ImmutableList', 'ssuper',
-           'iter_close',
+           'iter_close', 'BytesIteratorFile'
            ]
 
 class MissingObject(object):
@@ -158,4 +159,46 @@ class ssuper(super):
 def iter_close(iter):
     if hasattr(iter, 'close') and callable(iter.close):
         iter.close()
+
+
+class BytesIteratorFile(RawIOBase):
+    def __init__(self, i):
+        self.iter = iter(i)
+        self.cache = b''
+        self.eof = False
+
+    def readall(self):
+        ret = b''.join(self.iter)
+        return self.cache + ret
+
+    def read(self, num=-1):
+        if self.eof:
+            return b''
+        if num == -1:
+            return self.readall()
+
+        # Try getting our cache first.
+        chunks = [self.cache]
+        total_len = len(self.cache)
+
+        try:
+            while total_len < num:
+                next_chunk = self.iter.next()
+                chunks.append(next_chunk)
+                total_len += len(next_chunk)
+        except StopIteration:
+            self.eof = True
+
+        # Join together.
+        bstr = b''.join(chunks)
+
+        # Trim to required length.
+        if len(bstr) > num:
+            bstr, cache = bstr[:num], bstr[num:]
+        else:
+            cache = b''
+
+        # Reset cache, return value.
+        self.cache = cache
+        return bstr
 

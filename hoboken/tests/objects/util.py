@@ -202,6 +202,29 @@ class TestImmutableList(BaseTestCase):
             self.l.sort()
 
 
+class TestBytesIteratorFile(BaseTestCase):
+    def setup(self):
+        self.f = BytesIteratorFile([b'foo', b'bar', b'baz'])
+
+    def test_readall(self):
+        self.assert_equal(self.f.readall(), b'foobarbaz')
+
+    def test_read_single_chunk(self):
+        self.assert_equal(self.f.read(3), b'foo')
+
+    def test_read_chunk_and_a_half(self):
+        self.assert_equal(self.f.read(4), b'foob')
+
+    def test_read_with_cache(self):
+        self.assert_equal(self.f.read(4), b'foob')
+        self.assert_equal(self.f.read(2), b'ar')
+
+    def test_read_three_chunks(self):
+        self.assert_equal(self.f.read(9), b'foobarbaz')
+
+    def test_read_past_end(self):
+        self.assert_equal(self.f.read(9), b'foobarbaz')
+        self.assert_equal(self.f.read(2), b'')
 
 
 def suite():
@@ -211,6 +234,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestEnvironConverter))
     suite.addTest(unittest.makeSuite(TestCachedProperty))
     suite.addTest(unittest.makeSuite(TestImmutableList))
+    suite.addTest(unittest.makeSuite(TestBytesIteratorFile))
 
     return suite
 

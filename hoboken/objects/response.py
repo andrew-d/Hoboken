@@ -6,7 +6,7 @@ import collections
 from hoboken.objects.base import BaseResponse
 from hoboken.objects.headers import WSGIHeaders
 from hoboken.objects.constants import status_reasons, status_generic_reasons
-from hoboken.util import iter_close
+from hoboken.objects.util import iter_close
 
 
 class WSGIBaseResponse(BaseResponse):

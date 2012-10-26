@@ -3,7 +3,7 @@ from __future__ import with_statement, absolute_import, print_function
 import re
 from numbers import Number
 from hoboken.six import text_type
-from hoboken.util import cached_property
+from hoboken.objects.util import cached_property
 
 class _boolean_property(object):
     def __init__(self, property_name):
