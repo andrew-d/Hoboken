@@ -1,7 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 from abc import ABCMeta, abstractproperty
-from ..six import with_metaclass
+from hoboken.six import with_metaclass
 
 
 class BaseRequest(with_metaclass(ABCMeta)):

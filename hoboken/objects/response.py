@@ -3,10 +3,10 @@ import re
 from numbers import Number
 import collections
 
-from .base import BaseResponse
-from .headers import WSGIHeaders
-from .constants import status_reasons, status_generic_reasons
-from ..util import iter_close
+from hoboken.objects.base import BaseResponse
+from hoboken.objects.headers import WSGIHeaders
+from hoboken.objects.constants import status_reasons, status_generic_reasons
+from hoboken.util import iter_close
 
 
 class WSGIBaseResponse(BaseResponse):
@@ -72,4 +72,10 @@ class WSGIBaseResponse(BaseResponse):
 
     def close(self):
         iter_close(self._response_iter)
+
+
+from .mixins.response_body import ResponseBodyMixin
+
+class WSGIFullResponse(ResponseBodyMixin, WSGIBaseResponse):
+    pass
 

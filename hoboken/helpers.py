@@ -1,12 +1,12 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from .application import halt
 import sys
 import time
 import datetime
 import webob
 
-from .six import iteritems
+from hoboken.six import iteritems
+from hoboken.application import halt
 
 
 class HobokenCachingMixin(object):

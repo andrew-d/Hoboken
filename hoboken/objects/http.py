@@ -1,19 +1,19 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
-from . import six
+from hoboken.six import text_type, binary_type
 
 UNSAFE_RE = re.compile(br"[^\\-_.!~*'();/?:@&=+$,\[\]a-zA-Z\d]")
 ESCAPED_RE = re.compile(br"%[a-fA-F\d]{2}")
 
 def quote(val, encoding='utf-8', unsafe=UNSAFE_RE):
-    if isinstance(val, six.text_type):
+    if isinstance(val, text_type):
         val = val.encode(encoding)
 
-    if isinstance(unsafe, six.text_type):
+    if isinstance(unsafe, text_type):
         unsafe = unsafe.encode('latin1')
 
-    if isinstance(unsafe, six.binary_type):
+    if isinstance(unsafe, binary_type):
         pattern = b"[" + re.escape(unsafe) + b"]"
         unsafe = re.compile(pattern)
 
@@ -27,7 +27,7 @@ def quote(val, encoding='utf-8', unsafe=UNSAFE_RE):
 
 
 def unquote(val, encoding='utf-8'):
-    if isinstance(val, six.text_type):
+    if isinstance(val, text_type):
         val = val.encode(encoding)
 
     def _unquoter(match_obj):

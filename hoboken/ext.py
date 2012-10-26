@@ -1,5 +1,3 @@
-from .application import HobokenBaseApplication
-from .helpers import *
 import re
 import sys
 try:
@@ -7,7 +5,9 @@ try:
 except ImportError:
     import simplejson as json
 
-from .six import PY3, string_types, binary_type, text_type, iteritems
+from hoboken.six import PY3, string_types, binary_type, text_type, iteritems
+from hoboken.application import HobokenBaseApplication
+from hoboken.helpers import *
 
 
 class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):

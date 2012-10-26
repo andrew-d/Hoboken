@@ -2,8 +2,8 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 from numbers import Number
-from . import six
-from ..util import cached_property
+from hoboken.six import text_type
+from hoboken.util import cached_property
 
 class _boolean_property(object):
     def __init__(self, property_name):
@@ -81,7 +81,7 @@ class CacheObject(object):
             # Convert numbers to strings, and text (unicode/str) to bytes.
             if isinstance(value, Number):
                 value = str(value)
-            if isinstance(value, six.text_type):
+            if isinstance(value, text_type):
                 value = value.encode('latin-1')
 
             if self.QUOTE_RE.search(value):

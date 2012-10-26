@@ -2,8 +2,8 @@ from __future__ import with_statement, absolute_import, print_function
 import re
 import codecs
 
-from ..util import ImmutableList
-from . import six
+from hoboken.util import ImmutableList
+from hoboken.six import text_type, binary_type, PY3
 
 class AcceptList(ImmutableList):
     _accept_re = re.compile(br'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')
@@ -17,9 +17,9 @@ class AcceptList(ImmutableList):
         return item == b'*' or item.lower() == value.lower()
 
     def __getitem__(self, key):
-        if isinstance(key, six.text_type):
+        if isinstance(key, text_type):
             return self.quality(key.encode('utf-8'))
-        elif isinstance(key, six.binary_type):
+        elif isinstance(key, binary_type):
             return self.quality(key)
         else:
             return list.__getitem__(self, key)
@@ -44,7 +44,7 @@ class AcceptList(ImmutableList):
             it = value
             if quality != 1:
                 q = str(quality)
-                if six.PY3:
+                if PY3:
                     q = q.encode('latin-1')
                 it = value + b';q=' + q
             result.append(it)
@@ -110,7 +110,7 @@ class CharsetAccept(AcceptList):
     def _match(self, value, item):
         def _normalize(name):
             try:
-                if six.PY3 and isinstance(name, bytes):
+                if PY3 and isinstance(name, bytes):
                     name = name.decode('utf-8')
                 return codecs.lookup(name).name
             except LookupError:

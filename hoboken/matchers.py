@@ -6,10 +6,10 @@ import re
 import sys
 
 # In-package dependencies
-from .exceptions import *
+from hoboken.exceptions import *
 
 # Compatibility.
-from .six import string_types, text_type, PY3
+from hoboken.six import string_types, text_type, PY3
 
 RegexType = type(re.compile(""))
 RegexMatchType = type(re.compile(".*").match("asdf"))

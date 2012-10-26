@@ -1,6 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from .six import callable
+from hoboken.six import callable
 
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
            '_int_serializer', 'cached_property', 'ImmutableList', 'ssuper',

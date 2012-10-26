@@ -1,10 +1,11 @@
 from __future__ import with_statement, absolute_import, print_function
 import re
-from .base import BaseRequest
-from .util import *
-from .http import quote, unquote
-from .headers import WSGIHeaders
-from ..six import *
+
+from hoboken.objects.base import BaseRequest
+from hoboken.objects.util import *
+from hoboken.objects.http import quote, unquote
+from hoboken.objects.headers import WSGIHeaders
+from hoboken.six import *
 
 
 

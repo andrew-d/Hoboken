@@ -18,13 +18,14 @@ except:                     # pragma: no cover
 from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerError
 
 # In-package dependencies
-from .exceptions import *
-from .matchers import *
-from .objects import WSGIFullRequest as Request
-from .objects import WSGIFullResponse as Response
+from hoboken.exceptions import *
+from hoboken.matchers import *
+from hoboken.objects import WSGIFullRequest as Request
+from hoboken.objects import WSGIFullResponse as Response
 
 # Compatibility.
-from .six import with_metaclass, text_type, binary_type, string_types, callable, iteritems
+from hoboken.six import (with_metaclass, text_type, binary_type, string_types,
+                         callable, iteritems)
 
 
 def get_func_attr(func, attr, default=None, delete=False):
