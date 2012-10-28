@@ -4,8 +4,8 @@ from io import RawIOBase
 from hoboken.six import callable
 
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
-           '_int_serializer', 'cached_property', 'ImmutableList', 'ssuper',
-           'iter_close', 'BytesIteratorFile'
+           '_int_serializer', 'cached_property', 'ImmutableList', 'iter_close',
+           'BytesIteratorFile'
            ]
 
 class MissingObject(object):
@@ -134,26 +134,6 @@ class ImmutableListMixin(object):
 
 class ImmutableList(ImmutableListMixin, list):
     pass
-
-
-class ssuper(super):
-    """
-    This class mimics the behavior of 'super', except that it allows us to
-    call __set__s from the base class(es).  This is handy for our mixins that
-    override properties, but don't necessarily know what the base class will
-    be.  For example, check out ResponseBodyMixin.
-    """
-    def __setattr__(self, name, value):
-        mro = self.__self_class__.__mro__
-        for pos in xrange(len(mro)):
-            if mro[pos] == self.__thisclass__:
-                break
-        for pos in xrange(pos + 1, len(mro)):
-            tmp = mro[pos]
-            if isinstance(tmp, type) and name in tmp.__dict__:
-                desc = tmp.__dict__[name]
-                desc.__set__(self.__self__, value)
-                return
 
 
 def iter_close(iter):

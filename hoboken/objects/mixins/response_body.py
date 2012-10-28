@@ -1,19 +1,17 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from hoboken.objects.util import cached_property, ssuper, iter_close
+from hoboken.objects.util import cached_property, iter_close
+from hoboken.objects.oproperty import oproperty, property_overriding
 from hoboken.six import binary_type, callable
 
 
+@property_overriding
 class ResponseBodyMixin(object):
     def __init__(self, *args, **kwargs):
         super(ResponseBodyMixin, self).__init__(*args, **kwargs)
 
-    @property
-    def response_iter(self):
-        return super(ResponseBodyMixin, self).response_iter
-
-    @response_iter.setter
-    def response_iter(self, val):
+    @oproperty.override_setter
+    def response_iter(self, val, orig):
         if isinstance(val, binary_type):
             # If this is a bytestring, we wrap it in a list.
             new_val = [val]
@@ -24,8 +22,8 @@ class ResponseBodyMixin(object):
         else:
             new_val = val
 
-        # We need to use 'ssuper' to be able to call __set__.
-        ssuper(ResponseBodyMixin, self).response_iter = new_val
+        # Call the original setter with our new value.
+        orig(new_val)
 
     @property
     def body_file(self):
