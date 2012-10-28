@@ -6,6 +6,7 @@ from hoboken.objects.util import *
 from hoboken.objects.http import quote, unquote
 from hoboken.objects.headers import WSGIHeaders
 from hoboken.six import *
+from hoboken.objects.oproperty import oproperty, property_overriding
 
 
 
@@ -77,19 +78,20 @@ class WSGIBaseRequest(BaseRequest):
     input_stream = _environ_prop('wsgi.input')
 
 
+@property_overriding
 class WSGIRequest(WSGIBaseRequest):
     _STRIP_PORT = re.compile(br":\d+\Z")
 
     def __init__(self, *args, **kwargs):
         super(WSGIRequest, self).__init__(*args, **kwargs)
 
-    @WSGIBaseRequest.path_info.getter
-    def path_info(self):
+    @oproperty
+    def path_info(self, orig):
         """
         An override of path_info's getter that ensures we always have a
         leading slash.
         """
-        val = super(WSGIRequest, self).path_info
+        val = orig()
         return b'/' + val.lstrip(b'/')
 
     @property
