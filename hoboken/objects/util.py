@@ -12,6 +12,9 @@ class MissingObject(object):
     def __repr__(self):
         return "<missing>"
 
+    def __str__(self):
+        raise AttributeError("__str__ not supported!")
+
 missing = MissingObject()
 
 
