@@ -71,11 +71,13 @@ class WSGIBaseResponse(BaseResponse):
         self._response_iter = val
 
     def close(self):
+        """Close the underlying iterator, if we need to."""
         iter_close(self._response_iter)
 
 
+from .mixins.cache import WSGIResponseCacheMixin
 from .mixins.response_body import ResponseBodyMixin
 
-class WSGIFullResponse(ResponseBodyMixin, WSGIBaseResponse):
+class WSGIFullResponse(ResponseBodyMixin, WSGIResponseCacheMixin, WSGIBaseResponse):
     pass
 

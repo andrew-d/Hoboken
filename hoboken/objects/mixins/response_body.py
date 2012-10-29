@@ -5,6 +5,58 @@ from hoboken.objects.oproperty import oproperty, property_overriding
 from hoboken.six import binary_type, callable
 
 
+class IteratorFile(object):
+    """
+    This class converts an iterator into a file-like object.
+    TODO: Look into inheriting from RawIOBase or something similar.
+    """
+    def __init__(self, it):
+        self.iter = iter(it)
+        self.last_chunk = b''
+        self._closed = False
+
+    @property
+    def closed(self):
+        return self._closed
+
+    def readall(self):
+        if self._closed:
+            return b''
+
+        val = b''.join(self.iter)
+        self._closed = True
+        return self.last_chunk + val
+
+    def read(self, size=-1):
+        if size == -1:
+            return self.readall()
+
+        chunks = [self.last_chunk]
+        total_size = len(self.last_chunk)
+        self.last_chunk = b''
+
+        # If we're not closed, read chunks from the iterator until we have enough data.
+        if not self._closed:
+            try:
+                while total_size < size:
+                    curr_chunk = self.iter.next()
+                    chunks.append(curr_chunk)
+                    total_size += len(curr_chunk)
+            except StopIteration:
+                self._closed = True
+
+        # Make return value
+        return_val = b''.join(chunks)
+
+        # Trim the returned size, if necessary.
+        if len(return_val) > size:
+            return_val, self.last_chunk = return_val[:size], return_val[size:]
+
+        # Return it!
+        return return_val
+
+
+
 @property_overriding
 class ResponseBodyMixin(object):
     def __init__(self, *args, **kwargs):
@@ -12,13 +64,9 @@ class ResponseBodyMixin(object):
 
     @oproperty.override_setter
     def response_iter(self, val, orig):
+        # If this is a bytestring, we wrap it in a list.
         if isinstance(val, binary_type):
-            # If this is a bytestring, we wrap it in a list.
             new_val = [val]
-        elif hasattr(val, 'read') and callable(val.read):
-            # This is a file-like object.  Read it, and wrap the response in an
-            # iterable.
-            new_val = [val.read()]
         else:
             new_val = val
 
@@ -28,8 +76,10 @@ class ResponseBodyMixin(object):
     @property
     def body_file(self):
         """The response body as a file-like object."""
-        # TODO: implement
-        # TODO: do we want to have our response_iter handle file-like objects,
-        # or have it as a body_file.setter?
-        pass
+        return IteratorFile(self.response_iter)
+
+    @body_file.setter
+    def body_file(self, val):
+        it = [val.read()]
+        self.response_iter = it
 
