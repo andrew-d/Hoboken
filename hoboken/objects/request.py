@@ -172,7 +172,7 @@ class WSGIRequest(WSGIBaseRequest):
 # TODO: do we really want this as a mixin?
 class RequestVarsMixin(object):
     def __init__(self, *args, **kwargs):
-        self.urlvars = []
+        self.urlargs = []
         self.urlvars = {}
         super(RequestVarsMixin, self).__init__(*args, **kwargs)
 
