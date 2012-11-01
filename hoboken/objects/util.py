@@ -146,13 +146,13 @@ def iter_close(iter):
 
 class BytesIteratorFile(RawIOBase):
     def __init__(self, i):
-        self.iter = iter(i)
-        self.cache = b''
+        self.__iter = iter(i)
+        self.__cache = b''
         self.eof = False
 
     def readall(self):
-        ret = b''.join(self.iter)
-        return self.cache + ret
+        ret = b''.join(self.__iter)
+        return self.__cache + ret
 
     def read(self, num=-1):
         if self.eof:
@@ -161,12 +161,12 @@ class BytesIteratorFile(RawIOBase):
             return self.readall()
 
         # Try getting our cache first.
-        chunks = [self.cache]
-        total_len = len(self.cache)
+        chunks = [self.__cache]
+        total_len = len(self.__cache)
 
         try:
             while total_len < num:
-                next_chunk = self.iter.next()
+                next_chunk = self.__iter.next()
                 chunks.append(next_chunk)
                 total_len += len(next_chunk)
         except StopIteration:
@@ -182,6 +182,6 @@ class BytesIteratorFile(RawIOBase):
             cache = b''
 
         # Reset cache, return value.
-        self.cache = cache
+        self.__cache = cache
         return bstr
 
