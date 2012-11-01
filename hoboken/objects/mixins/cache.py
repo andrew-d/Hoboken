@@ -157,12 +157,12 @@ class ResponseCacheObject(CacheObject):
     #   - proxy_revalidate
 
     public = _boolean_property('public')
-    no_cache = _value_property('no-cache')
     no_store = _boolean_property('no-store')
     no_transform = _boolean_property('no-transform')
     must_revalidate = _boolean_property('must-revalidate')
     proxy_revalidate = _boolean_property('proxy-revalidate')
 
+    no_cache = _value_property('no-cache')
     private = _value_property('private')
     max_age = _value_property('max-age')
     s_max_age = _value_property('s-maxage')
@@ -193,5 +193,4 @@ class WSGIResponseCacheMixin(object):
 #   - The 'Expires' HTTP header
 #   - 'Pragma: no-cache' --> 'Cache-Control: no-cache'
 #   - The 'Vary' HTTP header
-#   - Investigate whether deleting a property works
 

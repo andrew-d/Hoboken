@@ -118,13 +118,55 @@ class TestWSGIRequestCacheMixin(BaseTestCase):
         delattr(self.r.cache_control, param_name)
         self.assert_true(getattr(self.r.cache_control, param_name) is None)
 
-
-
+@parametrize
 class TestWSGIResponseCacheMixin(BaseTestCase):
+    BOOLEAN_PROPS = ['public', 'no_store', 'no_transform', 'must_revalidate', 'proxy_revalidate']
+    VALUE_PROPS = ['no_cache', 'private', 'max_age', 's_max_age', 's_maxage']
+
+    def setup(self):
+        self.r = WSGIResponseCacheMixin()
+        self.r.headers = {}
+
     def test_cache_control(self):
-        r = WSGIResponseCacheMixin()
-        r.headers = {}
-        self.assert_is_instance(r.cache_control, ResponseCacheObject)
+        self.assert_is_instance(self.r.cache_control, ResponseCacheObject)
+
+    @parameters(BOOLEAN_PROPS)
+    def test_get_boolean_properties(self, param_name):
+        self.assert_false(getattr(self.r.cache_control, param_name))
+
+    @parameters(BOOLEAN_PROPS)
+    def test_set_boolean_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, True)
+        self.assert_true(getattr(self.r.cache_control, param_name))
+
+    @parameters(BOOLEAN_PROPS)
+    def test_del_boolean_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, True)
+        delattr(self.r.cache_control, param_name)
+        self.assert_false(getattr(self.r.cache_control, param_name))
+
+    @parameters(VALUE_PROPS)
+    def test_get_value_properties(self, param_name):
+        self.assert_true(getattr(self.r.cache_control, param_name) is None)
+
+    @parameters(VALUE_PROPS)
+    def test_set_value_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, 'some_value')
+        self.assert_equal(getattr(self.r.cache_control, param_name), 'some_value')
+
+    @parameters(VALUE_PROPS)
+    def test_del_value_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, 'some_value')
+        delattr(self.r.cache_control, param_name)
+        self.assert_true(getattr(self.r.cache_control, param_name) is None)
+
+    def test_s_maxage_variants(self):
+        self.r.cache_control.s_max_age = True
+        self.assert_true(self.r.cache_control.s_maxage)
+
+        self.r.cache_control.s_maxage = False
+        self.assert_false(self.r.cache_control.s_max_age)
+
 
 
 def suite():
