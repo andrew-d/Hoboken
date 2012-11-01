@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import BaseTestCase
+from hoboken.tests.helpers import parameters, parametrize
 import unittest
 from mock import MagicMock, Mock, patch
 
@@ -25,8 +26,8 @@ class TestBooleanProperty(BaseTestCase):
         self.o.get_property.assert_called_once_with("name")
 
     def test_set(self):
-        _boolean_property.__set__(self.p, self.o, 'value')
-        self.o.set_property.assert_called_once_with('name', 'value')
+        _boolean_property.__set__(self.p, self.o, True)
+        self.o.set_property.assert_called_once_with('name', True)
 
     def test_delete(self):
         _boolean_property.__delete__(self.p, self.o)
@@ -75,11 +76,48 @@ class TestCacheObject(BaseTestCase):
         self.assert_equal(n._serialize_cache_control(), b'quoted="foo and bar"')
 
 
+@parametrize
 class TestWSGIRequestCacheMixin(BaseTestCase):
+    BOOLEAN_PROPS = ['no_cache', 'no_store', 'no_transform', 'only_if_cached']
+    VALUE_PROPS = ['max_age', 'max_stale', 'min_fresh']
+
+    def setup(self):
+        self.r = WSGIRequestCacheMixin()
+        self.r.headers = {}
+
     def test_cache_control(self):
-        r = WSGIRequestCacheMixin()
-        r.headers = {}
-        self.assert_is_instance(r.cache_control, RequestCacheObject)
+        self.assert_is_instance(self.r.cache_control, RequestCacheObject)
+
+    @parameters(BOOLEAN_PROPS)
+    def test_get_boolean_properties(self, param_name):
+        self.assert_false(getattr(self.r.cache_control, param_name))
+
+    @parameters(BOOLEAN_PROPS)
+    def test_set_boolean_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, True)
+        self.assert_true(getattr(self.r.cache_control, param_name))
+
+    @parameters(BOOLEAN_PROPS)
+    def test_del_boolean_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, True)
+        delattr(self.r.cache_control, param_name)
+        self.assert_false(getattr(self.r.cache_control, param_name))
+
+    @parameters(VALUE_PROPS)
+    def test_get_value_properties(self, param_name):
+        self.assert_true(getattr(self.r.cache_control, param_name) is None)
+
+    @parameters(VALUE_PROPS)
+    def test_set_value_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, 'some_value')
+        self.assert_equal(getattr(self.r.cache_control, param_name), 'some_value')
+
+    @parameters(VALUE_PROPS)
+    def test_del_value_properties(self, param_name):
+        setattr(self.r.cache_control, param_name, 'some_value')
+        delattr(self.r.cache_control, param_name)
+        self.assert_true(getattr(self.r.cache_control, param_name) is None)
+
 
 
 class TestWSGIResponseCacheMixin(BaseTestCase):

@@ -16,6 +16,9 @@ class _boolean_property(object):
         return val
 
     def __set__(self, obj, val):
+        if not isinstance(val, bool):
+            raise ValueError("Must set boolean property {0} to True or" \
+                             " False".format(self.name))
         obj.set_property(self.name, val)
 
     def __delete__(self, obj):
@@ -64,14 +67,15 @@ class CacheObject(object):
     # def _check_underlying_header(self):
     #     if self.underlying_header is self.http_obj.get('Cache-Control'):
     #         return
-
+    #
     #     # The underlying header value doesn't match.  Re-parse.
     #     new_
 
     def _serialize_cache_control(self):
         parts = []
         for name, value in sorted(self.properties.items()):
-            if value is False:
+            # TODO: we should deal with setting things to None
+            if value is False or value is None:
                 continue
 
             if value is True:
@@ -103,6 +107,8 @@ class CacheObject(object):
             name = match.group(1)
             value = match.group(2) or match.group(3) or None
             if value:
+                # Try converting this value to an integer.  We don't care if
+                # this fails.
                 try:
                     value = int(value)
                 except ValueError:
@@ -151,7 +157,7 @@ class ResponseCacheObject(CacheObject):
     #   - proxy_revalidate
 
     public = _boolean_property('public')
-    no_cache = _boolean_property('no-cache')                # FIXME: this doesn't handle a value
+    no_cache = _value_property('no-cache')
     no_store = _boolean_property('no-store')
     no_transform = _boolean_property('no-transform')
     must_revalidate = _boolean_property('must-revalidate')
