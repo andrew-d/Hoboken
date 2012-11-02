@@ -4,6 +4,7 @@ import re
 from numbers import Number
 from hoboken.six import text_type
 from hoboken.objects.util import cached_property
+from hoboken.objects.oproperty import property_overriding, oproperty
 
 class _boolean_property(object):
     def __init__(self, property_name):
@@ -168,6 +169,36 @@ class ResponseCacheObject(CacheObject):
     s_max_age = _value_property('s-maxage')
     s_maxage = s_max_age
 
+
+@property_overriding
+class PragmaNoCacheMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(PragmaNoCacheMixin, self).__init__(*args, **kwargs)
+
+    @oproperty
+    def no_cache(self, orig):
+        """
+        The HTTP/1.1 specification says that caches should treat
+        'Pragma: no-cache' the same as 'Cache-Control: no-cache'.  This mixin
+        does exactly that.
+        """
+        val = orig()
+        if orig is None:
+            pragma = self.headers.get('Pragma')
+            if pragma.lower().trim() == 'no-cache':
+                val = True
+
+        return val
+
+
+class FullRequestCacheObject(PragmaNoCacheMixin, RequestCacheObject):
+    pass
+
+
+class FullResponseCacheObject(PragmaNoCacheMixin, ResponseCacheObject):
+    pass
+
+
 class WSGIRequestCacheMixin(object):
     def __init__(self, *args, **kwargs):
         super(WSGIRequestCacheMixin, self).__init__(*args, **kwargs)
@@ -175,7 +206,7 @@ class WSGIRequestCacheMixin(object):
     @cached_property
     def cache_control(self):
         header_val = self.headers.get('Cache-Control', b'')
-        cache_object = RequestCacheObject.parse(self, header_val)
+        cache_object = FullRequestCacheObject.parse(self, header_val)
         return cache_object
 
 class WSGIResponseCacheMixin(object):
@@ -185,7 +216,7 @@ class WSGIResponseCacheMixin(object):
     @cached_property
     def cache_control(self):
         header_val = self.headers.get('Cache-Control', b'')
-        cache_object = ResponseCacheObject.parse(self, header_val)
+        cache_object = FullResponseCacheObject.parse(self, header_val)
         return cache_object
 
 
