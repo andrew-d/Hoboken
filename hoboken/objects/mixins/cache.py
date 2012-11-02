@@ -188,8 +188,29 @@ class WSGIResponseCacheMixin(object):
         cache_object = ResponseCacheObject.parse(self, header_val)
         return cache_object
 
+
+class WSGIResponseOtherCachesMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(WSGIResponseOtherCachesMixin, self).__init__(*args, **kwargs)
+
+    @property
+    def age(self):
+        a = self.headers.get('Age', 0)
+        try:
+            a = int(a)
+        except ValueError:
+            a = None
+        return a
+
+    @age.setter
+    def age(self, val):
+        # If not bytes, encode as an integer, then as a string, then to bytes.
+        if not isinstance(val, bytes):
+            val = str(int(val)).encode('ascii')
+        self.headers['Age'] = val
+
+
 # TODO:
-#   - The 'Age' HTTP header
 #   - The 'Expires' HTTP header
 #   - 'Pragma: no-cache' --> 'Cache-Control: no-cache'
 #   - The 'Vary' HTTP header

@@ -109,12 +109,12 @@ class TestWSGIRequestCacheMixin(BaseTestCase):
 
     @parameters(VALUE_PROPS)
     def test_set_value_properties(self, param_name):
-        setattr(self.r.cache_control, param_name, 'some_value')
-        self.assert_equal(getattr(self.r.cache_control, param_name), 'some_value')
+        setattr(self.r.cache_control, param_name, b'some_value')
+        self.assert_equal(getattr(self.r.cache_control, param_name), b'some_value')
 
     @parameters(VALUE_PROPS)
     def test_del_value_properties(self, param_name):
-        setattr(self.r.cache_control, param_name, 'some_value')
+        setattr(self.r.cache_control, param_name, b'some_value')
         delattr(self.r.cache_control, param_name)
         self.assert_true(getattr(self.r.cache_control, param_name) is None)
 
@@ -151,12 +151,12 @@ class TestWSGIResponseCacheMixin(BaseTestCase):
 
     @parameters(VALUE_PROPS)
     def test_set_value_properties(self, param_name):
-        setattr(self.r.cache_control, param_name, 'some_value')
-        self.assert_equal(getattr(self.r.cache_control, param_name), 'some_value')
+        setattr(self.r.cache_control, param_name, b'some_value')
+        self.assert_equal(getattr(self.r.cache_control, param_name), b'some_value')
 
     @parameters(VALUE_PROPS)
     def test_del_value_properties(self, param_name):
-        setattr(self.r.cache_control, param_name, 'some_value')
+        setattr(self.r.cache_control, param_name, b'some_value')
         delattr(self.r.cache_control, param_name)
         self.assert_true(getattr(self.r.cache_control, param_name) is None)
 
@@ -168,6 +168,24 @@ class TestWSGIResponseCacheMixin(BaseTestCase):
         self.assert_false(self.r.cache_control.s_max_age)
 
 
+class TestWSGIResponseOtherCachesMixin(BaseTestCase):
+    def setup(self):
+        self.r = WSGIResponseOtherCachesMixin()
+        self.r.headers = {}
+
+    def test_age_simple(self):
+        self.r.age = 123
+        self.assert_equal(self.r.age, 123)
+
+    def test_age_with_bytes(self):
+        self.r.age = b'123'
+        self.assert_equal(self.r.age, 123)
+
+    def test_age_with_invalid(self):
+        self.r.headers['Age'] = b'bad data'
+        self.assert_true(self.r.age is None)
+
+
 
 def suite():
     suite = unittest.TestSuite()
@@ -176,5 +194,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestCacheObject))
     suite.addTest(unittest.makeSuite(TestWSGIRequestCacheMixin))
     suite.addTest(unittest.makeSuite(TestWSGIResponseCacheMixin))
+    suite.addTest(unittest.makeSuite(TestWSGIResponseOtherCachesMixin))
 
     return suite
