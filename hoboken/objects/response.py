@@ -9,6 +9,31 @@ from hoboken.objects.constants import status_reasons, status_generic_reasons
 from hoboken.objects.util import iter_close
 
 
+class EmptyResponse(object):
+    """
+    An empty WSGI response.
+
+    An iterator that immediately stops. Optionally provides a close
+    method to close the underlying response_iter it replaces.
+    """
+
+    def __init__(self, response_iter=None):
+        if response_iter and hasattr(response_iter, 'close'):
+            self.close = response_iter.close
+
+    def __iter__(self):
+        return self
+
+    def __len__(self):
+        return 0
+
+    def next(self):
+        raise StopIteration()
+
+    # For Python 3.X
+    __next__ = next
+
+
 class WSGIBaseResponse(BaseResponse):
     def __init__(self, charset='utf-8', *args, **kwargs):
         super(WSGIBaseResponse, self).__init__(*args, **kwargs)
@@ -68,11 +93,22 @@ class WSGIBaseResponse(BaseResponse):
                              "iterable, not {0!s}".format(type(val))
                              )
 
-        self._response_iter = val
+        self._response_iter = iter(val)
 
     def close(self):
         """Close the underlying iterator, if we need to."""
         iter_close(self._response_iter)
+
+    def __call__(self, environ, start_response):
+        header_list = list(self.headers)
+        start_response(self.status, header_list)
+
+        # We special-case the HEAD method to return an empty response.
+        if environ['REQUEST_METHOD'] == 'HEAD':
+            return EmptyResponse(self.response_iter)
+
+        return self.response_iter
+
 
 
 from .mixins.cache import WSGIResponseCacheMixin
