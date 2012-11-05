@@ -1,6 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 from collections import MutableMapping
-from hoboken.six import PY3, iterkeys
+from hoboken.six import PY3, iterkeys, iteritems
 
 class WSGIHeaders(MutableMapping):
     def __init__(self, environ):
@@ -39,5 +39,8 @@ class WSGIHeaders(MutableMapping):
         for key in iterkeys(self.environ):
             if isinstance(key, str) and key.startswith('HTTP_'):
                 yield key[5:].replace('_', '-').title()
+
+    def to_list(self):
+        return list(iteritems(self))
 
 

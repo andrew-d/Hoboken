@@ -48,6 +48,10 @@ class TestWSGIHeaders(BaseTestCase):
         h['Header'] = '123'
         self.assert_equal(h['Header'], '123')
 
+    def test_to_list(self):
+        l = self.h.to_list()
+        self.assert_equal(l, [('Header', 'value'), ('Other-Header', 'other')])
+
 
 def suite():
     suite = unittest.TestSuite()

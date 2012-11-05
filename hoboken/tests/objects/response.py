@@ -39,17 +39,40 @@ class TestWSGIBaseResponse(BaseTestCase):
 
     def test_response_iter(self):
         self.e.response_iter = ['a', 'b', 'c']
-        self.assert_equal(self.e.response_iter, ['a', 'b', 'c'])
+        self.assert_equal(list(self.e.response_iter), ['a', 'b', 'c'])
 
     def test_response_iter_fails(self):
         with self.assert_raises(ValueError):
             self.e.response_iter = 123
 
     def test_will_close_iter(self):
-        i = MagicMock()
+        class TestIter(object):
+            def __iter__(self):
+                return self
+
+            def close(self):
+                self.closed = True
+
+            def next(self):
+                return StopIteration()
+
+            __next__ = next
+
+        i = TestIter()
         self.e.response_iter = i
         self.e.close()
-        self.assert_true(i.close.called)
+        self.assert_true(i.closed)
+
+    def test___call__(self):
+        start_response = MagicMock()
+        environ = {"REQUEST_METHOD": "GET"}
+        self.e.headers['Response-Header'] = b'value'
+
+        it = self.e(environ, start_response)
+
+        self.assert_equal(it, [b''])
+        start_response.assert_called_with("200 OK", [('Response-Header', 'value')])
+
 
 
 

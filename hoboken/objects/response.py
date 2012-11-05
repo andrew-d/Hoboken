@@ -100,7 +100,7 @@ class WSGIBaseResponse(BaseResponse):
         iter_close(self._response_iter)
 
     def __call__(self, environ, start_response):
-        header_list = list(self.headers)
+        header_list = self.headers.to_list()
         start_response(self.status, header_list)
 
         # We special-case the HEAD method to return an empty response.
