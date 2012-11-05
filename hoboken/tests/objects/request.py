@@ -54,11 +54,11 @@ class TestWSGIRequest(BaseTestCase):
         self.r = WSGIRequest(self.environ)
 
     def test_path_info(self):
-        with patch('hoboken.objects.request.WSGIBaseRequest.path_info') as mock:
-            mock.__get__ = Mock(return_value=b'foo')
+        with patch('hoboken.objects.request.WSGIBaseRequest.path_info') as m:
+            m.__get__ = Mock(return_value=b'foo')
             self.assert_equal(self.r.path_info, b'/foo')
 
-            mock.__get__ = Mock(return_value=b'/foo')
+            m.__get__ = Mock(return_value=b'/foo')
             self.assert_equal(self.r.path_info, b'/foo')
 
     def test_host_with_port(self):
@@ -113,10 +113,12 @@ class TestWSGIRequest(BaseTestCase):
 
         c = TestClass()
 
-        self.assert_equal(WSGIRequest.full_path.__get__(c), b'script/path_info')
+        self.assert_equal(WSGIRequest.full_path.__get__(c),
+                          b'script/path_info')
 
         c.query_string = b'foo=bar'
-        self.assert_equal(WSGIRequest.full_path.__get__(c), b'script/path_info?foo=bar')
+        self.assert_equal(WSGIRequest.full_path.__get__(c),
+                          b'script/path_info?foo=bar')
 
     def test_url(self):
         class TestClass(object):
@@ -127,10 +129,12 @@ class TestWSGIRequest(BaseTestCase):
 
         c = TestClass()
 
-        self.assert_equal(WSGIRequest.url.__get__(c), b'http://localhost:1234/script/path_info')
+        self.assert_equal(WSGIRequest.url.__get__(c),
+                          b'http://localhost:1234/script/path_info')
 
         c.query_string = b'foo=bar'
-        self.assert_equal(WSGIRequest.url.__get__(c), b'http://localhost:1234/script/path_info?foo=bar')
+        self.assert_equal(WSGIRequest.url.__get__(c),
+                          b'http://localhost:1234/script/path_info?foo=bar')
 
     def test_is_secure(self):
         class TestClass(object):

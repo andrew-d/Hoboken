@@ -57,7 +57,9 @@ class TestValueProperty(BaseTestCase):
 class TestCacheObject(BaseTestCase):
     def test_parse_value(self):
         props = CacheObject.parse_value(b"no-cache, no-store, max-age=123")
-        self.assert_equal(props, {b"no-cache": True, b"no-store": True, b"max-age": 123})
+        self.assert_equal(props,
+            {b"no-cache": True, b"no-store": True, b"max-age": 123}
+        )
 
     def test_parse(self):
         http_obj = object()
@@ -70,10 +72,12 @@ class TestCacheObject(BaseTestCase):
             b"no-store": True,
             b"max-age": 123,
         })
-        self.assert_equal(m._serialize_cache_control(), b"max-age=123, no-cache, no-store")
+        self.assert_equal(m._serialize_cache_control(),
+                          b"max-age=123, no-cache, no-store")
 
         n = CacheObject(None, initial_properties={b'quoted': b'foo and bar'})
-        self.assert_equal(n._serialize_cache_control(), b'quoted="foo and bar"')
+        self.assert_equal(n._serialize_cache_control(),
+                          b'quoted="foo and bar"')
 
 
 @parametrize
@@ -110,7 +114,8 @@ class TestWSGIRequestCacheMixin(BaseTestCase):
     @parameters(VALUE_PROPS)
     def test_set_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
-        self.assert_equal(getattr(self.r.cache_control, param_name), b'some_value')
+        self.assert_equal(getattr(self.r.cache_control, param_name),
+                          b'some_value')
 
     @parameters(VALUE_PROPS)
     def test_del_value_properties(self, param_name):
@@ -120,7 +125,8 @@ class TestWSGIRequestCacheMixin(BaseTestCase):
 
 @parametrize
 class TestWSGIResponseCacheMixin(BaseTestCase):
-    BOOLEAN_PROPS = ['public', 'no_store', 'no_transform', 'must_revalidate', 'proxy_revalidate']
+    BOOLEAN_PROPS = ['public', 'no_store', 'no_transform', 'must_revalidate',
+                     'proxy_revalidate']
     VALUE_PROPS = ['no_cache', 'private', 'max_age', 's_max_age', 's_maxage']
 
     def setup(self):
@@ -152,7 +158,8 @@ class TestWSGIResponseCacheMixin(BaseTestCase):
     @parameters(VALUE_PROPS)
     def test_set_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
-        self.assert_equal(getattr(self.r.cache_control, param_name), b'some_value')
+        self.assert_equal(getattr(self.r.cache_control, param_name),
+                          b'some_value')
 
     @parameters(VALUE_PROPS)
     def test_del_value_properties(self, param_name):

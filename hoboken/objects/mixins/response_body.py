@@ -35,7 +35,8 @@ class IteratorFile(object):
         total_size = len(self.last_chunk)
         self.last_chunk = b''
 
-        # If we're not closed, read chunks from the iterator until we have enough data.
+        # If we're not closed, read chunks from the iterator until we have
+        # enough data.
         if not self._closed:
             try:
                 while total_size < size:

@@ -14,7 +14,11 @@ class WSGIBaseRequest(BaseRequest):
     def __init__(self, environ, charset='utf-8'):
         super(WSGIBaseRequest, self).__init__()
         if type(environ) is not dict:
-            raise ValueError("The WSGI environ must be a dict, not a {0!r}".format(type(environ)))
+            raise ValueError(
+                "The WSGI environ must be a dict, not a {0!r}".format(
+                    type(environ)
+                )
+            )
 
         self.environ = environ
         self.charset = charset
@@ -24,8 +28,8 @@ class WSGIBaseRequest(BaseRequest):
             if isinstance(value, bytes):
                 value = value.decode('latin-1')
             elif isinstance(value, str):
-                # Encode and then decode to verify that this string only contains
-                # valid codepoints.
+                # Encode and then decode to verify that this string only
+                # contains valid codepoints.
                 value = value.encode('latin-1').decode('latin-1')
 
             return value
@@ -180,5 +184,6 @@ class RequestVarsMixin(object):
 from .mixins.accept import WSGIAcceptMixin
 from .mixins.cache import WSGIRequestCacheMixin
 
-class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin, WSGIRequest):
+class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin,
+                      WSGIRequest):
     pass

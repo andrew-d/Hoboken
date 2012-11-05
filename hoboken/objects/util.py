@@ -79,7 +79,9 @@ class cached_property(object):
 
 
 def is_immutable(self):
-    raise TypeError('{0!r} objects are immutable'.format(self.__class__.__name__))
+    raise TypeError(
+        '{0!r} objects are immutable'.format(self.__class__.__name__)
+    )
 
 
 class ImmutableListMixin(object):

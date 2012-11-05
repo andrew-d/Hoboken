@@ -6,6 +6,7 @@ from mock import MagicMock, Mock, patch
 
 from hoboken.objects.response import *
 
+
 class TestWSGIBaseResponse(BaseTestCase):
     def setup(self):
         self.e = WSGIBaseResponse()
@@ -71,9 +72,9 @@ class TestWSGIBaseResponse(BaseTestCase):
         it = self.e(environ, start_response)
 
         self.assert_equal(it, [b''])
-        start_response.assert_called_with("200 OK", [('Response-Header', 'value')])
-
-
+        start_response.assert_called_with("200 OK",
+            [('Response-Header', 'value')]
+        )
 
 
 def suite():
