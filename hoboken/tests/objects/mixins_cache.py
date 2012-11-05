@@ -174,6 +174,7 @@ class TestWSGIResponseOtherCachesMixin(BaseTestCase):
         self.r.headers = {}
 
     def test_age_simple(self):
+        self.assert_equal(self.r.age, None)
         self.r.age = 123
         self.assert_equal(self.r.age, 123)
 

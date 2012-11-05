@@ -226,10 +226,10 @@ class WSGIResponseOtherCachesMixin(object):
 
     @property
     def age(self):
-        a = self.headers.get('Age', 0)
+        a = self.headers.get('Age')
         try:
             a = int(a)
-        except ValueError:
+        except (ValueError, TypeError):
             a = None
         return a
 
