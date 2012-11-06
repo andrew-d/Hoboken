@@ -36,11 +36,12 @@ class EmptyResponse(object):
 
 class WSGIBaseResponse(BaseResponse):
     def __init__(self, charset='utf-8', *args, **kwargs):
-        super(WSGIBaseResponse, self).__init__(*args, **kwargs)
-
-        self._status_code = 200
-        self._response_iter = [b'']
         self.charset = charset
+
+        self._status_code = kwargs.pop('status_int', 200)
+        self._response_iter = [b'']
+
+        super(WSGIBaseResponse, self).__init__(*args, **kwargs)
 
     @property
     def status_int(self):
