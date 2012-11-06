@@ -2,7 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 
 from hoboken.objects.util import cached_property, iter_close
 from hoboken.objects.oproperty import oproperty, property_overriding
-from hoboken.six import binary_type, callable
+from hoboken.six import binary_type, text_type, callable, u
 
 
 class IteratorFile(object):
@@ -83,4 +83,37 @@ class ResponseBodyMixin(object):
     def body_file(self, val):
         it = [val.read()]
         self.response_iter = it
+
+    @property
+    def body(self):
+        """
+        The body as a bytestring.
+        """
+        return b''.join(self.response_iter)
+
+    @body.setter
+    def body(self, val):
+        if not isinstance(val, binary_type):
+            raise ValueError("Response body must be set to a bytestring")
+
+        self.response_iter = [val]
+
+    @property
+    def text(self):
+        """
+        The body as a Unicode string.
+        """
+        # TODO: benchmark against self.body.encode(self.charset)
+        return u('').join(x.decode(self.charset) for x in self.response_iter)
+
+    @text.setter
+    def text(self, val):
+        if not isinstance(val, text_type):
+            raise ValueError(
+                "Response text must be set to a '{0}' value".format(
+                    text_type.__name__
+                )
+            )
+
+        self.response_iter = [val.encode(self.charset)]
 

@@ -6,6 +6,7 @@ from io import BytesIO
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.response_body import *
+from hoboken.six import u
 
 class TestIteratorFile(BaseTestCase):
     def setup(self):
@@ -61,7 +62,7 @@ class TestResponseBodyMixin(BaseTestCase):
                 self._response_iter = val
 
         class MixedIn(ResponseBodyMixin, TestObject):
-            pass
+            charset = 'utf-8'
 
         self.m = MixedIn()
 
@@ -89,6 +90,30 @@ class TestResponseBodyMixin(BaseTestCase):
         self.m.response_iter = [b'foobar']
         f = self.m.body_file
         self.assert_equal(f.read(), b'foobar')
+
+    def test_set_body(self):
+        self.m.body = b'foobar'
+        self.assert_equal(self.m.response_iter, [b'foobar'])
+
+    def test_set_body_with_invalid(self):
+        with self.assert_raises(ValueError):
+            self.m.body = u('foo')
+
+    def test_get_body(self):
+        self.m.response_iter = [b'foo', b'bar']
+        self.assert_equal(self.m.body, b'foobar')
+
+    def test_set_text(self):
+        self.m.text = u('foobar')
+        self.assert_equal(self.m.response_iter, [b'foobar'])
+
+    def test_set_text_with_invalid(self):
+        with self.assert_raises(ValueError):
+            self.m.text = b'foo'
+
+    def test_get_text(self):
+        self.m.response_iter = [b'foo', b'bar']
+        self.assert_equal(self.m.text, u('foobar'))
 
 
 
