@@ -427,7 +427,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         route function into the request body.  Override this in a subclass
         to customize how values are returned.
         """
-        print('value is: {0!r}, {1}'.format(value, type(value)))
+        # print('value is: {0!r}, {1}'.format(value, type(value)))
         if isinstance(value, text_type):
             resp.text = value
         elif isinstance(value, binary_type):
