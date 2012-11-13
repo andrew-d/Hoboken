@@ -114,8 +114,9 @@ class WSGIBaseResponse(BaseResponse):
 
 from .mixins.cache import WSGIResponseCacheMixin
 from .mixins.response_body import ResponseBodyMixin
+from .mixins.etag import WSGIResponseEtagMixin
 
 class WSGIFullResponse(ResponseBodyMixin, WSGIResponseCacheMixin,
-                       WSGIBaseResponse):
+                       WSGIResponseEtagMixin, WSGIBaseResponse):
     pass
 

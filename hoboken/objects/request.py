@@ -183,7 +183,8 @@ class RequestVarsMixin(object):
 
 from .mixins.accept import WSGIAcceptMixin
 from .mixins.cache import WSGIRequestCacheMixin
+from .mixins.etag import WSGIRequestEtagMixin
 
 class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin,
-                      WSGIRequest):
+                      WSGIRequestEtagMixin, WSGIRequest):
     pass
