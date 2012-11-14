@@ -2,7 +2,6 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 from hoboken.six import binary_type
-from hoboken.objects.oproperty import property_overriding, oproperty
 
 
 ETAG_RE = re.compile(br'(?:^|\s)(W/)?"((?:\\"|.)*?)"')
