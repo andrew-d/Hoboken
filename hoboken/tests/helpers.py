@@ -123,6 +123,10 @@ class BaseTestCase(unittest.TestCase):
         BaseTestCase.number_of_assertions += 1
         assert x in y, "{0!r} is not in {1!r}".format(x, y)
 
+    def assert_between(self, val, lower, upper):
+        BaseTestCase.number_of_assertions += 1
+        assert lower <= val <= upper, "{0!r} is not between {1!r} and {2!r}".format(val, lower, upper)
+
     def assert_raises(self, exception, callable=None, *args, **kwargs):
         BaseTestCase.number_of_assertions += 1
         catcher = _ExceptionCatcher(self, exception)
