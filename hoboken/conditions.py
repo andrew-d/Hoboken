@@ -1,7 +1,6 @@
 from __future__ import print_function
 import re
 from collections import Iterable
-from webob.acceptparse import MIMEAccept
 
 def user_agent(match_re):
     regex = re.compile(match_re)

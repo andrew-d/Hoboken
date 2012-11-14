@@ -14,9 +14,6 @@ except:                     # pragma: no cover
     import dummy_threading as threading
 #from functools import wraps
 
-# External dependencies
-from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerError
-
 # In-package dependencies
 from hoboken.exceptions import *
 from hoboken.matchers import *
