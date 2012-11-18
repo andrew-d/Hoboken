@@ -162,26 +162,26 @@ class TestPassHelper(HobokenTestCase):
         @self.app.before("/pass/before")
         def pass_before():
             pass_route()
-            self.app.response.text = 'bad'
+            self.app.response.body = b'bad'
 
         @self.app.before("/pass/*")
         def before_pass_all(splat):
-            self.app.response.text += 'good'
+            self.app.response.body += b'good'
 
         @self.app.get("/pass/*")
         def pass_before_route(splat):
-            self.app.response.text += 'foo'
+            self.app.response.body += b'foo'
 
         self.app.config.debug = True
 
     def test_pass_route(self):
-        self.assert_body_is('good', path='/aroute/')
+        self.assert_body_is(b'good', path='/aroute/')
 
     def test_pass_before(self):
         # Passing in filter will simply jump to the next filter.  It has no
         # effect on the actual body routes themselves.
-        self.assert_body_is('goodfoo', path='/pass/before')
-        self.assert_body_is('goodfoo', path='/pass/other')
+        self.assert_body_is(b'goodfoo', path='/pass/before')
+        self.assert_body_is(b'goodfoo', path='/pass/other')
 
 
 class TestRedirectHelper(HobokenTestCase):
