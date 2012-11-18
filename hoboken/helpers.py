@@ -3,10 +3,10 @@ from __future__ import with_statement, absolute_import, print_function
 import sys
 import time
 import datetime
-import webob
 
 from hoboken.six import iteritems
 from hoboken.application import halt
+from hoboken.objects.mixins.etag import MatchAnyEtag, MatchNoneEtag
 
 
 class HobokenCachingMixin(object):
@@ -29,7 +29,7 @@ class HobokenCachingMixin(object):
         self.response.last_modified = timestamp
 
         # We don't do anything if there's an ETag.
-        if self.request.if_none_match is not webob.etag.NoETag:
+        if self.request.if_none_match is not MatchNoneEtag:
             return
 
         if self.response.status_int == 200 and self.request.if_modified_since is not None:
@@ -56,17 +56,17 @@ class HobokenCachingMixin(object):
         #  - If it's not a new resource, and the header specifies 'anything' (i.e. '*')
         #  - Otherwise, if it's an exact match.
         def etag_matches(value):
-            if value is webob.etag.AnyETag:
+            if value is MatchAnyEtag:
                 return not new_resource
             return self.response.etag in value
 
         if self.response.is_success or self.response.status_int == 304:
-            if self.request.if_none_match is not webob.etag.NoETag and etag_matches(self.request.if_none_match):
+            if self.request.if_none_match is not MatchNoneEtag and etag_matches(self.request.if_none_match):
                 if self.request.is_safe:
                     halt(code=304)
                 else:
                     halt(code=412)
-            elif self.request.if_match is not webob.etag.AnyETag and not etag_matches(self.request.if_match):
+            elif self.request.if_match is not MatchAnyEtag and not etag_matches(self.request.if_match):
                 halt(code=412)
 
     def set_cache_control(self, **kwargs):

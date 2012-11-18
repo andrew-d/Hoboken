@@ -64,7 +64,7 @@ class WSGIDateMixin(object):
             tup = tup[:9] + (0,)
 
         timestamp = mktime_tz(tup)
-        return datetime.datetime.fromtimestamp(timestamp)
+        return datetime.fromtimestamp(timestamp)
 
     def _serialize_date(self, value):
         """
