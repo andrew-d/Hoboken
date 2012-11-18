@@ -242,7 +242,5 @@ class WSGIResponseOtherCachesMixin(object):
 
 
 # TODO:
-#   - The 'Expires' HTTP header
-#   - 'Pragma: no-cache' --> 'Cache-Control: no-cache'
 #   - The 'Vary' HTTP header
 

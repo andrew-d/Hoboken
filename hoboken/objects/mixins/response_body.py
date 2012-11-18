@@ -103,8 +103,10 @@ class ResponseBodyMixin(object):
         """
         The body as a Unicode string.
         """
-        # TODO: benchmark against self.body.encode(self.charset)
-        return u('').join(x.decode(self.charset) for x in self.response_iter)
+        # TODO: benchmark these options
+        # return u('').join(x.decode(self.charset) for x in self.response_iter)
+        # return b''.join(self.response_iter).encode(self.charset)
+        return self.body.encode(self.charset)
 
     @text.setter
     def text(self, val):
