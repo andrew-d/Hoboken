@@ -113,10 +113,12 @@ class WSGIBaseResponse(BaseResponse):
 
 
 from .mixins.cache import WSGIResponseCacheMixin
-from .mixins.response_body import ResponseBodyMixin
+from .mixins.date import WSGIResponseDateMixin
 from .mixins.etag import WSGIResponseEtagMixin
+from .mixins.response_body import ResponseBodyMixin
 
 class WSGIFullResponse(ResponseBodyMixin, WSGIResponseCacheMixin,
-                       WSGIResponseEtagMixin, WSGIBaseResponse):
+                       WSGIResponseEtagMixin, WSGIResponseDateMixin,
+                       WSGIBaseResponse):
     pass
 

@@ -13,12 +13,34 @@ from email.utils import (
     formatdate
 )
 from numbers import Number
-from hoboken.six import binary_type
+from hoboken.six import binary_type, text_type
 
 
-class WSGIResponseDateMixin(object):
+def date_header_property(header, read_only=False):
+    def getter(self):
+        return self._parse_date(self.headers.get(header))
+    def setter(self, value):
+        if value is None:
+            self.headers.pop(header, None)
+        else:
+            self.headers[header] = self._serialize_date(value)
+    def deleter(self):
+        self.headers.pop(header, None)
+
+    # TODO: Set the docstring properly
+    if read_only:
+        return property(getter, doc='')
+    else:
+        return property(getter, setter, deleter, doc='')
+
+
+class WSGIDateMixin(object):
+    """
+    This mixin is used for both Requests and Responses.
+    """
+
     def __init__(self, *args, **kwargs):
-        super(WSGIResponseDateMixin, self).__init__(*args, **kwargs)
+        super(WSGIDateMixin, self).__init__(*args, **kwargs)
 
     # Hook for datetime.now - makes testing easier.
     __now = staticmethod(datetime.now)
@@ -27,6 +49,9 @@ class WSGIResponseDateMixin(object):
         """
         Parse a given date string into a datetime() value.
         """
+        if value is None:
+            return None
+
         if isinstance(value, binary_type):
             value = value.decode('latin-1')
 
@@ -46,8 +71,10 @@ class WSGIResponseDateMixin(object):
         Serialize a date into an RFC 2822-compliant binary string.
         """
         # If we're given a string, we return it as-is.
-        if isinstance(value, (text_type, binary_type)):
+        if isinstance(value, binary_type):
             return value
+        if isinstance(value, text_type):
+            return value.encode('latin-1')
 
         # If we're given a time delta, we assume it's from now.
         if isinstance(value, timedelta):
@@ -61,7 +88,7 @@ class WSGIResponseDateMixin(object):
         if isinstance(value, (tuple, time.struct_time)):
             value = calendar.timegm(value)
 
-        # Finally, assert that we actually have an integer by this point.
+        # Finally, assert that we actually have an number by this point.
         if not isinstance(value, Number):
             raise ValueError("Unknown value to serialize: {0!r}".format(value))
 
@@ -70,20 +97,21 @@ class WSGIResponseDateMixin(object):
         serialized = formatdate(value, usegmt=True)
         return serialized.encode('latin-1')
 
-    @property
-    def date(self):
-        return self._parse_date(self.headers.get('Date'))
+    date = date_header_property('Date')
 
-    @date.setter
-    def date(self, val):
-        self.headers['Date'] = self._serialize_date(val)
 
-    # TODO: these are for a REQUEST!
-    # @property
-    # def if_modified_since(self):
-    #     pass
+class WSGIResponseDateMixin(WSGIDateMixin):
+    def __init__(self, *args, **kwargs):
+        super(WSGIResponseDateMixin, self).__init__(*args, **kwargs)
 
-    # @property
-    # def if_unmodified_since(self):
-    #     pass
+    last_modified = date_header_property('Last-Modified')
+    expires = date_header_property('Expires')
+
+
+class WSGIRequestDateMixin(WSGIDateMixin):
+    def __init__(self, *args, **kwargs):
+        super(WSGIRequestDateMixin, self).__init__(*args, **kwargs)
+
+    if_modified_since = date_header_property('If-Modified-Since')
+    if_unmodified_since = date_header_property('If-Unmodified-Since')
 
