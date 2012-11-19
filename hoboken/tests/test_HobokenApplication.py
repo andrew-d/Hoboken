@@ -257,7 +257,7 @@ class TestMatcherTypes(HobokenTestCase):
 
         r = Request.blank("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_2(self):
@@ -271,7 +271,7 @@ class TestMatcherTypes(HobokenTestCase):
 
         r = Request.blank("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_3(self):
@@ -285,7 +285,7 @@ class TestMatcherTypes(HobokenTestCase):
 
         r = Request.blank("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_4(self):
@@ -299,7 +299,7 @@ class TestMatcherTypes(HobokenTestCase):
 
         r = Request.blank("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_custom_matcher(self):
@@ -314,7 +314,7 @@ class TestMatcherTypes(HobokenTestCase):
 
         r = Request.blank("/")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(m.match.call_count, 1)
 
 
@@ -359,7 +359,7 @@ class TestMiscellaneousMethods(HobokenTestCase):
         r.method = 'OTHER'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 405)
+        self.assert_equal(resp.status_int, 405)
 
     def test_will_error_on_invalid_body(self):
         req = mock.MagicMock()

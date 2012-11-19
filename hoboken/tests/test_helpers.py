@@ -50,14 +50,14 @@ class TestLastModified(HobokenTestCase):
         r = Request.blank("/resource")
         r.if_modified_since = datetime.datetime(year=2012, month=7, day=20)
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 304)
+        self.assert_equal(resp.status_int, 304)
         self.assert_equal(resp.body, b'')
 
     def test_will_return_200_for_newer(self):
         r = Request.blank("/resource")
         r.if_modified_since = datetime.datetime(year=2012, month=7, day=1)
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'resource value')
 
     def test_if_unmodified_since(self):
@@ -66,7 +66,7 @@ class TestLastModified(HobokenTestCase):
         r.body = b'put this here'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
 
     def test_if_unmodified_since_precondition_fail(self):
         r = Request.blank("/resource", method='PUT')
@@ -74,7 +74,7 @@ class TestLastModified(HobokenTestCase):
         r.body = b'put this here'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 412)
+        self.assert_equal(resp.status_int, 412)
 
 
 class TestETag(HobokenTestCase):
@@ -103,31 +103,31 @@ class TestETag(HobokenTestCase):
 
     def test_etag_will_return_304_for_correct_if_none_match(self):
         resp = self.call_app("/resource", if_none_match=self.etag)
-        self.assert_equal(resp.status_code, 304)
+        self.assert_equal(resp.status_int, 304)
 
     def test_etag_will_return_304_for_incorrect_if_none_match(self):
         resp = self.call_app("/resource", method='PUT', if_none_match=self.etag)
-        self.assert_equal(resp.status_code, 412)
+        self.assert_equal(resp.status_int, 412)
 
     def test_etag_will_return_200_for_no_if_none_match(self):
         resp = self.call_app("/resource", method='PUT', if_none_match=self.etag + 'false')
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
 
     def test_etag_will_return_200_for_correct_if_match(self):
         resp = self.call_app("/resource", method='PUT', if_match=self.etag)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
 
     def test_etag_will_return_412_for_incorrect_if_match(self):
         resp = self.call_app("/resource", method='PUT', if_match=self.etag + 'fail')
-        self.assert_equal(resp.status_code, 412)
+        self.assert_equal(resp.status_int, 412)
 
     def test_wildcard_etag_if_match(self):
         resp = self.call_app("/resource", method='PUT', if_match='*')
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
 
     def test_wildcard_etag_if_none_match(self):
         resp = self.call_app("/resource", method='PUT', if_none_match='*')
-        self.assert_equal(resp.status_code, 412)
+        self.assert_equal(resp.status_int, 412)
 
 
 class TestCacheControl(HobokenTestCase):
@@ -240,7 +240,7 @@ class TestRedirection(HobokenTestCase):
         r = Request.blank("/redirect_fail", referer='')
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'no redirect')
 
     def test_redirect_to(self):

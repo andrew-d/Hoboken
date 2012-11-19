@@ -483,7 +483,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # TODO: hook.
 
             # Send "invalid method" exception.
-            response.status_code = 405
+            response.status_int = 405
             return
 
         matched = False
@@ -503,7 +503,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         except HaltRoutingException as ex:
             # Set the various parameters.
             if ex.code is not None:
-                response.status_code = ex.code
+                response.status_int = ex.code
 
             if ex.body is not None:
                 # We pass the body through to on_returned_body.
@@ -548,10 +548,10 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             self.response = self.request.get_response(self.sub_app)
         else:
             # By default, return a 404 request.
-            self.response.status_code = 404
+            self.response.status_int = 404
 
     def on_exception(self, exception):
-        self.response.status_code = 500
+        self.response.status_int = 500
         if self.config.debug:
             # Format the current traceback
             tb = traceback.format_exc()
