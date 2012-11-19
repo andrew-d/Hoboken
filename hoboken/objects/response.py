@@ -81,6 +81,7 @@ class WSGIBaseResponse(BaseResponse):
         self.headers.update(value)
 
     headers = property(_headers_getter, _headers_setter)
+    del _headers_getter, _headers_setter
 
     @property
     def response_iter(self):

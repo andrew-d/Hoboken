@@ -61,6 +61,8 @@ class CacheObject(object):
     def set_property(self, name, val):
         self.properties[name] = val
 
+        # Whenever we update the cache-control property, we re-serialize to
+        # the underlying header.
         header_val = self._serialize_cache_control()
         self.http_obj.headers['Cache-Control'] = header_val
 
@@ -95,6 +97,13 @@ class CacheObject(object):
             parts.append(name + b'=' + value)
 
         return b', '.join(parts)
+
+    def reparse(self):
+        """
+        Re-parse the Cache-Control value from the underlying header.
+        """
+        properties = self.parse_value(self.http_obj.headers['Cache-Control'])
+        self.properties = properties
 
     @classmethod
     def parse(klass, http_obj, header_value):
