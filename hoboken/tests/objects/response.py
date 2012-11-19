@@ -26,6 +26,13 @@ class TestWSGIBaseResponse(BaseTestCase):
         self.e.status_int = 200
         self.assert_equal(self.e.status_text, 'OK')
 
+    def test_status_text_other_code(self):
+        self.e.status_int = 299
+        self.assert_equal(self.e.status_text, 'Success')
+
+        self.e.status_int = 599
+        self.assert_equal(self.e.status_text, 'Unknown Server Error')
+
     def test_status(self):
         self.e.status_int = 200
         self.assert_equal(self.e.status, '200 OK')
