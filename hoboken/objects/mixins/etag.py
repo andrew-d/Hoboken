@@ -4,7 +4,8 @@ import re
 from hoboken.six import binary_type
 
 
-ETAG_RE = re.compile(br'(?:^|\s)(W/)?"((?:\\"|.)*?)"')
+# TODO: support unquoted values here.
+ETAG_RE = re.compile(br'(?:^|\s)([Ww]/)?"((?:\\"|.)*?)"')
 
 
 class _MatchAnyEtag(object):
