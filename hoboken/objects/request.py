@@ -114,6 +114,8 @@ class WSGIRequest(WSGIBaseRequest):
 
         return host
 
+    # TODO: do we want to go to the trouble of creating the host+port above,
+    # and also split it here?  It seems like extra work.
     @property
     def host(self):
         return self._STRIP_PORT.sub(b'', self.host_with_port)
@@ -148,7 +150,7 @@ class WSGIRequest(WSGIBaseRequest):
 
     @property
     def url(self):
-        """ The full URL of the request."""
+        """The full URL of the request."""
         # This code adapted from PEP 3333, thanks to Ian Bicking.
         url = self.scheme + b'://'
 
