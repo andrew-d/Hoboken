@@ -153,17 +153,79 @@ class TestQuerystringParser(BaseTestCase):
     # TODO: test overlarge fields, blank values, and strict parsing
 
 
+class TestOctetStreamParser(BaseTestCase):
+    def setup(self):
+        self.d = []
+        self.started = 0
+        self.finished = 0
+
+        def on_start():
+            self.started += 1
+
+        def on_data(data, start, end):
+            self.d.append(data[start:end])
+
+        def on_end():
+            self.finished += 1
+
+        callbacks = {
+            'on_start': on_start,
+            'on_data': on_data,
+            'on_end': on_end
+        }
+
+        self.p = OctetStreamParser(callbacks)
+
+    def assert_data(self, data):
+        self.assert_equal(b''.join(self.d), data)
+        self.d = []
+
+    def assert_started(self, val=True):
+        if val:
+            self.assert_equal(self.started, 1)
+        else:
+            self.assert_equal(self.started, 0)
+
+    def assert_finished(self, val=True):
+        if val:
+            self.assert_equal(self.finished, 1)
+        else:
+            self.assert_equal(self.finished, 0)
+
+    def test_simple(self):
+        # Assert is not started
+        self.assert_started(False)
+
+        # Write something, it should then be started + have data
+        self.p.write(b'foobar')
+        self.assert_started()
+        self.assert_data(b'foobar')
+
+        # Finalize, and check
+        self.assert_finished(False)
+        self.p.write(b'')
+        self.assert_finished()
+
+    def test_multiple_chunks(self):
+        self.p.write(b'foo')
+        self.p.write(b'bar')
+        self.p.write(b'baz')
+        self.p.write(b'')
+
+        self.assert_data(b'foobarbaz')
+        self.assert_finished()
+
 
 class TestRequestBodyMixin(BaseTestCase):
     def setup(self):
         pass
 
 
-
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestParseContentType))
     suite.addTest(unittest.makeSuite(TestQuerystringParser))
+    suite.addTest(unittest.makeSuite(TestOctetStreamParser))
     suite.addTest(unittest.makeSuite(TestRequestBodyMixin))
 
     return suite

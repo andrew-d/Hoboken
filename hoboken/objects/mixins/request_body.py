@@ -61,7 +61,7 @@ LOWER_Z = b'z'[0]
 
 # Lower-casing a character is different, because of the difference between
 # str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte
-# These functions abstract that
+# These functions abstract that.
 if PY3:
     lower_char = lambda c: c | 0x20
     ord_char = lambda c: c
@@ -136,28 +136,97 @@ class File(object):
         self.fileobj.close()
 
 
-class OctetStreamParser(object):
-    def __init__(self, filename, mime_type):
-        self.filename = filename
-        self.mime_type = mime_type
+class MultipartPart(object):
+    """
+    This class encapsulates a portion of a multipart message.
+    """
+    def __init__(self):
+        self.headers = {}
+
+    def add_header(self, header, val):
+        self.headers[header] = val
+
+    @property
+    def content_type(self):
+        # TODO: If we don't have one, what do we assume?
+        return self.headers.get('Content-Type')
+
+    @property
+    def file_name(self):
+        # TODO: parse content-disposition header
+        pass
+
+    @property
+    def transfer_encoding(self):
+        # TODO: according to RFC1341, the default is 7bit.  Check for HTTP?
+        return self.headers.get('Content-Transfer-Encoding', 'binary')
+
+
+class BaseParser(object):
+    """
+    This class implements some helpful methods for parsers.  Currently, it
+    implements the callback logic in a central location.
+    """
+    def callback(self, name, data=None, start=None, end=None):
+        """
+        This function calls a provided callback with some data.
+        """
+        func = self.callbacks.get("on_" + name)
+        if func is None:
+            return
+
+        # Depending on whether we're given a buffer...
+        if data is not None:
+            # Don't do anything if we have start == end.
+            if start is not None and start == end:
+                return
+
+            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start, end, data[start:end]))
+            func(data, start, end)
+        else:
+            # print("Calling %s with no data" % ('on_' + name,))
+            func()
+
+    def set_callback(self, name, new_func):
+        """
+        Update the function for a callback.  Removes from the callbacks dict
+        if new_func is None.
+        """
+        if new_func is None:
+            self.callbacks.pop(name, None)
+        else:
+            self.callbacks[name] = new_func
+
+
+
+class OctetStreamParser(BaseParser):
+    """
+    This parser parses an octet-stream request body and calls callbacks when
+    incoming data is received.  Callbacks are:
+        - on_start
+        - on_data       (with data parameters)
+        - on_end
+    """
+    def __init__(self, callbacks={}):
+        self.callbacks = callbacks
 
         self._started = False
 
     def write(self, data):
         if not self._started:
-            # TODO: Emit a 'part started' event once.
+            self.callback('start')
             self._started = True
 
         # Emit an end callback if we're done.
         if len(data) == 0:
-            # TODO: emit 'part end' callback.
-            pass
+            self.callback('end')
+            return 0
 
-        # TODO: Just emit this data callback.
-        pass
+        # Just emit the data callback as-is.
+        self.callback('data', data, 0, len(data))
 
 
-class QuerystringParser(object):
+class QuerystringParser(BaseParser):
     """
     This is a streaming querystring parser.  It will consume data, and call
     the callbacks given when it has enough data.
@@ -259,56 +328,8 @@ class QuerystringParser(object):
 
         self.state = state
 
-    def callback(self, name, data=None, start=None, end=None):
-        """
-        This function calls a provided callback with some data.
-        """
-        func = self.callbacks.get("on_" + name)
-        if func is None:
-            return
 
-        # Depending on whether we're given a buffer...
-        if data is not None:
-            # Don't do anything if we have start == end.
-            if start is not None and start == end:
-                return
-
-            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start, end, data[start:end]))
-            func(data, start, end)
-        else:
-            # print("Calling %s with no data" % ('on_' + name,))
-            func()
-
-
-class MultipartPart(object):
-    """
-    This class encapsulates a portion of a multipart message.
-    """
-    def __init__(self):
-        self.headers = {}
-
-    def add_header(self, header, val):
-        self.headers[header] = val
-
-    @property
-    def content_type(self):
-        # TODO: If we don't have one, what do we assume?
-        return self.headers.get('Content-Type')
-
-    @property
-    def file_name(self):
-        # TODO: parse content-disposition header
-        pass
-
-    @property
-    def transfer_encoding(self):
-        # TODO: according to RFC1341, this is the default.  Does this apply
-        # to HTTP?
-        return self.headers.get('Content-Transfer-Encoding', '7bit')
-
-
-
-class MultipartParser(object):
+class MultipartParser(BaseParser):
     """
     This class implements a state machine that parses a multipart/form-data
     message.
@@ -720,27 +741,6 @@ class MultipartParser(object):
         # all of it.
         return len(data)
 
-    def callback(self, name, data=None, start=None, end=None):
-        """
-        This function calls a provided callback with some data.
-        """
-        func = self.callbacks.get("on_" + name)
-        if func is None:
-            return
-
-        # Depending on whether we're given a buffer...
-        if data is not None:
-            # Don't do anything if we have start == end.
-            if start is not None and start == end:
-                return
-
-            print("Calling %s with value: %r" % ('on_' + name, data[start:end]))
-            func(data, start, end)
-
-        else:
-            print("Calling %s with no data" % ('on_' + name,))
-            func()
-
 
 class FormParser(object):
     # This is the default configuration for our form parser.
@@ -836,8 +836,22 @@ class FormParser(object):
                 del header_value[:]
 
             def on_headers_finished():
-                # TODO: do something with our part.
-                pass
+                # Parse the given Content-Transfer-Encoding to determine what
+                # we need to do with the incoming data.
+                if part.transfer_encoding == 'binary':
+                    pass
+
+                elif part.transfer_encoding == 'base64':
+                    pass
+
+                else:
+                    # TODO: do we really want to raise an exception here?  Or
+                    # should we just continue parsing?
+                    raise FormParserError(
+                        'Unknown Content-Transfer-Encoding "{0}"'.format(
+                            part.transfer_encoding
+                        )
+                    )
 
             def on_end(self):
                 pass
