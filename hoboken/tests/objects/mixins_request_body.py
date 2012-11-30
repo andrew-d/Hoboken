@@ -10,35 +10,35 @@ from hoboken.objects.mixins.request_body import *
 
 class TestParseContentType(BaseTestCase):
     def test_simple(self):
-        t, p = parse_content_type(b'application/json')
+        t, p = parse_options_header(b'application/json')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {})
 
     def test_single_param(self):
-        t, p = parse_content_type(b'application/json;par=val')
+        t, p = parse_options_header(b'application/json;par=val')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {b'par': b'val'})
 
     def test_multiple_params(self):
-        t, p = parse_content_type(b'application/json;par=val;asdf=foo')
+        t, p = parse_options_header(b'application/json;par=val;asdf=foo')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {b'par': b'val', b'asdf': b'foo'})
 
     def test_quoted_param(self):
-        t, p = parse_content_type(b'application/json;param="quoted"')
+        t, p = parse_options_header(b'application/json;param="quoted"')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {b'param': b'quoted'})
 
     def test_quoted_param_with_semicolon(self):
-        t, p = parse_content_type(b'application/json;param="quoted;with;semicolons"')
+        t, p = parse_options_header(b'application/json;param="quoted;with;semicolons"')
         self.assert_equal(p[b'param'], b'quoted;with;semicolons')
 
     def test_quoted_param_with_escapes(self):
-        t, p = parse_content_type(b'application/json;param="This \\" is \\" a \\" quote"')
+        t, p = parse_options_header(b'application/json;param="This \\" is \\" a \\" quote"')
         self.assert_equal(p[b'param'], b'This " is " a " quote')
 
     def test_handles_ie6_bug(self):
-        t, p = parse_content_type(b'text/plain; filename="C:\\this\\is\\a\\path\\file.txt"')
+        t, p = parse_options_header(b'text/plain; filename="C:\\this\\is\\a\\path\\file.txt"')
 
         self.assert_equal(p[b'filename'], b'file.txt')
 

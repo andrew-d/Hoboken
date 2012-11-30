@@ -82,7 +82,7 @@ class FormParserError(ValueError):
     pass
 
 
-def parse_content_type(value):
+def parse_options_header(value):
     """
     Parses a Content-Type header into a value in the following format:
         (content_type, {parameters})
@@ -963,7 +963,7 @@ class RequestBodyMixin(object):
             raise ValueError("No Content-Type header given!")
 
         # Try and get our boundary.
-        content_type, params = parse_content_type(content_type)
+        content_type, params = parse_options_header(content_type)
         boundary = params.get('boundary')
 
         # Try and get a filename.
