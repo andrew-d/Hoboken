@@ -159,7 +159,6 @@ class QuerystringParser(object):
     def __init__(self, callbacks={}, keep_blank_values=False,
                  strict_parsing=False, max_size=-1):
         self.state = STATE_BEFORE_FIELD
-        self.index = 0
 
         self.callbacks = callbacks
         self.max_size = max_size
@@ -171,7 +170,6 @@ class QuerystringParser(object):
 
     def write(self, data):
         state = self.state
-        index = self.index
 
         # If we're called with an empty data string, we treat it as the end, in
         # which case we might need to emit an "end" callback.
@@ -238,39 +236,6 @@ class QuerystringParser(object):
             i += 1
 
         self.state = state
-        self.index = index
-
-    def parse_fields(self, fields):
-        for field in fields:
-            # If we have no field, continue
-            if not field:
-                continue
-
-            nv = field.split('=', 1)
-
-            # If there is no split..
-            if len(nv) != 2:
-                if self.strict_parsing:
-                    raise FormParserError('Bad query field: %r' % (field,))
-
-                # If we are to keep blank values, we just append a blank.
-                if self.keep_blank_values:
-                    nv.append(b'')
-                else:
-                    continue
-
-            # If we have a value, or we are keeping blank values...
-            if len(nv[1]) > 0 or self.keep_blank_values:
-                # ... unquote and replace + signs.
-                name = nv[0].replace(b'+', b' ')
-                name = unquote(name)
-
-                value = nv[1].replace(b'+', b' ')
-                value = unquote(value)
-
-                # Call our callback with the name,value pair
-                f = Field(name, value)
-                self.on_field(f)
 
     def callback(self, name, data=None, start=None, end=None):
         """
