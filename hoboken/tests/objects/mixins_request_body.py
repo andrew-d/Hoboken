@@ -48,33 +48,70 @@ class TestQuerystringParser(BaseTestCase):
 
     def setup(self):
         self.f = []
-        self.p = QuerystringParser(self.on_field)
+
+        name_buffer = []
+        data_buffer = []
+
+        def on_field_name(data, start, end):
+            name_buffer.append(data[start:end])
+
+        def on_field_data(data, start, end):
+            data_buffer.append(data[start:end])
+
+        def on_field_end():
+            self.f.append((
+                b''.join(name_buffer),
+                b''.join(data_buffer)
+            ))
+
+            del name_buffer[:]
+            del data_buffer[:]
+
+        callbacks = {
+            'on_field_name': on_field_name,
+            'on_field_data': on_field_data,
+            'on_field_end': on_field_end
+        }
+
+        self.p = QuerystringParser(callbacks)
 
     def test_simple_querystring(self):
         self.p.write(b'foo=bar')
         self.p.write(b'')
 
-        self.assert_fields(Field(name=b'foo', value=b'bar'))
+        self.assert_fields((b'foo', b'bar'))
+
+    def test_querystring_blank_beginning(self):
+        self.p.write(b'&foo=bar')
+        self.p.write(b'')
+
+        self.assert_fields((b'foo', b'bar'))
+
+    def test_querystring_blank_end(self):
+        self.p.write(b'foo=bar&')
+        self.p.write(b'')
+
+        self.assert_fields((b'foo', b'bar'))
 
     def test_multiple_querystring(self):
         self.p.write(b'foo=bar&asdf=baz')
         self.p.write(b'')
 
         self.assert_fields(
-            Field(name=b'foo', value=b'bar'),
-            Field(name=b'asdf', value=b'baz')
+            (b'foo', b'bar'),
+            (b'asdf', b'baz')
         )
 
     def test_streaming_simple(self):
         self.p.write(b'foo=bar&')
         self.assert_fields(
-            Field(name=b'foo', value=b'bar'),
+            (b'foo', b'bar'),
         )
 
         self.p.write(b'asdf=baz')
         self.p.write(b'')
         self.assert_fields(
-            Field(name=b'asdf', value=b'baz')
+            (b'asdf', b'baz')
         )
 
     def test_streaming_break(self):
@@ -89,13 +126,13 @@ class TestQuerystringParser(BaseTestCase):
 
         self.p.write(b'&asd')
         self.assert_fields(
-            Field(name=b'foo', value=b'onetwothree')
+            (b'foo', b'onetwothree')
         )
 
         self.p.write(b'f=baz')
         self.p.write(b'')
         self.assert_fields(
-            Field(name=b'asdf', value=b'baz')
+            (b'asdf', b'baz')
         )
 
     def test_semicolon_seperator(self):
@@ -103,8 +140,8 @@ class TestQuerystringParser(BaseTestCase):
         self.p.write(b'')
 
         self.assert_fields(
-            Field(name=b'foo', value=b'bar'),
-            Field(name=b'asdf', value=b'baz')
+            (b'foo', b'bar'),
+            (b'asdf', b'baz')
         )
 
     # TODO: test overlarge fields, blank values, and strict parsing

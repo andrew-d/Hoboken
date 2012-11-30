@@ -23,6 +23,53 @@ from functools import wraps
 from types import FunctionType
 from collections import namedtuple
 
+# States for the querystring parser.
+STATE_BEFORE_FIELD = 0
+STATE_FIELD_NAME   = 1
+STATE_FIELD_DATA   = 2
+
+# States for the multipart parser
+STATE_START                     = 0
+STATE_START_BOUNDARY            = 1
+STATE_HEADER_FIELD_START        = 2
+STATE_HEADER_FIELD              = 3
+STATE_HEADER_VALUE_START        = 4
+STATE_HEADER_VALUE              = 5
+STATE_HEADER_VALUE_ALMOST_DONE  = 6
+STATE_HEADERS_ALMOST_DONE       = 7
+STATE_PART_DATA_START           = 8
+STATE_PART_DATA                 = 9
+STATE_PART_DATA_END             = 10
+STATE_END                       = 11
+
+# Flags for the multipart parser.
+FLAG_PART_BOUNDARY              = 1
+FLAG_LAST_BOUNDARY              = 2
+
+# Get constants.  Since iterating over a str on Python 2 gives you a 1-length
+# string, but iterating over a bytes object on Python 3 gives you an integer,
+# we need to save these constants.
+CR = b'\r'[0]
+LF = b'\n'[0]
+COLON = b':'[0]
+HYPHEN = b'-'[0]
+SPACE = b' '[0]
+AMPERSAND = b'&'[0]
+SEMICOLON = b';'[0]
+LOWER_A = b'a'[0]
+LOWER_Z = b'z'[0]
+
+# Lower-casing a character is different, because of the difference between
+# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte
+# These functions abstract that
+if PY3:
+    lower_char = lambda c: c | 0x20
+    ord_char = lambda c: c
+else:
+    lower_char = lambda c: c.lower()
+    ord_char = lambda c: ord(c)
+
+
 
 class FormParserError(ValueError):
     pass
@@ -99,58 +146,99 @@ class OctetStreamParser(object):
 class QuerystringParser(object):
     """
     This is a streaming querystring parser.  It will consume data, and call
-    the on_field callback with a Field() instance whenever it's consumed enough
-    data to make up a field.
-    """
-    def __init__(self, on_field, keep_blank_values=False, strict_parsing=False,
-                 max_size=-1):
-        self.buff = []
+    the callbacks given when it has enough data.
 
-        self.on_field = on_field
+    Valid callbacks (* means with data):
+        - on_field_start
+        - on_field_name         *
+        - on_field_data         *
+        - on_field_end
+    """
+    SPLIT_RE = re.compile(b'[&;]')
+
+    def __init__(self, callbacks={}, keep_blank_values=False,
+                 strict_parsing=False, max_size=-1):
+        self.state = STATE_BEFORE_FIELD
+        self.index = 0
+
+        self.callbacks = callbacks
         self.max_size = max_size
+
+        # TODO: these currently don't do anything.  We should make them behave
+        # like expected.
         self.keep_blank_values = keep_blank_values
         self.strict_parsing = strict_parsing
 
     def write(self, data):
-        # Read until we get passed an empty chunk of data.
+        state = self.state
+        index = self.index
+
+        # If we're called with an empty data string, we treat it as the end, in
+        # which case we might need to emit an "end" callback.
         if len(data) == 0:
-            # Our fields are just the remaining data, if any.
-            if len(self.buff) > 0:
-                fields = [b''.join(self.buff)]
+            if state == STATE_FIELD_DATA:
+                self.callback('field_end')
+            return 0
 
-                # Parse and callback on these fields.
-                self.parse_fields(fields)
+        i = 0
+        while i < len(data):
+            ch = data[i]
 
-            # TODO: Emit an "end" callback?
-            return
+            # Depending on our state...
+            if state == STATE_BEFORE_FIELD:
+                # Skip leading seperators.
+                if ch == AMPERSAND or ch == SEMICOLON:
+                    pass
+                else:
+                    i -= 1
+                    state = STATE_FIELD_NAME
 
-        # Try and split this chunk.
-        spl = re.split(b'[&;]', data)
+            elif state == STATE_FIELD_NAME:
+                # See if we can find an equals sign in the remaining data.  If
+                # so, we can immedately emit the field name and jump to the
+                # data state.
+                equals_pos = data.find(b'=', i)
+                if equals_pos != -1:
+                    # Emit this name.
+                    self.callback('field_name', data, i, equals_pos)
 
-        # If we don't have any splits, there's no ampersand here, so we just
-        # append and return.
-        if len(spl) == 1:
-            # TODO: check field size
-            self.buff.append(data)
-            return
+                    # Jump i to this position.  Note that it will then have 1
+                    # added to it below, which means the next iteration of this
+                    # loop will inspect the character after the equals sign.
+                    i = equals_pos
+                    state = STATE_FIELD_DATA
+                else:
+                    # No equals sign found.  Just emit the rest as a name.
+                    self.callback('field_name', data, i, len(data))
+                    i = len(data)
 
-        # We have some splits.  Concatenate our buffer to the first item...
-        fields = [b''.join(self.buff) + spl[0]]
+            elif state == STATE_FIELD_DATA:
+                # Try finding either an ampersand or a semicolon after this
+                # position.
+                sep_pos = data.find(b'&', i)
+                if sep_pos == -1:
+                    sep_pos = data.find(b';', i)
 
-        # Each middle item is a new field.
-        for i in range(1, len(spl) - 1):
-            # TODO: check field size
-            fields.append(spl[i])
+                # If we found it, callback this bit as data and then go back
+                # to expecting to find a field.
+                if sep_pos != -1:
+                    self.callback('field_data', data, i, sep_pos)
+                    self.callback('field_end')
+                    i = sep_pos
+                    state = STATE_FIELD_NAME
 
-        # And append the final item to our buff (only if it's non-zero
-        # length).
-        if len(spl[-1]) > 0:
-            self.buff = [spl[-1]]
-        else:
-            self.buff = []
+                # Otherwise, emit the rest as data and finish.
+                else:
+                    self.callback('field_data', data, i, len(data))
+                    i = len(data)
 
-        # Yield fields.
-        self.parse_fields(fields)
+            else:
+                return i
+
+            i += 1
+
+        self.state = state
+        self.index = index
 
     def parse_fields(self, fields):
         for field in fields:
@@ -184,6 +272,26 @@ class QuerystringParser(object):
                 f = Field(name, value)
                 self.on_field(f)
 
+    def callback(self, name, data=None, start=None, end=None):
+        """
+        This function calls a provided callback with some data.
+        """
+        func = self.callbacks.get("on_" + name)
+        if func is None:
+            return
+
+        # Depending on whether we're given a buffer...
+        if data is not None:
+            # Don't do anything if we have start == end.
+            if start is not None and start == end:
+                return
+
+            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start, end, data[start:end]))
+            func(data, start, end)
+        else:
+            # print("Calling %s with no data" % ('on_' + name,))
+            func()
+
 
 class MultipartPart(object):
     """
@@ -211,45 +319,6 @@ class MultipartPart(object):
         # to HTTP?
         return self.headers.get('Content-Transfer-Encoding', '7bit')
 
-
-# States for the multipart parser
-STATE_START                     = 0
-STATE_START_BOUNDARY            = 1
-STATE_HEADER_FIELD_START        = 2
-STATE_HEADER_FIELD              = 3
-STATE_HEADER_VALUE_START        = 4
-STATE_HEADER_VALUE              = 5
-STATE_HEADER_VALUE_ALMOST_DONE  = 6
-STATE_HEADERS_ALMOST_DONE       = 7
-STATE_PART_DATA_START           = 8
-STATE_PART_DATA                 = 9
-STATE_PART_DATA_END             = 10
-STATE_END                       = 11
-
-# Flags for tracking where we are.
-FLAG_PART_BOUNDARY              = 1
-FLAG_LAST_BOUNDARY              = 2
-
-# Get constants.  Since iterating over a str on Python 2 gives you a 1-length
-# string, but iterating over a bytes object on Python 3 gives you an integer,
-# we need to save these constants.
-CR = b'\r'[0]
-LF = b'\n'[0]
-COLON = b':'[0]
-HYPHEN = b'-'[0]
-SPACE = b' '[0]
-LOWER_A = b'a'[0]
-LOWER_Z = b'z'[0]
-
-# Lower-casing a character is different, because of the difference between
-# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte
-# These functions abstract that
-if PY3:
-    lower_char = lambda c: c | 0x20
-    ord_char = lambda c: c
-else:
-    lower_char = lambda c: c.lower()
-    ord_char = lambda c: ord(c)
 
 
 class MultipartParser(object):
@@ -713,9 +782,37 @@ class FormParser(object):
 
         elif (content_type == 'application/x-www-form-urlencoded' or
               content_type == 'application/x-url-encoded'):
+
+            name_buffer = []
+            data_buffer = []
+
+            def on_field_start():
+                pass
+
+            def on_field_name(data, start, end):
+                name_buffer.append(data[start:end])
+
+            def on_field_data(data, start, end):
+                data_buffer.append(data[start:end])
+
+            def on_field_end():
+                f = Field(
+                    name=b''.join(name_buffer),
+                    value=b''.join(data_buffer)
+                )
+
+                self.onField(f)
+
+                del name_buffer[:]
+                del data_buffer[:]
+
+            # Setup callbacks.
+            callbacks = {
+            }
+
             # Instantiate parser.
             parser = QuerystringParser(
-                        on_field=self.onField,
+                        callbacks=callbacks,
                         max_size=self.config['MAX_QUERYSTRING_SIZE']
                      )
 
@@ -744,8 +841,8 @@ class FormParser(object):
 
             def on_header_end():
                 part.add_header(b''.join(header_name), b''.join(header_value))
-                header_name = []
-                header_value = []
+                del header_name[:]
+                del header_value[:]
 
             def on_headers_finished():
                 # TODO: do something with our part.
