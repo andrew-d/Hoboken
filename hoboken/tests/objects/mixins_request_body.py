@@ -8,14 +8,24 @@ from mock import MagicMock, Mock, patch
 from hoboken.objects.mixins.request_body import *
 
 
-class TestParseContentType(BaseTestCase):
+class TestParseOptionsHeader(BaseTestCase):
     def test_simple(self):
         t, p = parse_options_header(b'application/json')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {})
 
+    def test_blank(self):
+        t, p = parse_options_header(b'')
+        self.assert_equal(t, b'')
+        self.assert_equal(p, {})
+
     def test_single_param(self):
         t, p = parse_options_header(b'application/json;par=val')
+        self.assert_equal(t, b'application/json')
+        self.assert_equal(p, {b'par': b'val'})
+
+    def test_single_param_with_spaces(self):
+        t, p = parse_options_header(b'application/json;     par=val')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {b'par': b'val'})
 
@@ -223,7 +233,7 @@ class TestRequestBodyMixin(BaseTestCase):
 
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestParseContentType))
+    suite.addTest(unittest.makeSuite(TestParseOptionsHeader))
     suite.addTest(unittest.makeSuite(TestQuerystringParser))
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))
     suite.addTest(unittest.makeSuite(TestRequestBodyMixin))
