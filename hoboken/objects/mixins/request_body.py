@@ -70,6 +70,13 @@ else:
     ord_char = lambda c: ord(c)
 
 
+# These are regexes for parsing header values.
+SPECIAL_CHARS = re.escape(b'()<>@,;:\\"/[]?={} \t')
+QUOTED_STR = br'"(?:\\.|[^"])*"'
+VALUE_STR = br'(?:[^%s]+|%s)' % (SPECIAL_CHARS, QUOTED_STR)
+OPTION_RE_STR = br'(?:;|^)\s*([^%s]+)\s*=\s*(%s)' % (SPECIAL_CHARS, VALUE_STR)
+OPTION_RE = re.compile(OPTION_RE_STR)
+
 
 class FormParserError(ValueError):
     pass
@@ -83,25 +90,32 @@ def parse_content_type(value):
     if not value:
         return (b'', {})
 
-    # Split by ";" character to grab the content type, and the rest.
-    spl = value.split(b';')
-    type, rest = spl[0], spl[1:]
+    # If we have no options, return the string as-is.
+    if b';' not in value:
+        return (value.lower().strip(), {})
 
-    # If we only have the type, just exit.
-    if not rest:
-        return (type, {})
+    # Split at the first semicolon, to get our value and then options.
+    ctype, rest = value.split(b';', 1)
+    options = {}
 
-    # Ok, we need to decode the rest of the parameters.
-    def _param_decoder(val):
-        pass
+    # Parse the options.
+    for match in OPTION_RE.finditer(rest):
+        key = match.group(1).lower()
+        value = match.group(2)
+        if value[0] == '"' and value[-1] == '"':
+            # Unquote the value.
+            value = value[1:-1]
+            value = value.replace('\\\\', '\\').replace('\\"', '"')
 
-    # TODO: properly parse and unquote the parameters now.
-    params = {}
-    for param in rest:
-        key, val = param.split(b'=')
-        params[key] = val
+        # If the value is a filename, we need to fix a bug on IE6 that sends
+        # the full file path instead of the filename.
+        if key == 'filename':
+            if value[1:3] == ':\\' or value[:2] == '\\\\':
+                value = value.split('\\')[-1]
 
-    return (type, params)
+        options[key] = value
+
+    return ctype, options
 
 
 # Simple container for a (field_name, value) tuple.

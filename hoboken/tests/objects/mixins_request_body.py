@@ -24,17 +24,23 @@ class TestParseContentType(BaseTestCase):
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {b'par': b'val', b'asdf': b'foo'})
 
-    @skip('FIXME: Currently failing')
     def test_quoted_param(self):
         t, p = parse_content_type(b'application/json;param="quoted"')
         self.assert_equal(t, b'application/json')
         self.assert_equal(p, {b'param': b'quoted'})
 
-    @skip('FIXME: Currently failing')
     def test_quoted_param_with_semicolon(self):
         t, p = parse_content_type(b'application/json;param="quoted;with;semicolons"')
-        self.assert_equal(t, b'application/json')
-        self.assert_equal(p, {b'param': b'quoted;with;semicolons'})
+        self.assert_equal(p[b'param'], b'quoted;with;semicolons')
+
+    def test_quoted_param_with_escapes(self):
+        t, p = parse_content_type(b'application/json;param="This \\" is \\" a \\" quote"')
+        self.assert_equal(p[b'param'], b'This " is " a " quote')
+
+    def test_handles_ie6_bug(self):
+        t, p = parse_content_type(b'text/plain; filename="C:\\this\\is\\a\\path\\file.txt"')
+
+        self.assert_equal(p[b'filename'], b'file.txt')
 
 
 class TestQuerystringParser(BaseTestCase):
