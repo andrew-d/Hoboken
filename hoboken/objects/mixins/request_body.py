@@ -185,9 +185,12 @@ class QuerystringParser(object):
             # Depending on our state...
             if state == STATE_BEFORE_FIELD:
                 # Skip leading seperators.
+                # TODO: skip multiple ampersand chunks? e.g. "foo=bar&&&a=b"?
                 if ch == AMPERSAND or ch == SEMICOLON:
                     pass
                 else:
+                    # Emit a field-start event, and go to that state.
+                    self.callback('field_start')
                     i -= 1
                     state = STATE_FIELD_NAME
 
@@ -222,8 +225,13 @@ class QuerystringParser(object):
                 if sep_pos != -1:
                     self.callback('field_data', data, i, sep_pos)
                     self.callback('field_end')
-                    i = sep_pos
-                    state = STATE_FIELD_NAME
+
+                    # Note that we go to the seperator, which brings us to the
+                    # "before field" state.  This allows us to properly emit
+                    # "field_start" events only when we actually have data for
+                    # a field of some sort.
+                    i = sep_pos - 1
+                    state = STATE_BEFORE_FIELD
 
                 # Otherwise, emit the rest as data and finish.
                 else:
@@ -773,6 +781,10 @@ class FormParser(object):
 
             # Setup callbacks.
             callbacks = {
+                'on_field_start': on_field_start,
+                'on_field_name': on_field_name,
+                'on_field_data': on_field_data,
+                'on_field_end': on_field_end,
             }
 
             # Instantiate parser.
