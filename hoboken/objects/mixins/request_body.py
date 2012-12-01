@@ -293,7 +293,6 @@ class BaseParser(object):
             self.callbacks[name] = new_func
 
 
-
 class OctetStreamParser(BaseParser):
     """
     This parser parses an octet-stream request body and calls callbacks when
@@ -304,7 +303,6 @@ class OctetStreamParser(BaseParser):
     """
     def __init__(self, callbacks={}):
         self.callbacks = callbacks
-
         self._started = False
 
     def write(self, data):
@@ -317,7 +315,7 @@ class OctetStreamParser(BaseParser):
             self.callback('end')
             return 0
 
-        # Just emit the data callback as-is.
+        # Just call the data callback as-is.
         self.callback('data', data, 0, len(data))
 
 
@@ -552,7 +550,7 @@ class MultipartParser(BaseParser):
                     if c != LF:
                         return i
 
-                    # The index is now used for XXX FILL ME IN XXX
+                    # The index is now used for indexing into our boundary.
                     index = 0
 
                     # Callback for the start of a part.
@@ -914,14 +912,21 @@ class FormParser(object):
         'MAX_QUERYSTRING_SIZE': 2 * 1024,       # 2 * max field size, since it
                                                 # contains the name and value
         'MAX_FILE_SIZE': 10 * 1024 * 1024,
+        'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,
     }
 
-    def __init__(self, content_type, boundary=None, content_length=-1,
-                 file_name=None, charset='latin-1', config={}):
+    def __init__(self, content_type, on_field, on_file, boundary=None,
+                 content_length=-1, file_name=None, charset='latin-1',
+                 config={}):
+        # Save variables.
         self.content_length = content_length
         self.boundary = boundary
         self.charset = charset
         self.bytes_received = 0
+
+        # Save callbacks.
+        self.on_field = on_field
+        self.on_file = on_file
 
         # Set configuration options.
         self.config = self.DEFAULT_CONFIG.copy()
@@ -929,9 +934,23 @@ class FormParser(object):
 
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == 'application/octet-stream':
+            def on_start():
+                pass
+
+            def on_data(data, start, end):
+                pass
+
+            def on_end():
+                pass
+
+            callbacks = {
+                'on_start': on_start,
+                'on_data': on_data,
+                'on_end': on_end,
+            }
+
             # Instantiate an octet-stream parser
-            # TODO: setup callbacks
-            parser = OctetStreamParser()
+            parser = OctetStreamParser(callbacks)
 
         elif (content_type == 'application/x-www-form-urlencoded' or
               content_type == 'application/x-url-encoded'):
@@ -954,7 +973,7 @@ class FormParser(object):
                     value=b''.join(data_buffer)
                 )
 
-                self.onField(f)
+                on_field(f)
 
                 del name_buffer[:]
                 del data_buffer[:]
@@ -986,8 +1005,12 @@ class FormParser(object):
                 part = MultipartPart()
 
             def on_part_data(data, start, end):
-                # TODO: check error code here.
-                writer.write(data[start:end])
+                bytes_processed = writer.write(data[start:end])
+                if bytes_processed != (end - start):
+                    # TODO: check error code here.
+                    pass
+
+                return bytes_processed
 
             def on_part_end():
                 pass
@@ -1053,19 +1076,6 @@ class FormParser(object):
         self.bytes_received += len(data)
         # TODO: check the parser's return value for errors?
         return self.parser.write(data)
-
-    def onField(self, field):
-        """
-        This function is called whenever we have a new form field.
-        """
-        pass
-
-    def handlePart(self, part):
-        """
-        This function gets called whenever we get a new request part.  The
-        'part' argument will be an instance of MultipartPart().
-        """
-        pass
 
 
 class RequestBodyMixin(object):
@@ -1161,6 +1171,7 @@ class RequestBodyMixin(object):
     def parse_body(self):
         # Get a form parser.
         fp = self.form_parser()
+
         fields = {}
         files = {}
 
