@@ -188,7 +188,8 @@ class BaseParser(object):
             if start is not None and start == end:
                 return
 
-            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start, end, data[start:end]))
+            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
+            #           end, data[start:end]))
             func(data, start, end)
         else:
             # print("Calling %s with no data" % ('on_' + name,))
@@ -476,7 +477,8 @@ class MultipartParser(BaseParser):
                 else:
                     # Check to ensure our boundary matches
                     if c != boundary[index + 2]:
-                        # print('start_boundary: expected %r, found %r' % (c, boundary[index + 2]))
+                        # print('start_boundary: expected %r, found %r' % (c,
+                        #        boundary[index + 2]))
                         return i
 
                     # Increment index into boundary and continue.
@@ -529,7 +531,6 @@ class MultipartParser(BaseParser):
                     # valid letter.  If not, it's an error.
                     cl = lower_char(c)
                     if cl < LOWER_A or cl > LOWER_Z:
-                        # print('header_field: found non-alpha character %r' % (c,))
                         return i
 
             elif state == STATE_HEADER_VALUE_START:
@@ -955,7 +956,9 @@ class FormParser(object):
             parser = MultipartParser(boundary, callbacks)
 
         else:
-            raise FormParserError("Unknown Content-Type: {0}".format(content_type))
+            raise FormParserError("Unknown Content-Type: {0}".format(
+                content_type
+            ))
 
         self.parser = parser
 
@@ -993,6 +996,10 @@ class RequestBodyMixin(object):
                 val = self.config.get(f)
                 if val is not None:
                     self.__form_config[f] = val
+
+        # Our fields and files default to nothing.
+        self.__fields = None
+        self.__files = None
 
     # Things we might need:
     #   - Upload directory (for temp files)
@@ -1079,7 +1086,14 @@ class RequestBodyMixin(object):
             else:
                 pass
 
-        # TODO: set these somewhere?
-        #self._fields = fields
-        #self._files = files
+        self.__fields = fields
+        self.__files = files
+
+    @property
+    def fields(self):
+        return self.__fields
+
+    @property
+    def files(self):
+        return self.__files
 
