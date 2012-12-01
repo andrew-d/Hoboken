@@ -1,11 +1,127 @@
 # -*- coding: utf-8 -*-
 
 from . import BaseTestCase, skip
+import os
+import tempfile
 import unittest
 from io import BytesIO
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.request_body import *
+
+
+class TestFile(BaseTestCase):
+    def setup(self):
+        self.c = {}
+        self.d = tempfile.mkdtemp()
+        self.f = File('foo.txt', self.c)
+
+    def assert_data(self, data):
+        f = self.f.fileobj
+        f.seek(0)
+        self.assert_equal(f.read(), data)
+        f.seek(0)
+        f.truncate()
+
+    def assert_exists(self):
+        full_path = os.path.join(self.d, self.f.file_name)
+        self.assert_true(os.path.exists(full_path))
+
+    def test_simple(self):
+        self.f.write(b'foobar')
+        self.assert_data(b'foobar')
+
+    def test_file_fallback(self):
+        self.c['MAX_MEMORY_FILE_SIZE'] = 1
+
+        self.f.write(b'1')
+        self.assert_true(self.f.in_memory)
+        self.assert_data(b'1')
+
+        self.f.write(b'123')
+        self.assert_false(self.f.in_memory)
+        self.assert_data(b'123')
+
+    def test_file_fallback_with_data(self):
+        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+
+        self.f.write(b'1' * 10)
+        self.assert_true(self.f.in_memory)
+
+        self.f.write(b'2' * 10)
+        self.assert_false(self.f.in_memory)
+
+        self.assert_data(b'11111111112222222222')
+
+    def test_file_name(self):
+        # Write to this dir.
+        self.c['UPLOAD_DIR'] = self.d
+        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+
+        # Write.
+        self.f.write(b'12345678901')
+        self.assert_false(self.f.in_memory)
+
+        # Assert that the file exists
+        self.assert_true(self.f.file_name is not None)
+        self.assert_exists()
+
+    def test_file_full_name(self):
+        # Write to this dir.
+        self.c['UPLOAD_DIR'] = self.d
+        self.c['KEEP_FILENAME'] = True
+        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+
+        # Write.
+        self.f.write(b'12345678901')
+        self.assert_false(self.f.in_memory)
+
+        # Assert that the file exists
+        self.assert_equal(self.f.file_name, 'foo')
+        self.assert_exists()
+
+    def test_file_full_name_with_ext(self):
+        self.c['UPLOAD_DIR'] = self.d
+        self.c['KEEP_FILENAME'] = True
+        self.c['KEEP_EXTENSIONS'] = True
+        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+
+        # Write.
+        self.f.write(b'12345678901')
+        self.assert_false(self.f.in_memory)
+
+        # Assert that the file exists
+        self.assert_equal(self.f.file_name, 'foo.txt')
+        self.assert_exists()
+
+    def test_file_full_name_with_ext(self):
+        self.c['UPLOAD_DIR'] = self.d
+        self.c['KEEP_FILENAME'] = True
+        self.c['KEEP_EXTENSIONS'] = True
+        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+
+        # Write.
+        self.f.write(b'12345678901')
+        self.assert_false(self.f.in_memory)
+
+        # Assert that the file exists
+        self.assert_equal(self.f.file_name, 'foo.txt')
+        self.assert_exists()
+
+    def test_no_dir_with_extension(self):
+        self.c['KEEP_EXTENSIONS'] = True
+        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+
+        # Write.
+        self.f.write(b'12345678901')
+        self.assert_false(self.f.in_memory)
+
+        # Assert that the file exists
+        ext = os.path.splitext(self.f.file_name)[1]
+        self.assert_equal(ext, '.txt')
+        self.assert_exists()
+
+    # TODO: test uploading two files with the same name.
 
 
 class TestParseOptionsHeader(BaseTestCase):
@@ -322,6 +438,7 @@ class TestRequestBodyMixin(BaseTestCase):
 
 def suite():
     suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestFile))
     suite.addTest(unittest.makeSuite(TestParseOptionsHeader))
     suite.addTest(unittest.makeSuite(TestQuerystringParser))
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))

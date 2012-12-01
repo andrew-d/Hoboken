@@ -17,9 +17,12 @@ try:
 except ImportError:
     from urllib.parse import parse_qs
 
+import os
 import re
 import base64
+import shutil
 import binascii
+import tempfile
 from io import BytesIO
 from functools import wraps
 from types import FunctionType
@@ -124,15 +127,99 @@ def parse_options_header(value):
 Field = namedtuple('Field', ['name', 'value'])
 
 
-# TODO: Fill this in with required stuff
 class File(object):
     """
-    This class represents an uploaded file.
+    This class represents an uploaded file.  It handles writing file data to
+    either an in-memory file or a temporary file on-disk, if the optional
+    threshold is passed.
     """
-    def __init__(self, filename, mime=None):
-        self.filename = filename
-        self.mime = mime or 'application/octet-stream'
+    def __init__(self, filename, config={}):
+        self.config = config
+        self.in_memory = True
+        self.bytes_written = 0
         self.fileobj = BytesIO()
+
+        # Our file name is None by default.
+        self.file_name = None
+
+        # Split the extension from the filename.
+        fname, ext = os.path.splitext(filename)
+        self._filename = fname
+        self._ext = ext or '.dat'
+
+    def write(self, data):
+        bwritten = self.fileobj.write(data)
+
+        # If the bytes written isn't the same as the length, just return.
+        if bwritten != len(data):
+            return bwritten
+
+        # Keep track of how many bytes we've written.
+        self.bytes_written += bwritten
+
+        # If we're in-memory and are over our limit, we create a file.
+        if (self.in_memory and
+            self.config.get('MAX_MEMORY_FILE_SIZE') is not None and
+            self.bytes_written > self.config.get('MAX_MEMORY_FILE_SIZE')):
+            # Go back to the start of our file.
+            self.fileobj.seek(0)
+
+            # Open a new file.
+            new_file = self.get_disk_file()
+            # TODO: check for errors here.
+
+            # Copy the file objects.
+            shutil.copyfileobj(self.fileobj, new_file)
+
+            # Seek to the new position in our new file.
+            new_file.seek(self.bytes_written)
+
+            # Reassign the fileobject.
+            old_fileobj = self.fileobj
+            self.fileobj = new_file
+
+            # We're no longer in memory.
+            self.in_memory = False
+
+            # Close the old file object.
+            old_fileobj.close()
+
+        # Return the number of bytes written.
+        return bwritten
+
+    def get_disk_file(self):
+        """
+        This function is responsible for getting a file object on-disk for us.
+        """
+        file_dir = self.config.get('UPLOAD_DIR')
+        keep_filename = self.config.get('KEEP_FILENAME', False)
+        keep_extensions = self.config.get('KEEP_EXTENSIONS', False)
+
+        # If we have a directory and are to keep the filename...
+        if file_dir is not None and keep_filename:
+            fname = self._filename
+            if keep_extensions:
+                fname = fname + self._ext
+
+            try:
+                tmp_file = open(os.path.join(file_dir, fname), 'w+b')
+            except IOError as e:
+                # TODO: what do we do?
+                tmp_file = None
+                pass
+        else:
+            options = {}
+            if keep_extensions:
+                options['suffix'] = self._ext
+            if file_dir is not None:
+                options['dir'] = file_dir
+
+            # Create a temporary (named) file with the appropriate settings.
+            tmp_file = tempfile.NamedTemporaryFile(**options)
+            fname = tmp_file.name
+
+        self.file_name = fname
+        return tmp_file
 
     def close(self):
         self.fileobj.close()
