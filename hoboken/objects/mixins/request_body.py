@@ -192,8 +192,8 @@ class File(object):
         This function is responsible for getting a file object on-disk for us.
         """
         file_dir = self.config.get('UPLOAD_DIR')
-        keep_filename = self.config.get('KEEP_FILENAME', False)
-        keep_extensions = self.config.get('KEEP_EXTENSIONS', False)
+        keep_filename = self.config.get('UPLOAD_KEEP_FILENAME', False)
+        keep_extensions = self.config.get('UPLOAD_KEEP_EXTENSIONS', False)
 
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
@@ -910,6 +910,9 @@ class FormParser(object):
         'MAX_FIELD_SIZE': 1024,
         'MAX_FILE_SIZE': 10 * 1024 * 1024,
         'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,
+        'UPLOAD_DIR': None,
+        'UPLOAD_KEEP_FILENAME': False,
+        'UPLOAD_KEEP_EXTENSIONS': False,
     }
 
     def __init__(self, content_type, on_field, on_file, boundary=None,
