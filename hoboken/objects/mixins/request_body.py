@@ -150,13 +150,18 @@ class MultipartPart(object):
 
     @property
     def content_type(self):
-        # TODO: If we don't have one, what do we assume?
-        return self.headers.get('Content-Type')
+        val = self.headers.get('Content-Type', 'text/plain')
+        ctype, options = parse_options_header(val)
+        return ctype
 
     @property
     def file_name(self):
-        # TODO: parse content-disposition header
-        pass
+        val = self.headers.get('Content-Disposition')
+        if val is None:
+            return None
+
+        disp, options = parse_options_header(val)
+        return options.get('filename')
 
     @property
     def transfer_encoding(self):
@@ -374,7 +379,9 @@ class MultipartParser(BaseParser):
         self.boundary_chars = set(boundary)
 
         # We also create a lookbehind list.
-        # TODO: why +8?
+        # Note: the +8 is since we can have, at maximum, "\r\n--" + boundary +
+        # "--\r\n" at the final boundary, and the length of '\r\n--' and
+        # '--\r\n' is 8 bytes.
         self.lookbehind = [0 for x in range(len(boundary) + 8)]
 
     def write(self, data):
@@ -835,7 +842,8 @@ class FormParser(object):
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == 'application/octet-stream':
             # Instantiate an octet-stream parser
-            parser = OctetStreamParser(file_name or '', content_type)
+            # TODO: setup callbacks
+            parser = OctetStreamParser()
 
         elif (content_type == 'application/x-www-form-urlencoded' or
               content_type == 'application/x-url-encoded'):
