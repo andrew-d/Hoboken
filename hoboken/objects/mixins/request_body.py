@@ -18,6 +18,8 @@ except ImportError:
     from urllib.parse import parse_qs
 
 import re
+import base64
+import binascii
 from io import BytesIO
 from functools import wraps
 from types import FunctionType
@@ -742,6 +744,74 @@ class MultipartParser(BaseParser):
         return len(data)
 
 
+class Base64Decoder(object):
+    def __init__(self, underlying):
+        self.cache = b''
+        self.underlying = underlying
+
+    def write(self, data):
+        # Just pass through empty writes.
+        if len(data) == 0:
+            return self.underlying.write(data)
+
+        # Prepend any cache info to our data.
+        if len(self.cache) > 0:
+            data = self.cache + data
+
+        # Slice off a string that's a multiple of 4.
+        decode_len = (len(data) // 4) * 4
+        val = data[:decode_len]
+
+        # Decode and write, if we have any.
+        if len(val) > 0:
+            # TODO: somehow check the return value of this
+            self.underlying.write(base64.b64decode(val))
+
+        # Get the remaining bytes and save in our cache.
+        remaining_len = len(data) % 4
+        if remaining_len > 0:
+            self.cache = data[-remaining_len:]
+        else:
+            self.cache = b''
+
+        # Return the length of the data to indicate no error.
+        return len(data)
+
+
+class QuotedPrintableDecoder(object):
+    def __init__(self, underlying):
+        self.cache = b''
+        self.underlying = underlying
+
+    def write(self, data):
+        # Just pass through empty writes.
+        if len(data) == 0:
+            # If we have a cache, write and then remove it.
+            if len(self.cache) > 0:
+                self.underlying.write(binascii.a2b_qp(self.cache))
+                self.cache = b''
+
+            return self.underlying.write(data)
+
+        # Prepend any cache info to our data.
+        if len(self.cache) > 0:
+            data = self.cache + data
+
+        # Since the longest possible escape is 3 characters long, either in
+        # the form '=XX' or '=\r\n', we encode up to 3 characters before the
+        # end of the string.
+        enc, rest = data[:-3], data[-3:]
+
+        # Encode and write, if we have data.
+        if len(enc) > 0:
+            self.underlying.write(binascii.a2b_qp(enc))
+
+        # Save remaining in cache.
+        self.cache = rest
+        return len(data)
+
+
+
 class FormParser(object):
     # This is the default configuration for our form parser.
     DEFAULT_CONFIG = {
@@ -812,6 +882,7 @@ class FormParser(object):
                 raise FormParserError("No boundary given")
 
             part = None
+            writer = None
             header_name = []
             header_value = []
 
@@ -819,7 +890,8 @@ class FormParser(object):
                 part = MultipartPart()
 
             def on_part_data(data, start, end):
-                pass
+                # TODO: check error code here.
+                writer.write(data[start:end])
 
             def on_part_end():
                 pass
@@ -839,10 +911,13 @@ class FormParser(object):
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 if part.transfer_encoding == 'binary':
-                    pass
+                    writer = part
 
                 elif part.transfer_encoding == 'base64':
-                    pass
+                    writer = Base64Decoder(part)
+
+                elif part.transfer_encoding == 'quoted-printable':
+                    writer = QuotedPrintableDecoder(part)
 
                 else:
                     # TODO: do we really want to raise an exception here?  Or

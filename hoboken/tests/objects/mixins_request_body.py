@@ -226,6 +226,95 @@ class TestOctetStreamParser(BaseTestCase):
         self.assert_finished()
 
 
+class TestBase64Decoder(BaseTestCase):
+    # Note: base64('foobar') == 'Zm9vYmFy'
+    def setup(self):
+        self.f = BytesIO()
+        self.d = Base64Decoder(self.f)
+
+    def assert_data(self, data):
+        self.f.seek(0)
+        self.assert_equal(self.f.read(), data)
+        self.f.seek(0)
+        self.f.truncate()
+
+    def test_simple(self):
+        self.d.write(b'Zm9vYmFy')
+        self.assert_data(b'foobar')
+
+    def test_split_properly(self):
+        self.d.write(b'Zm9v')
+        self.d.write(b'YmFy')
+        self.assert_data(b'foobar')
+
+    def test_bad_split(self):
+        buff = b'Zm9v'
+        for i in range(1, 4):
+            first, second = buff[:i], buff[i:]
+
+            self.d.write(first)
+            self.d.write(second)
+            self.assert_data(b'foo')
+
+    def test_long_bad_split(self):
+        buff = b'Zm9vYmFy'
+        for i in range(5, 8):
+            first, second = buff[:i], buff[i:]
+
+            self.d.write(first)
+            self.d.write(second)
+            self.assert_data(b'foobar')
+
+
+class TestQuotedPrintableDecoder(BaseTestCase):
+    def setup(self):
+        self.f = BytesIO()
+        self.d = QuotedPrintableDecoder(self.f)
+
+    def assert_data(self, data):
+        self.f.seek(0)
+        self.assert_equal(self.f.read(), data)
+        self.f.seek(0)
+        self.f.truncate()
+
+    def test_simple(self):
+        self.d.write(b'foobar')
+        self.d.write(b'')
+
+        self.assert_data(b'foobar')
+
+    def test_with_escape(self):
+        self.d.write(b'foo=3Dbar')
+        self.d.write(b'')
+
+        self.assert_data(b'foo=bar')
+
+    def test_with_newline_escape(self):
+        self.d.write(b'foo=\r\nbar')
+        self.d.write(b'')
+
+        self.assert_data(b'foobar')
+
+        self.d.write(b'foo=\nbar')
+        self.d.write(b'')
+
+        self.assert_data(b'foobar')
+
+    def test_with_split_escape(self):
+        self.d.write(b'foo=3')
+        self.d.write(b'Dbar')
+        self.d.write(b'')
+
+        self.assert_data(b'foo=bar')
+
+    def test_with_split_newline_escape(self):
+        self.d.write(b'foo=\r')
+        self.d.write(b'\nbar')
+        self.d.write(b'')
+
+        self.assert_data(b'foobar')
+
+
 class TestRequestBodyMixin(BaseTestCase):
     def setup(self):
         pass
@@ -236,6 +325,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TestParseOptionsHeader))
     suite.addTest(unittest.makeSuite(TestQuerystringParser))
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))
+    suite.addTest(unittest.makeSuite(TestBase64Decoder))
+    suite.addTest(unittest.makeSuite(TestQuotedPrintableDecoder))
     suite.addTest(unittest.makeSuite(TestRequestBodyMixin))
 
     return suite
