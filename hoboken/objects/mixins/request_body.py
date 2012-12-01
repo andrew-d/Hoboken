@@ -337,10 +337,10 @@ class QuerystringParser(BaseParser):
         self.state = STATE_BEFORE_FIELD
 
         self.callbacks = callbacks
-        self.max_size = max_size
 
         # TODO: these currently don't do anything.  We should make them behave
         # like expected.
+        self.max_size = max_size
         self.keep_blank_values = keep_blank_values
         self.strict_parsing = strict_parsing
 
@@ -904,13 +904,10 @@ class QuotedPrintableDecoder(object):
         return len(data)
 
 
-
 class FormParser(object):
     # This is the default configuration for our form parser.
     DEFAULT_CONFIG = {
         'MAX_FIELD_SIZE': 1024,
-        'MAX_QUERYSTRING_SIZE': 2 * 1024,       # 2 * max field size, since it
-                                                # contains the name and value
         'MAX_FILE_SIZE': 10 * 1024 * 1024,
         'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,
     }
@@ -989,7 +986,7 @@ class FormParser(object):
             # Instantiate parser.
             parser = QuerystringParser(
                         callbacks=callbacks,
-                        max_size=self.config['MAX_QUERYSTRING_SIZE']
+                        max_size=self.config['MAX_FIELD_SIZE']
                      )
 
         elif content_type == 'multipart/form-data':
@@ -1013,6 +1010,7 @@ class FormParser(object):
                 return bytes_processed
 
             def on_part_end():
+                # TODO: do something with our part.
                 pass
 
             def on_header_field(data, start, end):

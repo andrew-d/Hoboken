@@ -69,7 +69,7 @@ class TestFile(BaseTestCase):
     def test_file_full_name(self):
         # Write to this dir.
         self.c['UPLOAD_DIR'] = self.d
-        self.c['KEEP_FILENAME'] = True
+        self.c['UPLOAD_KEEP_FILENAME'] = True
         self.c['MAX_MEMORY_FILE_SIZE'] = 10
 
         # Write.
@@ -82,8 +82,8 @@ class TestFile(BaseTestCase):
 
     def test_file_full_name_with_ext(self):
         self.c['UPLOAD_DIR'] = self.d
-        self.c['KEEP_FILENAME'] = True
-        self.c['KEEP_EXTENSIONS'] = True
+        self.c['UPLOAD_KEEP_FILENAME'] = True
+        self.c['UPLOAD_KEEP_EXTENSIONS'] = True
         self.c['MAX_MEMORY_FILE_SIZE'] = 10
 
         # Write.
@@ -96,8 +96,8 @@ class TestFile(BaseTestCase):
 
     def test_file_full_name_with_ext(self):
         self.c['UPLOAD_DIR'] = self.d
-        self.c['KEEP_FILENAME'] = True
-        self.c['KEEP_EXTENSIONS'] = True
+        self.c['UPLOAD_KEEP_FILENAME'] = True
+        self.c['UPLOAD_KEEP_EXTENSIONS'] = True
         self.c['MAX_MEMORY_FILE_SIZE'] = 10
 
         # Write.
@@ -109,7 +109,7 @@ class TestFile(BaseTestCase):
         self.assert_exists()
 
     def test_no_dir_with_extension(self):
-        self.c['KEEP_EXTENSIONS'] = True
+        self.c['UPLOAD_KEEP_EXTENSIONS'] = True
         self.c['MAX_MEMORY_FILE_SIZE'] = 10
 
         # Write.
