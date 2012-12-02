@@ -42,12 +42,12 @@ class TestWSGIBaseResponse(BaseTestCase):
         self.assert_equal(self.e.status_int, 301)
 
     def test_headers(self):
-        self.e.headers['Cache-Control'] = 'foo'
-        self.assert_equal(self.e.headers['Cache-Control'], 'foo')
+        self.e.headers['Cache-Control'] = b'foo'
+        self.assert_equal(self.e.headers['Cache-Control'], b'foo')
 
     def test_response_iter(self):
-        self.e.response_iter = ['a', 'b', 'c']
-        self.assert_equal(list(self.e.response_iter), ['a', 'b', 'c'])
+        self.e.response_iter = [b'a', b'b', b'c']
+        self.assert_equal(list(self.e.response_iter), [b'a', b'b', b'c'])
 
     def test_response_iter_fails(self):
         with self.assert_raises(ValueError):
@@ -80,7 +80,7 @@ class TestWSGIBaseResponse(BaseTestCase):
 
         self.assert_equal(it, [b''])
         start_response.assert_called_with("200 OK",
-            [('Response-Header', 'value')]
+            [('Response-Header', b'value')]
         )
 
 

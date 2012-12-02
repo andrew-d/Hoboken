@@ -2,7 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 
 from hoboken.objects.util import cached_property, iter_close
 from hoboken.objects.oproperty import oproperty, property_overriding
-from hoboken.six import binary_type, text_type, callable, u
+from hoboken.six import advance_iterator, binary_type, text_type, callable, u
 
 
 class IteratorFile(object):
@@ -40,7 +40,7 @@ class IteratorFile(object):
         if not self._closed:
             try:
                 while total_size < size:
-                    curr_chunk = self.iter.next()
+                    curr_chunk = advance_iterator(self.iter)
                     chunks.append(curr_chunk)
                     total_size += len(curr_chunk)
             except StopIteration:
@@ -106,7 +106,7 @@ class ResponseBodyMixin(object):
         # TODO: benchmark these options
         # return u('').join(x.decode(self.charset) for x in self.response_iter)
         # return b''.join(self.response_iter).encode(self.charset)
-        return self.body.encode(self.charset)
+        return self.body.decode(self.charset)
 
     @text.setter
     def text(self, val):

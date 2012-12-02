@@ -125,9 +125,10 @@ class TestWSGIRequestCacheMixin(BaseTestCase):
 
 @parametrize
 class TestWSGIResponseCacheMixin(BaseTestCase):
-    BOOLEAN_PROPS = ['public', 'no_store', 'no_transform', 'must_revalidate',
-                     'proxy_revalidate']
-    VALUE_PROPS = ['no_cache', 'private', 'max_age', 's_max_age', 's_maxage']
+    BOOLEAN_PROPS = ['public', 'no_store', 'no_transform',
+                     'must_revalidate', 'proxy_revalidate']
+    VALUE_PROPS = ['no_cache', 'private', 'max_age', 's_max_age',
+                   's_maxage']
 
     def setup(self):
         self.r = WSGIResponseCacheMixin()

@@ -57,7 +57,7 @@ class WSGIBaseResponse(BaseResponse):
     def status_text(self):
         text = status_reasons.get(self._status_code)
         if not text:
-            text = status_generic_reasons[self._status_code / 100]
+            text = status_generic_reasons[self._status_code // 100]
         return text
 
     @property

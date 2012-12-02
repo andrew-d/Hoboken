@@ -144,14 +144,14 @@ class RequestCacheObject(CacheObject):
     #   - min_fresh + value
     #   - only_if_cached
 
-    no_cache = _boolean_property('no-cache')
-    no_store = _boolean_property('no-store')
-    no_transform = _boolean_property('no-transform')
-    only_if_cached = _boolean_property('only-if-cached')
+    no_cache = _boolean_property(b'no-cache')
+    no_store = _boolean_property(b'no-store')
+    no_transform = _boolean_property(b'no-transform')
+    only_if_cached = _boolean_property(b'only-if-cached')
 
-    max_age = _value_property('max-age')
-    max_stale = _value_property('max-stale')
-    min_fresh = _value_property('min-fresh')
+    max_age = _value_property(b'max-age')
+    max_stale = _value_property(b'max-stale')
+    min_fresh = _value_property(b'min-fresh')
 
 
 class ResponseCacheObject(CacheObject):
@@ -166,16 +166,16 @@ class ResponseCacheObject(CacheObject):
     #   - must_revalidate
     #   - proxy_revalidate
 
-    public = _boolean_property('public')
-    no_store = _boolean_property('no-store')
-    no_transform = _boolean_property('no-transform')
-    must_revalidate = _boolean_property('must-revalidate')
-    proxy_revalidate = _boolean_property('proxy-revalidate')
+    public = _boolean_property(b'public')
+    no_store = _boolean_property(b'no-store')
+    no_transform = _boolean_property(b'no-transform')
+    must_revalidate = _boolean_property(b'must-revalidate')
+    proxy_revalidate = _boolean_property(b'proxy-revalidate')
 
-    no_cache = _value_property('no-cache')
-    private = _value_property('private')
-    max_age = _value_property('max-age')
-    s_max_age = _value_property('s-maxage')
+    no_cache = _value_property(b'no-cache')
+    private = _value_property(b'private')
+    max_age = _value_property(b'max-age')
+    s_max_age = _value_property(b's-maxage')
     s_maxage = s_max_age
 
 

@@ -1,7 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 from io import RawIOBase
 
-from hoboken.six import callable
+from hoboken.six import advance_iterator, callable
 
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
            '_int_serializer', 'cached_property', 'ImmutableList', 'iter_close',
@@ -168,7 +168,7 @@ class BytesIteratorFile(RawIOBase):
 
         try:
             while total_len < num:
-                next_chunk = self.__iter.next()
+                next_chunk = advance_iterator(self.__iter)
                 chunks.append(next_chunk)
                 total_len += len(next_chunk)
         except StopIteration:

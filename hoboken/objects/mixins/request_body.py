@@ -57,15 +57,16 @@ FLAG_LAST_BOUNDARY              = 2
 CR = b'\r'[0]
 LF = b'\n'[0]
 COLON = b':'[0]
-HYPHEN = b'-'[0]
 SPACE = b' '[0]
+QUOTE = b'"'[0]
+HYPHEN = b'-'[0]
 AMPERSAND = b'&'[0]
 SEMICOLON = b';'[0]
 LOWER_A = b'a'[0]
 LOWER_Z = b'z'[0]
 
 # Lower-casing a character is different, because of the difference between
-# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte
+# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte.
 # These functions abstract that.
 if PY3:
     lower_char = lambda c: c | 0x20
@@ -78,8 +79,8 @@ else:
 # These are regexes for parsing header values.
 SPECIAL_CHARS = re.escape(b'()<>@,;:\\"/[]?={} \t')
 QUOTED_STR = br'"(?:\\.|[^"])*"'
-VALUE_STR = br'(?:[^%s]+|%s)' % (SPECIAL_CHARS, QUOTED_STR)
-OPTION_RE_STR = br'(?:;|^)\s*([^%s]+)\s*=\s*(%s)' % (SPECIAL_CHARS, VALUE_STR)
+VALUE_STR = br'(?:[^' + SPECIAL_CHARS + br']+|' + QUOTED_STR + br')'
+OPTION_RE_STR = br'(?:;|^)\s*([^' + SPECIAL_CHARS + br']+)\s*=\s*(' + VALUE_STR + br')'
 OPTION_RE = re.compile(OPTION_RE_STR)
 
 
@@ -107,16 +108,16 @@ def parse_options_header(value):
     for match in OPTION_RE.finditer(rest):
         key = match.group(1).lower()
         value = match.group(2)
-        if value[0] == '"' and value[-1] == '"':
+        if value[0] == QUOTE and value[-1] == QUOTE:
             # Unquote the value.
             value = value[1:-1]
-            value = value.replace('\\\\', '\\').replace('\\"', '"')
+            value = value.replace(b'\\\\', b'\\').replace(b'\\"', b'"')
 
         # If the value is a filename, we need to fix a bug on IE6 that sends
         # the full file path instead of the filename.
-        if key == 'filename':
-            if value[1:3] == ':\\' or value[:2] == '\\\\':
-                value = value.split('\\')[-1]
+        if key == b'filename':
+            if value[1:3] == b':\\' or value[:2] == b'\\\\':
+                value = value.split(b'\\')[-1]
 
         options[key] = value
 
@@ -252,8 +253,8 @@ class MultipartPart(object):
 
     @property
     def transfer_encoding(self):
-        # TODO: according to RFC1341, the default is 7bit.  Check for HTTP?
-        return self.headers.get('Content-Transfer-Encoding', 'binary')
+        # According to RFC1341, the default is 7bit.
+        return self.headers.get('Content-Transfer-Encoding', '7bit')
 
 
 class BaseParser(object):
@@ -1028,7 +1029,10 @@ class FormParser(object):
             def on_headers_finished():
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
-                if part.transfer_encoding == 'binary':
+                # TODO: check that we properly handle 8bit / 7bit encoding.
+                if (part.transfer_encoding == 'binary' or
+                    part.transfer_encoding == '8bit' or
+                    part.transfer_encoding == '7bit'):
                     writer = part
 
                 elif part.transfer_encoding == 'base64':

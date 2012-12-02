@@ -119,7 +119,7 @@ class WSGIResponseEtagMixin(object):
 
         # Return a tuple in the form (etag, is_strong)
         is_strong = not bool(matches.group(1))
-        etag = matches.group(2).replace('\\"', '"')
+        etag = matches.group(2).replace(b'\\"', b'"')
         return (etag, is_strong)
 
     @etag.setter
@@ -140,9 +140,9 @@ class WSGIResponseEtagMixin(object):
         else:
             # Quote the ETag.
             if strong:
-                new_val = '"%s"' % (val.replace('"', '\\"'),)
+                new_val = b'"' + val.replace(b'"', b'\\"') + b'"'
             else:
-                new_val = 'W/"%s"' % (val.replace('"', '\\"'),)
+                new_val = b'W/"' + val.replace(b'"', b'\\"') + b'"'
 
         self.headers['Etag'] = new_val
 

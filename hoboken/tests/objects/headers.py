@@ -9,8 +9,8 @@ from hoboken.objects.headers import WSGIHeaders
 class TestWSGIHeaders(BaseTestCase):
     def setup(self):
         self.environ = {
-            'HTTP_HEADER': 'value',
-            'HTTP_OTHER_HEADER': 'other'
+            'HTTP_HEADER': b'value',
+            'HTTP_OTHER_HEADER': b'other'
         }
         self.h = WSGIHeaders(self.environ)
 
@@ -39,18 +39,18 @@ class TestWSGIHeaders(BaseTestCase):
 
         self.assert_true('Header' in self.h)
 
-        self.assert_equal(self.h.keys(), ['Header', 'Other-Header'])
+        self.assert_equal(sorted(self.h.keys()), ['Header', 'Other-Header'])
 
     def test_with_no_environ(self):
         env = {}
         h = WSGIHeaders(env)
 
-        h['Header'] = '123'
-        self.assert_equal(h['Header'], '123')
+        h['Header'] = b'123'
+        self.assert_equal(h['Header'], b'123')
 
     def test_to_list(self):
-        l = self.h.to_list()
-        self.assert_equal(l, [('Header', 'value'), ('Other-Header', 'other')])
+        l = sorted(self.h.to_list())
+        self.assert_equal(l, [('Header', b'value'), ('Other-Header', b'other')])
 
 
 def suite():
