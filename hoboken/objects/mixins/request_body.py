@@ -916,12 +916,10 @@ class FormParser(object):
     }
 
     def __init__(self, content_type, on_field, on_file, boundary=None,
-                 content_length=-1, file_name=None, charset='latin-1',
-                 config={}):
+                 content_length=-1, file_name=None, config={}):
         # Save variables.
         self.content_length = content_length
         self.boundary = boundary
-        self.charset = charset
         self.bytes_received = 0
 
         # Save callbacks.
