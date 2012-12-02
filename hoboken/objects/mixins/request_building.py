@@ -109,11 +109,11 @@ class WSGIRequestBuilderMixin(object):
         # Ignore exception info here.
         if catch_exc_info:
             status, headers, app_iter, exc_info = self.call_application(
-                application, catch_exc_info=True)
+                wsgi_app, catch_exc_info=True)
             del exc_info
         else:
             status, headers, app_iter = self.call_application(
-                application, catch_exc_info=False)
+                wsgi_app, catch_exc_info=False)
 
         # Set values on response and return.
         resp = self.ResponseClass()
