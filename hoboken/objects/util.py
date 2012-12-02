@@ -55,6 +55,8 @@ def _environ_converter(prop, parser, serializer):
 
 
 def _int_parser(value):
+    if value is None or value == b'':
+        return None
     return int(value)
 
 _int_serializer = str
