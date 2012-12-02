@@ -187,7 +187,9 @@ from .mixins.accept import WSGIAcceptMixin
 from .mixins.cache import WSGIRequestCacheMixin
 from .mixins.date import WSGIRequestDateMixin
 from .mixins.etag import WSGIRequestEtagMixin
+from .mixins.request_building import WSGIRequestBuilderMixin
 
 class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestCacheMixin, RequestVarsMixin,
-                      WSGIRequestEtagMixin, WSGIRequestDateMixin, WSGIRequest):
+                      WSGIRequestEtagMixin, WSGIRequestDateMixin,
+                      WSGIRequestBuilderMixin, WSGIRequest):
     pass
