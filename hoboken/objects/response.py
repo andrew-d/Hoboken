@@ -112,14 +112,14 @@ class WSGIBaseResponse(BaseResponse):
         return self.response_iter
 
 
-
+from .mixins.authorization import WSGIResponseAuthorizationMixin
 from .mixins.cache import WSGIResponseCacheMixin
 from .mixins.date import WSGIResponseDateMixin
 from .mixins.etag import WSGIResponseEtagMixin
 from .mixins.response_body import ResponseBodyMixin
 
-class WSGIFullResponse(ResponseBodyMixin, WSGIResponseCacheMixin,
-                       WSGIResponseEtagMixin, WSGIResponseDateMixin,
-                       WSGIBaseResponse):
+class WSGIFullResponse(ResponseBodyMixin, WSGIResponseAuthorizationMixin,
+                       WSGIResponseCacheMixin, WSGIResponseEtagMixin,
+                       WSGIResponseDateMixin, WSGIBaseResponse):
     pass
 

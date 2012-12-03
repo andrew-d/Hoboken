@@ -19,11 +19,12 @@ def suite():
     from .test_response import suite as suite_3
     from .test_headers import suite as suite_4
     from .test_mixins_accept import suite as suite_5
-    from .test_mixins_cache import suite as suite_6
-    from .test_mixins_request_body import suite as suite_7
-    from .test_mixins_request_building import suite as suite_8
-    from .test_mixins_response_body import suite as suite_9
-    from .test_mixins_etag import suite as suite_10
+    from .test_mixins_authorization import suite as suite_6
+    from .test_mixins_cache import suite as suite_7
+    from .test_mixins_request_body import suite as suite_8
+    from .test_mixins_request_building import suite as suite_9
+    from .test_mixins_response_body import suite as suite_10
+    from .test_mixins_etag import suite as suite_11
 
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
@@ -36,6 +37,7 @@ def suite():
     suite.addTest(suite_8())
     suite.addTest(suite_9())
     suite.addTest(suite_10())
+    suite.addTest(suite_11())
 
     return suite
 
