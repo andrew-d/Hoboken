@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from . import BaseTestCase
+import pickle
 import unittest
+from io import BytesIO
 from mock import Mock
 
 from hoboken.objects.util import *
+from hoboken.objects.util import _int_parser
 
 
 class TestEnvironPropWithDefault(BaseTestCase):
@@ -151,6 +154,9 @@ class TestCachedProperty(BaseTestCase):
         self.cls.cache = 456
         self.assert_equal(self.cls.cache, 456)
 
+    def test_get_from_class(self):
+        self.assert_true(isinstance(self.TestClass.cache, cached_property))
+
 
 class TestImmutableList(BaseTestCase):
     def setup(self):
@@ -201,6 +207,23 @@ class TestImmutableList(BaseTestCase):
         with self.assert_raises(TypeError):
             self.l.sort()
 
+    def test_is_hashable(self):
+        h = hash(self.l)
+        self.assert_true(h is not None)
+        self.assert_equal(hash(self.l), h)
+
+    def test_is_picklable(self):
+        dst = BytesIO()
+        p = pickle.Pickler(dst)
+        p.dump(self.l)
+
+        data = dst.getvalue()
+        src = BytesIO(data)
+        u = pickle.Unpickler(src)
+        j = u.load()
+
+        self.assert_equal(self.l, j)
+
 
 class TestBytesIteratorFile(BaseTestCase):
     def setup(self):
@@ -225,6 +248,16 @@ class TestBytesIteratorFile(BaseTestCase):
     def test_read_past_end(self):
         self.assert_equal(self.f.read(9), b'foobarbaz')
         self.assert_equal(self.f.read(2), b'')
+        self.assert_equal(self.f.read(1), b'')
+
+    def test_read_with_all(self):
+        self.assert_equal(self.f.read(-1), b'foobarbaz')
+
+
+class TestOther(BaseTestCase):
+    def test_int_parser_handles_invalid(self):
+        self.assert_true(_int_parser(None) is None)
+        self.assert_true(_int_parser(b'') is None)
 
 
 def suite():
@@ -235,6 +268,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestCachedProperty))
     suite.addTest(unittest.makeSuite(TestImmutableList))
     suite.addTest(unittest.makeSuite(TestBytesIteratorFile))
+    suite.addTest(unittest.makeSuite(TestOther))
 
     return suite
 
