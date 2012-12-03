@@ -34,10 +34,13 @@ class TestWSGIHeaders(BaseTestCase):
         del self.h['header']
         self.assert_true('HTTP_HEADER' not in self.environ)
 
+    def test_contains(self):
+        self.h['Foo'] = 'bar'
+        self.assert_true('Foo' in self.h)
+        self.assert_false('Bad' in self.h)
+
     def test_misc(self):
         self.assert_equal(len(self.h), 2)
-
-        self.assert_true('Header' in self.h)
 
         self.assert_equal(sorted(self.h.keys()), ['Header', 'Other-Header'])
 

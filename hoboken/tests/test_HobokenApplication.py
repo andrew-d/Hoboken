@@ -46,7 +46,7 @@ class TestWorksWithConditions(HobokenTestCase):
 class TestConditionCanAbortRequest(HobokenTestCase):
     def after_setup(self):
         def no_foo_in_path(req):
-            return req.path.find('foo') == -1
+            return req.path.find(b'foo') == -1
 
         @condition(no_foo_in_path)
         @self.app.get('/:param')
@@ -175,13 +175,13 @@ class TestPassHelper(HobokenTestCase):
         self.app.config.debug = True
 
     def test_pass_route(self):
-        self.assert_body_is(b'good', path='/aroute/')
+        self.assert_body_is('good', path='/aroute/')
 
     def test_pass_before(self):
         # Passing in filter will simply jump to the next filter.  It has no
         # effect on the actual body routes themselves.
-        self.assert_body_is(b'goodfoo', path='/pass/before')
-        self.assert_body_is(b'goodfoo', path='/pass/other')
+        self.assert_body_is('goodfoo', path='/pass/before')
+        self.assert_body_is('goodfoo', path='/pass/other')
 
 
 class TestRedirectHelper(HobokenTestCase):
@@ -208,7 +208,7 @@ class TestRedirectHelper(HobokenTestCase):
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 302)
-        self.assert_true(resp.headers['Location'].endswith('/uploaded'))
+        self.assert_true(resp.headers['Location'].endswith(b'/uploaded'))
 
     def test_redirect_code(self):
         for code in [301, 302, 303]:
@@ -218,7 +218,7 @@ class TestRedirectHelper(HobokenTestCase):
             resp = req.get_response(self.app)
 
             self.assert_equal(resp.status_int, code)
-            self.assert_true(resp.headers['Location'].endswith('/foo'))
+            self.assert_true(resp.headers['Location'].endswith(b'/foo'))
 
     def test_redirect_with_non_get(self):
         req = Request.build("/upload", method='POST')
@@ -226,7 +226,7 @@ class TestRedirectHelper(HobokenTestCase):
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 303)
-        self.assert_true(resp.headers['Location'].endswith('/uploaded'))
+        self.assert_true(resp.headers['Location'].endswith(b'/uploaded'))
 
 
 class TestRoute(HobokenTestCase):
@@ -238,7 +238,8 @@ class TestRoute(HobokenTestCase):
 
 class TestMatcherTypes(HobokenTestCase):
     def test_will_handle_regex(self):
-        r = re.compile("(.*?)")
+        r = re.compile(b"(.*?)")
+
         @self.app.get(r)
         def regex_get():
             return b'body'
@@ -247,12 +248,12 @@ class TestMatcherTypes(HobokenTestCase):
         self.assert_true(isinstance(route.matcher, RegexMatcher))
 
     def test_will_handle_regex_named_captures(self):
-        r = re.compile("/(.*?)foo(?P<name>.*?)bar")
+        r = re.compile(b"/(.*?)foo(?P<name>.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg, name=None):
-            self.assert_equal(arg, 'ONE')
-            self.assert_equal(name, 'TWO')
+            self.assert_equal(arg, b'ONE')
+            self.assert_equal(name, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
@@ -261,12 +262,12 @@ class TestMatcherTypes(HobokenTestCase):
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_2(self):
-        r = re.compile("/(?P<first>.*?)foo(?P<second>.*?)bar")
+        r = re.compile(b"/(?P<first>.*?)foo(?P<second>.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(first=None, second=None):
-            self.assert_equal(first, 'ONE')
-            self.assert_equal(second, 'TWO')
+            self.assert_equal(first, b'ONE')
+            self.assert_equal(second, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
@@ -275,12 +276,12 @@ class TestMatcherTypes(HobokenTestCase):
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_3(self):
-        r = re.compile("/(.*?)foo(.*?)bar")
+        r = re.compile(b"/(.*?)foo(.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg1, arg2):
-            self.assert_equal(arg1, 'ONE')
-            self.assert_equal(arg2, 'TWO')
+            self.assert_equal(arg1, b'ONE')
+            self.assert_equal(arg2, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
@@ -289,12 +290,12 @@ class TestMatcherTypes(HobokenTestCase):
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_4(self):
-        r = re.compile("/(?P<first>.*?)foo(.*?)bar")
+        r = re.compile(b"/(?P<first>.*?)foo(.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg, first=None):
-            self.assert_equal(first, 'ONE')
-            self.assert_equal(arg, 'TWO')
+            self.assert_equal(first, b'ONE')
+            self.assert_equal(arg, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")

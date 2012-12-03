@@ -4,6 +4,7 @@ from . import BaseTestCase
 import unittest
 from mock import MagicMock, Mock, patch
 
+from hoboken.six import u
 from hoboken.objects.request import *
 
 
@@ -52,6 +53,15 @@ class TestWSGIRequest(BaseTestCase):
         }
 
         self.r = WSGIRequest(self.environ)
+
+    def test_method(self):
+        self.assert_equal(self.r.method, 'GET')
+
+        self.r.method = u('POST')
+        self.assert_equal(self.r.method, 'POST')
+
+        self.r.method = b'PUT'
+        self.assert_equal(self.r.method, 'PUT')
 
     def test_path_info(self):
         with patch('hoboken.objects.request.WSGIBaseRequest.path_info') as m:

@@ -259,7 +259,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         pattern = self.MATCH_REGEX_BYTES.sub(convert_match, pattern)
         pattern = br'\A' + pattern + br'\Z'
 
-        return pattern.decode('ascii')
+        return pattern
 
     def match(self, request):
         match = self.match_re.match(request.path_info)

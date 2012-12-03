@@ -5,6 +5,7 @@ import unittest
 from .helpers import parametrize, parameters
 
 from hoboken.application import Request
+from hoboken.six import iteritems, text_type
 Matcher = hoboken.matchers.HobokenRouteMatcher
 
 
@@ -31,7 +32,7 @@ class TestHeadFallback(HobokenTestCase):
     def after_setup(self):
         @self.app.get('/')
         def get_func():
-            self.app.response.headers['X-Custom-Header'] = 'foobar'
+            self.app.response.headers['X-Custom-Header'] = b'foobar'
             return 'get body'
 
     def test_HEAD_fallback(self):
@@ -41,7 +42,7 @@ class TestHeadFallback(HobokenTestCase):
 
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(len(resp.body), 0)
-        self.assert_equal(resp.headers['X-Custom-Header'], 'foobar')
+        self.assert_equal(resp.headers['X-Custom-Header'], b'foobar')
 
 
 # Load our list of test cases from our yaml file.
@@ -64,7 +65,7 @@ class TestRouting(HobokenTestCase):
             return
 
         matcher = Matcher(param['path'])
-        regex = param['regex']
+        regex = param['regex'].encode('latin-1')
         self.assert_equal(matcher.match_re.pattern, regex)
 
         class FakeRequest(object):
@@ -72,11 +73,16 @@ class TestRouting(HobokenTestCase):
 
         for succ in param.get('successes', []):
             r = FakeRequest()
-            r.path_info = succ['route']
+            r.path_info = succ['route'].encode('latin-1')
             matched, args, kwargs = matcher.match(r)
 
-            expected_args = succ.get('args', [])
-            expected_kwargs = succ.get('kwargs', {})
+            expected_args = [x.encode('latin-1') for x in succ.get('args', [])]
+            expected_kwargs_str = succ.get('kwargs', {})
+            expected_kwargs = {}
+            for k, v in iteritems(expected_kwargs_str):
+                if isinstance(v, text_type):
+                    v = v.encode('latin-1')
+                expected_kwargs[k] = v
             self.assert_equal(matched, True)
             self.assert_equal(args, expected_args)
             self.assert_equal(kwargs, expected_kwargs)

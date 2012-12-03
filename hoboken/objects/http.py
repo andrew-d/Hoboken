@@ -1,7 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
-from hoboken.six import text_type, binary_type
+from hoboken.six import PY3, text_type, binary_type
 
 UNSAFE_RE = re.compile(br"[^\\-_.!~*'();/?:@&=+$,\[\]a-zA-Z\d]")
 ESCAPED_RE = re.compile(br"%[a-fA-F\d]{2}")
@@ -30,10 +30,17 @@ def unquote(val, encoding='utf-8'):
     if isinstance(val, text_type):
         val = val.encode(encoding)
 
-    def _unquoter(match_obj):
-        enc = match_obj.group(0)
-        val = int(enc[1:], 16)
-        return bytes([val])
+    chars = []
+    if PY3:
+        def _unquoter(match_obj):
+            enc = match_obj.group(0)
+            val = int(enc[1:], 16)
+            return bytes([val])
+    else:
+        def _unquoter(match_obj):
+            enc = match_obj.group(0)
+            val = int(enc[1:], 16)
+            return chr(val)
 
     unquoted = ESCAPED_RE.sub(_unquoter, val)
     return unquoted

@@ -50,7 +50,22 @@ class WSGIBaseRequest(BaseRequest):
                 value = value.encode('latin-1')
             return value
 
-    method = _environ_prop('REQUEST_METHOD', b'GET')
+    # The HTTP method alone is a string, not bytes.
+    @property
+    def method(self):
+        return self.environ.get('REQUEST_METHOD', 'GET')
+
+    @method.setter
+    def method(self, val):
+        if PY3:
+            if isinstance(val, bytes):
+                val = val.decode('latin-1')
+        else:
+            if isinstance(val, unicode):
+                val = val.encode('latin-1')
+
+        self.environ['REQUEST_METHOD'] = val
+
     scheme = _environ_prop('wsgi.url_scheme')
     script_name = _environ_prop('SCRIPT_NAME', b'')
     path_info = _environ_prop('PATH_INFO', b'')

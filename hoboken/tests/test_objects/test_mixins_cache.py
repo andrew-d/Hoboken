@@ -33,6 +33,10 @@ class TestBooleanProperty(BaseTestCase):
         _boolean_property.__delete__(self.p, self.o)
         self.o.set_property.assert_called_once_with('name', False)
 
+    def test_bad_set(self):
+        with self.assert_raises(ValueError):
+            _boolean_property.__set__(self.p, self.o, 'bad')
+
 
 class TestValueProperty(BaseTestCase):
     def setup(self):
@@ -78,6 +82,20 @@ class TestCacheObject(BaseTestCase):
         n = CacheObject(None, initial_properties={b'quoted': b'foo and bar'})
         self.assert_equal(n._serialize_cache_control(),
                           b'quoted="foo and bar"')
+
+    def test_reparse(self):
+        class tmp(object):
+            headers = {}
+
+        t = tmp()
+        c = CacheObject.parse(t, b'no-cache')
+        self.assert_equal(c.get_property('no-cache'), True)
+        self.assert_true(c.get_property('no-store') is None)
+
+        t.headers['Cache-Control'] = b'no-store'
+        c.reparse()
+        self.assert_equal(c.get_property('no-store'), True)
+        self.assert_true(c.get_property('no-cache') is None)
 
 
 @parametrize

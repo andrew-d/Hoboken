@@ -73,14 +73,14 @@ class TestFilterParams(HobokenTestCase):
     def after_setup(self):
         @self.app.before("/before/:param1/:param2/*")
         def before_func(splat, param1=None, param2=None):
-            self.val = (param1 + '\n' +
-                        param2 + '\n' +
+            self.val = (param1 + b'\n' +
+                        param2 + b'\n' +
                         splat)
 
         @self.app.after("/after/:foo/*/:bar")
         def after_func(splat, foo=None, bar=None):
-            self.val = (foo + '\n' +
-                        splat + '\n' +
+            self.val = (foo + b'\n' +
+                        splat + b'\n' +
                         bar)
 
         @self.app.get("/*")
@@ -91,11 +91,11 @@ class TestFilterParams(HobokenTestCase):
 
     def test_before_params(self):
         self.call_app(path='/before/one/two/params')
-        self.assert_equal(self.val, 'one\ntwo\nparams')
+        self.assert_equal(self.val, b'one\ntwo\nparams')
 
     def test_after_params(self):
         self.call_app(path='/after/abcd/morestuff/defg')
-        self.assert_equal(self.val, 'abcd\nmorestuff\ndefg')
+        self.assert_equal(self.val, b'abcd\nmorestuff\ndefg')
 
 
 class TestCatchallFilters(HobokenTestCase):

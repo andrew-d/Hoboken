@@ -14,16 +14,16 @@ import hoboken
 
 def suite():
     # Import test suites here.
-    from .util import suite as suite_1
-    from .request import suite as suite_2
-    from .response import suite as suite_3
-    from .headers import suite as suite_4
-    from .mixins_accept import suite as suite_5
-    from .mixins_cache import suite as suite_6
-    from .mixins_request_body import suite as suite_7
-    from .mixins_request_building import suite as suite_8
-    from .mixins_response_body import suite as suite_9
-    from .mixins_etag import suite as suite_10
+    from .test_util import suite as suite_1
+    from .test_request import suite as suite_2
+    from .test_response import suite as suite_3
+    from .test_headers import suite as suite_4
+    from .test_mixins_accept import suite as suite_5
+    from .test_mixins_cache import suite as suite_6
+    from .test_mixins_request_body import suite as suite_7
+    from .test_mixins_request_building import suite as suite_8
+    from .test_mixins_response_body import suite as suite_9
+    from .test_mixins_etag import suite as suite_10
 
     suite = unittest.TestSuite()
     suite.addTest(suite_1())

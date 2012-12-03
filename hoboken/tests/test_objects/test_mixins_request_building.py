@@ -38,10 +38,9 @@ class TestBuildMethod(BaseTestCase):
         self.req_type.assert_called_with(env)
 
     def assert_headers(self, *header_list):
-        expected = [call(*x) for x in header_list]
-        self.assert_equal(self.req.headers.__setitem__.call_args_list,
-                          expected)
-        # self.req.headers.__setitem__.assert_called_with(header, val)
+        for x in header_list:
+            c = call(*x)
+            self.assert_true(c in self.req.headers.__setitem__.call_args_list)
 
     def test_default(self):
         self.build('/')

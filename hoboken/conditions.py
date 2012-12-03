@@ -2,7 +2,11 @@ from __future__ import print_function
 import re
 from collections import Iterable
 
+from hoboken.six import text_type
+
 def user_agent(match_re):
+    if isinstance(match_re, text_type):
+        match_re = match_re.encode('latin-1')
     regex = re.compile(match_re)
 
     def user_agent_func(req):
@@ -16,6 +20,8 @@ def user_agent(match_re):
 
 
 def host(match_re):
+    if isinstance(match_re, text_type):
+        match_re = match_re.encode('latin-1')
     regex = re.compile(match_re)
 
     def host_func(req):
@@ -28,9 +34,17 @@ def accepts(mimetypes):
     # Note that we can't simply check for an iterable here, since
     # strings are also iterables.
     if isinstance(mimetypes, list):
-        will_accept = mimetypes
+        will_accept_raw = mimetypes
     else:
-        will_accept = [mimetypes]
+        will_accept_raw = [mimetypes]
+
+    # Encode the list.
+    will_accept = []
+    for x in will_accept_raw:
+        if isinstance(x, text_type):
+            will_accept.append(x.encode('latin-1'))
+        else:
+            will_accept.append(x)
 
     def accepts_func(req):
         for a in will_accept:

@@ -45,6 +45,8 @@ class TestHostCondition(HobokenTestCase):
 
 class TestAcceptsCondition(HobokenTestCase):
     def after_setup(self):
+        self.app.config.debug = True
+
         @condition(accepts("text/html"))
         @self.app.get('/')
         def html():
@@ -55,7 +57,7 @@ class TestAcceptsCondition(HobokenTestCase):
         def plain():
             return 'plain'
 
-        @condition(accepts("text/*"))
+        @condition(accepts(b"text/*".decode('latin-1')))
         @self.app.get("/")
         def text():
             return 'text'

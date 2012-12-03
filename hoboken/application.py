@@ -346,7 +346,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # If a code is specified, we take that.
         if code is None:
             # If no code, we send a 303 if it's supported and we aren't already using GET.
-            if self.request.http_version == 'HTTP/1.1' and self.request.method != 'GET':
+            if self.request.http_version == b'HTTP/1.1' and self.request.method != 'GET':
                 code = 303
             else:
                 code = 302
@@ -397,7 +397,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def before(self, match=None):
         # If the match isn't provided, we match anything.
         if match is None:
-            match = re.compile(".*")
+            match = re.compile(b".*")
 
         def internal_decorator(func):
             self.add_before_filter(match, func)
@@ -411,7 +411,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def after(self, match=None):
         # If the match isn't provided, we match anything.
         if match is None:
-            match = re.compile(".*")
+            match = re.compile(b".*")
 
         def internal_decorator(func):
             self.add_after_filter(match, func)

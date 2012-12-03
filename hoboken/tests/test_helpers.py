@@ -249,7 +249,7 @@ class TestRedirection(HobokenTestCase):
         resp = r.get_response(self.app)
 
         self.assert_between(resp.status_int, 300, 399)
-        self.assert_true(resp.headers['Location'].endswith('/to_me'))
+        self.assert_true(resp.headers['Location'].endswith(b'/to_me'))
 
 
 class TestShift(HobokenTestCase):

@@ -1,6 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from hoboken.six import binary_type, iteritems, reraise, text_type
+from hoboken.six import binary_type, iteritems, PY3, reraise, text_type
 
 # NOTE: much of the following code is taken from WebOb - an inspiration for
 # this functionality.  Thanks, guys!
@@ -18,14 +18,19 @@ class WSGIRequestBuilderMixin(object):
         super(WSGIRequestBuilderMixin, self).__init__(*args, **kwargs)
 
     @classmethod
-    def build(klass, path, charset='utf-8', **kwargs):
+    def build(klass, path, **kwargs):
         """
         This function lets us build a request by creating a base, empty WSGI
         environ, and then filling it in with the appropriate values.
         """
-        # Encode our path as bytes if necessary.
-        if isinstance(path, text_type):
-            path = path.encode(charset)
+        if PY3:
+            # We encode bytes as strings.
+            if isinstance(path, binary_type):
+                path = path.decode('latin-1')
+        else:
+            # We encode unicode as a string.
+            if isinstance(path, text_type):
+                path = path.encode('latin-1')
 
         # Build a temporary environ.
         env = {

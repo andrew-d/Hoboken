@@ -1,6 +1,3 @@
-# Requirements for the application
-WebOb==1.2
-
 # Optional requirement, but heavily encouraged.
 Shift==0.0.4
 
