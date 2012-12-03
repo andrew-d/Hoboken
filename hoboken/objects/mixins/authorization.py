@@ -2,11 +2,12 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 import base64
+import binascii
 
 from hoboken.six import iteritems
 
-valid_authentication_schemes = ['Basic', 'Digest', 'WSSE', 'HMACDigest',
-                                'GoogleLogin', 'Cookie', 'OpenID']
+valid_authentication_schemes = [b'Basic', b'Digest', b'WSSE', b'HMACDigest',
+                                b'GoogleLogin', b'Cookie', b'OpenID']
 _valid_schemes_set = set(valid_authentication_schemes)
 
 AUTH_PARAMS_REGEX = re.compile(br'([a-z]+)=(".*?"|[^,]*)(?:\Z|, *)')
@@ -22,9 +23,9 @@ class Authorization(object):
         if val is None:
             return None
 
-        authtype, params = val.split(' ', 1)
+        authtype, params = val.split(b' ', 1)
         if authtype in _valid_schemes_set:
-            if authtype == 'Basic' and '"' not in params:
+            if authtype == b'Basic' and b'"' not in params:
                 params = klass._parse_basic_auth(params)
             else:
                 params = klass._parse_auth_params(params)
@@ -35,7 +36,7 @@ class Authorization(object):
     def _parse_auth_params(klass, params):
         ret = {}
         for k, v in AUTH_PARAMS_REGEX.findall(params):
-            ret[k] = v.strip('"')
+            ret[k] = v.strip(b'"')
         return ret
 
     @classmethod
@@ -47,7 +48,7 @@ class Authorization(object):
 
             username, password = dec.split(b':', 1)
             return {b'username': username, b'password': password}
-        except TypeError:
+        except (TypeError, binascii.Error):
             return value
 
     def serialize(self):
