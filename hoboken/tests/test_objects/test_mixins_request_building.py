@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import BaseTestCase
+import sys
 import unittest
 from mock import MagicMock, call, patch
 
@@ -135,6 +136,39 @@ class TestCallApplication(BaseTestCase):
 
         it.close.assert_called()
 
+    def test_call_write_function(self):
+        app_it = MagicMock()
+
+        def dummy_app(environ, start_response):
+            # Call start_response.
+            writer = start_response(self.return_val, self.return_headers)
+            writer(b'foo')
+            writer(b'bar')
+            return app_it
+
+        self.req = self.Type.build('/')
+        status, headers, it = self.req.call_application(dummy_app)
+
+        self.assert_equal(list(it), [b'foo', b'bar'])
+        app_it.close.assert_called_once_with()
+
+    def test_call_application_with_exception(self):
+        def dummy_app(environ, start_response):
+            try:
+                1 / 0
+                start_response("200 OK", [])
+                return [b'normal']
+            except Exception:
+                start_response("500 Internal Server Error", [], sys.exc_info())
+                return [b'error']
+
+        self.req = self.Type.build('/')
+
+        with self.assert_raises(ZeroDivisionError):
+            status, headers, it = self.req.call_application(dummy_app)
+
+        status, headers, it, err = self.req.call_application(dummy_app, catch_exc_info=True)
+
     def test_get_response(self):
         self.req = self.Type.build('/')
         self.return_val = '200 OK'
@@ -147,6 +181,21 @@ class TestCallApplication(BaseTestCase):
         self.assert_equal(resp.status, self.return_val)
         self.assert_equal(resp.headers, self.return_headers)
         self.assert_equal(resp.response_iter, self.return_iter)
+
+    def test_get_response_with_err(self):
+        def dummy_app(environ, start_response):
+            try:
+                1 / 0
+                start_response("200 OK", [])
+                return [b'normal']
+            except Exception:
+                start_response("500 Internal Server Error", [], sys.exc_info())
+                return [b'error']
+
+        self.req = self.Type.build('/')
+        self.req.ResponseClass = MagicMock
+        resp = self.req.get_response(dummy_app, catch_exc_info=True)
+        self.assert_equal(resp.status, '500 Internal Server Error')
 
 
 def suite():

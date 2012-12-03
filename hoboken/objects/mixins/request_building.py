@@ -23,11 +23,11 @@ class WSGIRequestBuilderMixin(object):
         This function lets us build a request by creating a base, empty WSGI
         environ, and then filling it in with the appropriate values.
         """
-        if PY3:
+        if PY3:         # pragma: no cover
             # We encode bytes as strings.
             if isinstance(path, binary_type):
                 path = path.decode('latin-1')
-        else:
+        else:           # pragma: no cover
             # We encode unicode as a string.
             if isinstance(path, text_type):
                 path = path.encode('latin-1')
@@ -80,7 +80,7 @@ class WSGIRequestBuilderMixin(object):
         # This function gets passed to the application.
         def start_response(status, headers, exc_info=None):
             if exc_info is not None and not catch_exc_info:
-                reraise(exc_info)
+                reraise(*exc_info)
             captured[:] = [status, headers, exc_info]
 
             # The write() callable should append to our output list.
