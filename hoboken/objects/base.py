@@ -11,14 +11,14 @@ class BaseRequest(with_metaclass(ABCMeta)):
     """
     @abstractproperty
     def http_version(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def url(self):
-        pass
+        raise NotImplementedError()
     @abstractproperty
     def path(self):
-        pass
+        raise NotImplementedError()
 
     # TODO: do we want these in all cases? i.e. if we're not a WSGI
     # application, do we care about these? possibly rename these to the names
@@ -29,34 +29,34 @@ class BaseRequest(with_metaclass(ABCMeta)):
     #              about
     @abstractproperty
     def script_name(self):
-        pass
+        raise NotImplementedError()
     @abstractproperty
     def path_info(self):
-        pass
+        raise NotImplementedError()
 
 
     @abstractproperty
     def host(self):
-        pass
+        raise NotImplementedError()
     @abstractproperty
     def port(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def scheme(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def method(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def query_string(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def input_stream(self):
-        pass
+        raise NotImplementedError()
 
 
     # TODO: do these belong here?
@@ -89,19 +89,19 @@ class BaseResponse(with_metaclass(ABCMeta)):
     """
     @abstractproperty
     def status_int(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def status_text(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def status(self):
-        pass
+        raise NotImplementedError()
 
     @abstractproperty
     def headers(self):
-        pass
+        raise NotImplementedError()
 
     # Response body
     # -------------------------------------------
@@ -111,7 +111,7 @@ class BaseResponse(with_metaclass(ABCMeta)):
         """
         The base iterator for a response.
         """
-        pass
+        raise NotImplementedError()
 
     # TODO: do these belong here?
     @property
