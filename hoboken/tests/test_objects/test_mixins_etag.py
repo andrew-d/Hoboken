@@ -17,6 +17,9 @@ class TestMatchAnyEtag(BaseTestCase):
     def test_converts_to_str(self):
         self.assert_equal(str(self.e), '*')
 
+    def test_is_false_boolean(self):
+        self.assert_false(bool(self.e))
+
 
 class TestMatchNoneEtag(BaseTestCase):
     def setup(self):
@@ -27,6 +30,9 @@ class TestMatchNoneEtag(BaseTestCase):
 
     def test_converts_to_str(self):
         self.assert_equal(str(self.e), '')
+
+    def test_is_false_boolean(self):
+        self.assert_false(bool(self.e))
 
 
 class TestWSGIRequestEtagMixin(BaseTestCase):
@@ -123,6 +129,18 @@ class TestWSGIResponseEtagMixin(BaseTestCase):
         self.m.etag = (b'Foobar', False)
         self.assert_equal(self.m.etag[1], False)
         self.assert_true(self.m.headers['Etag'].startswith(b'W/'))
+
+    def test_no_etag_match(self):
+        self.m.headers['Etag'] = b'NO_MATCH"'
+        self.assert_equal(self.m.etag, b'NO_MATCH"')
+
+    def test_set_invalid_etag(self):
+        with self.assert_raises(ValueError):
+            self.m.etag = 123
+
+    def test_set_existing_etag(self):
+        self.m.etag = b'W/"foobar"'
+        self.assert_equal(self.m.etag, (b'foobar', False))
 
 
 def suite():

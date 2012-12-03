@@ -83,7 +83,7 @@ class TestWSGIDateMixin(BaseTestCase):
         v = 'Mon, 03 Dec 2012 00:00:00'
         parsed = self.d._parse_date(v)
         serialized = self.d._serialize_date(parsed)
-        self.assert_equal(serialized, 'Mon, 03 Dec 2012 00:00:00 GMT')
+        self.assert_equal(serialized, b'Mon, 03 Dec 2012 00:00:00 GMT')
 
 
 def suite():

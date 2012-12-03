@@ -19,7 +19,7 @@ def quote(val, encoding='utf-8', unsafe=UNSAFE_RE):
 
     def _quoter(match_obj):
         ch = match_obj.group(0)
-        ech = "%{:02X}".format(ord(ch)).encode('ascii')
+        ech = "%{v:02X}".format(v=ord(ch)).encode('ascii')
         return ech
 
     quoted = unsafe.sub(_quoter, val)
