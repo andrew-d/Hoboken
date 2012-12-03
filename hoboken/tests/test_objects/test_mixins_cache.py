@@ -89,13 +89,13 @@ class TestCacheObject(BaseTestCase):
 
         t = tmp()
         c = CacheObject.parse(t, b'no-cache')
-        self.assert_equal(c.get_property('no-cache'), True)
-        self.assert_true(c.get_property('no-store') is None)
+        self.assert_equal(c.get_property(b'no-cache'), True)
+        self.assert_true(c.get_property(b'no-store') is None)
 
         t.headers['Cache-Control'] = b'no-store'
         c.reparse()
-        self.assert_equal(c.get_property('no-store'), True)
-        self.assert_true(c.get_property('no-cache') is None)
+        self.assert_equal(c.get_property(b'no-store'), True)
+        self.assert_true(c.get_property(b'no-cache') is None)
 
 
 @parametrize
