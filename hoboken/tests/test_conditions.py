@@ -78,9 +78,8 @@ class TestAcceptsCondition(HobokenTestCase):
     def test_other_accept(self):
         self.assert_body_is("plain", accepts="text/plain")
 
-    @skip("Since webob won't match this mime type")
     def test_general_match(self):
-        self.assert_body_is("text", "text/otherfoo")
+        self.assert_body_is("text", accepts="text/otherfoo")
 
     def test_list_of_accepts(self):
         self.assert_body_is("two", path="/two", accepts="application/json")
