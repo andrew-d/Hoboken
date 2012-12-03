@@ -97,6 +97,10 @@ class TestCacheObject(BaseTestCase):
         self.assert_equal(c.get_property(b'no-store'), True)
         self.assert_true(c.get_property(b'no-cache') is None)
 
+    def test_parse_invalid(self):
+        c = CacheObject.parse({}, b'max-age=12a3, no-store')
+        self.assert_equal(c.get_property(b'max-age'), b'12a3')
+
 
 @parametrize
 class TestWSGIRequestCacheMixin(BaseTestCase):
@@ -213,6 +217,44 @@ class TestWSGIResponseOtherCachesMixin(BaseTestCase):
         self.assert_true(self.r.age is None)
 
 
+class TestPragmaNoCacheMixin(BaseTestCase):
+    def setup(self):
+        self.calls = 0
+        self.val = None
+
+        class HttpObj(object):
+            headers = {}
+
+        class Base(object):
+            http_obj = None
+
+            @property
+            def no_cache(this):
+                self.calls += 1
+                return self.val
+
+        class MixedIn(PragmaNoCacheMixin, Base):
+            pass
+
+        self.c = MixedIn()
+        self.h = HttpObj()
+        self.c.http_obj = self.h
+
+    def test_will_override(self):
+        self.h.headers['Pragma'] = b'no-cache'
+        self.assert_true(self.c.no_cache)
+        self.assert_equal(self.calls, 1)
+
+    def test_will_not_override_if_given(self):
+        self.val = False
+        self.assert_false(self.c.no_cache)
+        self.assert_equal(self.calls, 1)
+
+    def test_will_ignore_invalid(self):
+        self.h.headers['Pragma'] = b'some-other-val'
+        self.assert_true(self.c.no_cache is None)
+        self.assert_equal(self.calls, 1)
+
 
 def suite():
     suite = unittest.TestSuite()
@@ -222,5 +264,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestWSGIRequestCacheMixin))
     suite.addTest(unittest.makeSuite(TestWSGIResponseCacheMixin))
     suite.addTest(unittest.makeSuite(TestWSGIResponseOtherCachesMixin))
+    suite.addTest(unittest.makeSuite(TestPragmaNoCacheMixin))
 
     return suite

@@ -192,9 +192,9 @@ class PragmaNoCacheMixin(object):
         does exactly that.
         """
         val = orig()
-        if orig is None:
-            pragma = self.headers.get('Pragma')
-            if pragma.lower().trim() == 'no-cache':
+        if val is None:
+            pragma = self.http_obj.headers.get('Pragma')
+            if pragma is not None and pragma.lower().strip() == b'no-cache':
                 val = True
 
         return val
