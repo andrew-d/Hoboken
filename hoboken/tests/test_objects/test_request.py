@@ -103,6 +103,15 @@ class TestWSGIRequest(BaseTestCase):
         self.r.headers[b'X-Forwarded-Port'] = '1234'
         self.assert_equal(self.r.port, 1234)
 
+    def test_port_with_host_forwarding(self):
+        self.r.headers[b'X-Forwarded-Host'] = 'foobar'
+        self.assert_equal(self.r.port, 80)
+
+    def test_port_with_server_port(self):
+        self.r.headers[b'Host'] = b'localhost'
+        self.environ['SERVER_PORT'] = '444'
+        self.assert_equal(self.r.port, 444)
+
     # def test_port_by_scheme(self):
     #     self.environ['wsgi.url_scheme'] = b'https'
     #     self.assert_equal(self.r.port, 443)

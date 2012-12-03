@@ -23,7 +23,7 @@ class WSGIBaseRequest(BaseRequest):
         self.environ = environ
         self.charset = charset
 
-    if PY3:
+    if PY3:             # pragma: no cover
         def _to_wsgi_str(self, value):
             if isinstance(value, bytes):
                 value = value.decode('latin-1')
@@ -39,7 +39,7 @@ class WSGIBaseRequest(BaseRequest):
             if isinstance(value, str):
                 value = value.encode('latin-1')
             return value
-    else:
+    else:               # pragma: no cover
         def _to_wsgi_str(self, value):
             if isinstance(value, unicode):
                 value = value.encode('latin-1')

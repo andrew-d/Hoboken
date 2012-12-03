@@ -84,9 +84,26 @@ class TestWSGIBaseResponse(BaseTestCase):
         )
 
 
+class TestEmptyResponse(BaseTestCase):
+    def setup(self):
+        self.r = EmptyResponse()
+
+    def test_is_empty(self):
+        self.assert_equal(len(self.r), 0)
+        self.assert_equal(list(self.r), [])
+
+    def test_will_call_close(self):
+        m = MagicMock()
+        r = EmptyResponse(response_iter=m)
+        r.close()
+
+        m.close.assert_called_once()
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestWSGIBaseResponse))
+    suite.addTest(unittest.makeSuite(TestEmptyResponse))
 
     return suite
 
