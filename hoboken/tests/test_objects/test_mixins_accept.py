@@ -59,6 +59,17 @@ class TestAcceptList(BaseTestCase):
         self.assert_equal(l[b'text/plain'], 0.5)
         self.assert_equal(l[b'text/html'], 1.0)
 
+        v = b'text/plain'.decode('latin-1')
+        self.assert_equal(l[v], 0.5)
+
+    def test_quality_fails(self):
+        l = AcceptList.parse(b'text/plain')
+        self.assert_equal(l[b'text/html'], 0)
+
+    def test_invalid_parse(self):
+        l = AcceptList.parse(None)
+        self.assert_true(l is None)
+
 
 class TestMIMEAccept(BaseTestCase):
     def setup(self):

@@ -71,14 +71,12 @@ class MIMEAccept(AcceptList):
     def _match(self, value, item):
         def _normalize(x):
             x = x.lower()
-            if x == b'*':
-                return (b'*', b'*')
-            else:
-                return x.split(b'/', 1)
+            return x.split(b'/', 1)
 
         if b'/' not in value:
             raise ValueError('Invalid mimetype {0!r}'.format(value))
         value_type, value_subtype = _normalize(value)
+
         if value_type == b'*' and value_subtype != b'*':
             raise ValueError('Invalid mimetype {0!r}'.format(value))
 
