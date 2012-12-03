@@ -4,10 +4,10 @@ from .helpers import *
 
 import os
 import unittest
-from webob import Request
 
 ensure_in_path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import hoboken
+from hoboken.application import Request
 
 
 class HobokenTestCase(BaseTestCase):
@@ -35,16 +35,16 @@ class HobokenTestCase(BaseTestCase):
         """
         This function calls our application, and returns a tuple of (status, body)
         """
-        req = Request.blank(path)
+        req = Request.build(path)
         req.method = method
         if user_agent is not None:
             req.headers['User-Agent'] = user_agent
 
         if host is not None:
-            req.host = host
+            req.headers['Host'] = host
 
         if accepts is not None:
-            req.accept = accepts
+            req.headers['Accept'] = accepts
 
         resp = req.get_response(self.app)
         return resp.status_int, resp.text

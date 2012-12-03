@@ -8,6 +8,10 @@ from hoboken.six import iteritems
 from hoboken.application import halt
 from hoboken.objects.mixins.etag import MatchAnyEtag, MatchNoneEtag
 
+# These are saved here so we can patch them during our tests.
+_now = datetime.datetime.now
+_utcnow = datetime.datetime.utcnow
+
 
 class HobokenCachingMixin(object):
     """
@@ -61,7 +65,7 @@ class HobokenCachingMixin(object):
         def etag_matches(value):
             if value is MatchAnyEtag:
                 return not new_resource
-            return self.response.etag in value
+            return etag in value
 
         if self.response.is_success or self.response.status_int == 304:
             if (self.request.if_none_match is not MatchNoneEtag and
@@ -81,17 +85,17 @@ class HobokenCachingMixin(object):
     def set_expires(self, amount, **kwargs):
         if isinstance(amount, int):
             max_age = amount
-            amount = datetime.datetime.now() + datetime.timedelta(seconds=amount)
+            amount = (_now() +
+                        datetime.timedelta(seconds=amount))
         else:
-            now = datetime.datetime.now()
+            now = _now()
             if now >= amount:
                 # Do nothing, this expired already.
                 max_age = 0
             else:
                 max_age = (amount - now).seconds
 
-        kwargs['max_age'] = max_age
-        self.set_cache_control(**kwargs)
+        self.response.cache_control.max_age = max_age
         self.response.expires = amount
 
 
@@ -102,8 +106,8 @@ class HobokenRedirectMixin(object):
         referred to this one.
         TODO: maybe emit HTML to redirect back if no referrer?
         """
-        if self.request.referer is not None and self.request.referer != '':
-            self.redirect(location=self.request.referer, *args, **kwargs)
+        if self.request.headers.get('Referer'):
+            self.redirect(location=self.request.headers['Referer'], *args, **kwargs)
         # TODO: do we want to do this?
         # elif 'text/html' in self.request.accept:
         #     body_text = """

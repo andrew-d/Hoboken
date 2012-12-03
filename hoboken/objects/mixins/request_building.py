@@ -12,7 +12,6 @@ class WSGIRequestBuilderMixin(object):
     """
     # Set our response class to None by default - it gets filled in later
     # to avoid circular imports.
-    # TODO: set this!
     ResponseClass = None
 
     def __init__(self, *args, **kwargs):

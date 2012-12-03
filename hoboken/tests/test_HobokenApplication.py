@@ -9,8 +9,8 @@ import os
 import re
 import sys
 import unittest
-from webob import Request
 import mock
+from hoboken.application import Request
 
 
 class TestHasHTTPMethods(HobokenTestCase):
@@ -106,12 +106,12 @@ class TestBodyReturnValues(HobokenTestCase):
             return b'f\xc3\xb8\xc3\xb8'.decode('utf-8')
 
     def test_bytes(self):
-        req = Request.blank('/bytes')
+        req = Request.build('/bytes')
         resp = req.get_response(self.app)
         self.assert_equal(resp.body, b'byte string')
 
     def test_bytes(self):
-        req = Request.blank('/string')
+        req = Request.build('/string')
         resp = req.get_response(self.app)
         self.assert_equal(resp.text, b'f\xc3\xb8\xc3\xb8'.decode('utf-8'))
 
@@ -136,7 +136,7 @@ class TestHaltHelper(HobokenTestCase):
         """Helper function to set the halt value and assert"""
         self.halt_code = code
         self.halt_body = body
-        req = Request.blank(path)
+        req = Request.build(path)
         resp = req.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, body)
@@ -204,29 +204,29 @@ class TestRedirectHelper(HobokenTestCase):
         self.app.config.debug = True
 
     def test_redirect(self):
-        req = Request.blank("/upload", method='POST')
+        req = Request.build("/upload", method='POST')
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 302)
-        self.assert_true(resp.location.endswith('/uploaded'))
+        self.assert_true(resp.headers['Location'].endswith('/uploaded'))
 
     def test_redirect_code(self):
         for code in [301, 302, 303]:
             self.redirect_code = code
 
-            req = Request.blank("/redirect")
+            req = Request.build("/redirect")
             resp = req.get_response(self.app)
 
             self.assert_equal(resp.status_int, code)
-            self.assert_true(resp.location.endswith('/foo'))
+            self.assert_true(resp.headers['Location'].endswith('/foo'))
 
     def test_redirect_with_non_get(self):
-        req = Request.blank("/upload", method='POST')
+        req = Request.build("/upload", method='POST')
         req.http_version = "HTTP/1.1"
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 303)
-        self.assert_true(resp.location.endswith('/uploaded'))
+        self.assert_true(resp.headers['Location'].endswith('/uploaded'))
 
 
 class TestRoute(HobokenTestCase):
@@ -255,7 +255,7 @@ class TestMatcherTypes(HobokenTestCase):
             self.assert_equal(name, 'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
@@ -269,7 +269,7 @@ class TestMatcherTypes(HobokenTestCase):
             self.assert_equal(second, 'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
@@ -283,7 +283,7 @@ class TestMatcherTypes(HobokenTestCase):
             self.assert_equal(arg2, 'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
@@ -297,7 +297,7 @@ class TestMatcherTypes(HobokenTestCase):
             self.assert_equal(arg, 'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
@@ -312,7 +312,7 @@ class TestMatcherTypes(HobokenTestCase):
             self.assert_equal(val, 'kwarg')
             return b'body'
 
-        r = Request.blank("/")
+        r = Request.build("/")
         resp = r.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(m.match.call_count, 1)
@@ -355,7 +355,7 @@ class TestMiscellaneousMethods(HobokenTestCase):
         def index():
             return b'foo'
 
-        r = Request.blank("/")
+        r = Request.build("/")
         r.method = 'OTHER'
         resp = r.get_response(self.app)
 
@@ -397,12 +397,12 @@ class TestConfig(HobokenTestCase):
         def two():
             self.assert_true('foo' not in app.g)
 
-        r = Request.blank("/one")
+        r = Request.build("/one")
         resp = r.get_response(app)
 
         self.assert_true('foo' not in app.g)
 
-        r = Request.blank("/two")
+        r = Request.build("/two")
         resp = r.get_response(app)
 
 

@@ -137,7 +137,17 @@ class TestCallApplication(BaseTestCase):
         it.close.assert_called()
 
     def test_get_response(self):
-        pass
+        self.req = self.Type.build('/')
+        self.return_val = '200 OK'
+        self.return_headers = []
+        self.return_iter = []
+        self.req.ResponseClass = MagicMock
+        resp = self.req.get_response(self.app)
+
+        self.assert_true(isinstance(resp, MagicMock))
+        self.assert_equal(resp.status, self.return_val)
+        self.assert_equal(resp.headers, self.return_headers)
+        self.assert_equal(resp.response_iter, self.return_iter)
 
 
 def suite():

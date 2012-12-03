@@ -2,6 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 import time
+import calendar
 from datetime import (
     date,
     datetime,
@@ -64,7 +65,7 @@ class WSGIDateMixin(object):
             tup = tup[:9] + (0,)
 
         timestamp = mktime_tz(tup)
-        return datetime.fromtimestamp(timestamp)
+        return datetime.utcfromtimestamp(timestamp)
 
     def _serialize_date(self, value):
         """

@@ -8,12 +8,12 @@ import unittest
 class TestRequest(HobokenTestCase):
     def test_is_safe(self):
         for method in ['GET', 'HEAD', 'OPTIONS', 'TRACE']:
-            r = Request.blank("/", method=method)
+            r = Request.build("/", method=method)
             self.assert_true(r.is_safe)
 
     def test_is_idempotent(self):
         for method in ['PUT', 'DELETE']:
-            r = Request.blank("/", method=method)
+            r = Request.build("/", method=method)
             self.assert_true(r.is_idempotent)
 
 

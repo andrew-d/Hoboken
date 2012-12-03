@@ -3,8 +3,8 @@ import os
 import yaml
 import unittest
 from .helpers import parametrize, parameters
-from webob import Request
 
+from hoboken.application import Request
 Matcher = hoboken.matchers.HobokenRouteMatcher
 
 
@@ -35,7 +35,7 @@ class TestHeadFallback(HobokenTestCase):
             return 'get body'
 
     def test_HEAD_fallback(self):
-        r = Request.blank('/')
+        r = Request.build('/')
         r.method = "HEAD"
         resp = r.get_response(self.app)
 

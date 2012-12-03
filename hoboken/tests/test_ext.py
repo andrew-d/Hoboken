@@ -4,7 +4,6 @@ from . import BaseTestCase, skip_if, is_python3
 from ..ext import HobokenJsonApplication
 import unittest
 from mock import patch, MagicMock
-from webob import Request
 
 class TestHobokenJsonApplication(BaseTestCase):
     def setup(self):
