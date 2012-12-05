@@ -430,6 +430,12 @@ class TestQuotedPrintableDecoder(BaseTestCase):
 
         self.assert_data(b'foobar')
 
+        self.d.write(b'foo=')
+        self.d.write(b'\r\nbar')
+        self.d.write(b'')
+
+        self.assert_data(b'foobar')
+
 
 class TestRequestBodyMixin(BaseTestCase):
     def setup(self):

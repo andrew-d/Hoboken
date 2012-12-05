@@ -243,6 +243,15 @@ class MultipartPart(object):
         return ctype
 
     @property
+    def field_name(self):
+        val = self.headers.get('Content-Disposition')
+        if val is None:
+            return None
+
+        disp, options = parse_options_header(val)
+        return options.get('name')
+
+    @property
     def file_name(self):
         val = self.headers.get('Content-Disposition')
         if val is None:
@@ -932,7 +941,7 @@ class FormParser(object):
         self.config.update(config)
 
         # Depending on the Content-Type, we instantiate the correct parser.
-        if content_type == 'application/octet-stream':
+        if content_type == b'application/octet-stream':
             def on_start():
                 pass
 
@@ -951,8 +960,8 @@ class FormParser(object):
             # Instantiate an octet-stream parser
             parser = OctetStreamParser(callbacks)
 
-        elif (content_type == 'application/x-www-form-urlencoded' or
-              content_type == 'application/x-url-encoded'):
+        elif (content_type == b'application/x-www-form-urlencoded' or
+              content_type == b'application/x-url-encoded'):
 
             name_buffer = []
             data_buffer = []
@@ -991,7 +1000,7 @@ class FormParser(object):
                         max_size=self.config['MAX_FIELD_SIZE']
                      )
 
-        elif content_type == 'multipart/form-data':
+        elif content_type == b'multipart/form-data':
             if boundary is None:
                 raise FormParserError("No boundary given")
 
@@ -1030,15 +1039,15 @@ class FormParser(object):
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                if (part.transfer_encoding == 'binary' or
-                    part.transfer_encoding == '8bit' or
-                    part.transfer_encoding == '7bit'):
+                if (part.transfer_encoding == b'binary' or
+                    part.transfer_encoding == b'8bit' or
+                    part.transfer_encoding == b'7bit'):
                     writer = part
 
-                elif part.transfer_encoding == 'base64':
+                elif part.transfer_encoding == b'base64':
                     writer = Base64Decoder(part)
 
-                elif part.transfer_encoding == 'quoted-printable':
+                elif part.transfer_encoding == b'quoted-printable':
                     writer = QuotedPrintableDecoder(part)
 
                 else:
@@ -1144,7 +1153,7 @@ class RequestBodyMixin(object):
     #     we have a field/file that is finished.
 
     # TODO: do we make this a property?
-    def form_parser(self):
+    def form_parser(self, on_field, on_file):
         # Before we do anything else, we need to parse our Content-Type and
         # Content-Length headers.
         content_length = int(self.headers.get('Content-Length', -1))
@@ -1161,31 +1170,40 @@ class RequestBodyMixin(object):
 
         # Instantiate a form parser.
         form_parser = FormParser(content_type,
+                                 on_field,
+                                 on_file,
                                  boundary=boundary,
                                  content_length=content_length,
                                  file_name=file_name,
                                  config=self.__form_config)
 
-        # TODO: feed the parser data somehow
-
         # Return our parser.
         return form_parser
 
     def parse_body(self):
-        # Get a form parser.
-        fp = self.form_parser()
-
         fields = {}
         files = {}
 
-        # For each field/file.
-        for type, data in fp:
-            if type == 'field':
-                fields[data.name] = data
-            elif type == 'file':
-                files[data.name] = data
-            else:
-                pass
+        def on_field(self, field):
+            fields[field.name] = field
+
+        def on_file(self, file):
+            pass
+
+        # Get a form parser.
+        fp = self.form_parser(on_field, on_file)
+
+        # Get blocksize.
+        blocksize = 1 * 1024 * 1024
+        if hasattr(self, 'config'):
+            blocksize = self.config.get('INPUT_BLOCKSIZE', blocksize)
+
+        # Feed with data.
+        while True:
+            data = self.input_stream.read(blocksize)
+            fp.write(data)
+            if len(data) == 0:
+                break
 
         self.__fields = fields
         self.__files = files
