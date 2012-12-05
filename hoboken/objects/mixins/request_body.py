@@ -302,6 +302,9 @@ class BaseParser(object):
         else:
             self.callbacks[name] = new_func
 
+    def close(self):
+        pass                # pragma: no cover
+
 
 class OctetStreamParser(BaseParser):
     """
@@ -320,13 +323,12 @@ class OctetStreamParser(BaseParser):
             self.callback('start')
             self._started = True
 
-        # Emit an end callback if we're done.
-        if len(data) == 0:
-            self.callback('end')
-            return 0
-
         # Just call the data callback as-is.
-        self.callback('data', data, 0, len(data))
+        if len(data) > 0:
+            self.callback('data', data, 0, len(data))
+
+    def close(self):
+        self.callback('end')
 
 
 class QuerystringParser(BaseParser):
@@ -356,13 +358,6 @@ class QuerystringParser(BaseParser):
 
     def write(self, data):
         state = self.state
-
-        # If we're called with an empty data string, we treat it as the end, in
-        # which case we might need to emit an "end" callback.
-        if len(data) == 0:
-            if state == STATE_FIELD_DATA:
-                self.callback('field_end')
-            return 0
 
         i = 0
         while i < len(data):
@@ -430,6 +425,11 @@ class QuerystringParser(BaseParser):
             i += 1
 
         self.state = state
+
+    def close(self):
+        # If we're currently in the middle of a field, we finish it.
+        if self.state == STATE_FIELD_DATA:
+            self.callback('field_end')
 
 
 class MultipartParser(BaseParser):
@@ -846,6 +846,11 @@ class MultipartParser(BaseParser):
         # all of it.
         return len(data)
 
+    def close(self):
+        # TODO: verify that we're inthe state STATE_END, otherwise throw an
+        # error or otherwise state that we're not finished parsing.
+        pass
+
 
 class Base64Decoder(object):
     def __init__(self, underlying):
@@ -853,10 +858,6 @@ class Base64Decoder(object):
         self.underlying = underlying
 
     def write(self, data):
-        # Just pass through empty writes.
-        if len(data) == 0:
-            return self.underlying.write(data)
-
         # Prepend any cache info to our data.
         if len(self.cache) > 0:
             data = self.cache + data
@@ -880,6 +881,10 @@ class Base64Decoder(object):
         # Return the length of the data to indicate no error.
         return len(data)
 
+    def close(self):
+        if hasattr(self.underlying, 'close'):
+            self.underlying.close()
+
 
 class QuotedPrintableDecoder(object):
     def __init__(self, underlying):
@@ -887,15 +892,6 @@ class QuotedPrintableDecoder(object):
         self.underlying = underlying
 
     def write(self, data):
-        # Just pass through empty writes.
-        if len(data) == 0:
-            # If we have a cache, write and then remove it.
-            if len(self.cache) > 0:
-                self.underlying.write(binascii.a2b_qp(self.cache))
-                self.cache = b''
-
-            return self.underlying.write(data)
-
         # Prepend any cache info to our data.
         if len(self.cache) > 0:
             data = self.cache + data
@@ -912,6 +908,15 @@ class QuotedPrintableDecoder(object):
         # Save remaining in cache.
         self.cache = rest
         return len(data)
+
+    def close(self):
+        # If we have a cache, write and then remove it.
+        if len(self.cache) > 0:
+            self.underlying.write(binascii.a2b_qp(self.cache))
+            self.cache = b''
+
+        # Close our underlying stream.
+        self.underlying.close()
 
 
 class FormParser(object):
@@ -931,6 +936,7 @@ class FormParser(object):
         self.content_length = content_length
         self.boundary = boundary
         self.bytes_received = 0
+        self.parser = None
 
         # Save callbacks.
         self.on_field = on_field
@@ -1089,6 +1095,10 @@ class FormParser(object):
         # TODO: check the parser's return value for errors?
         return self.parser.write(data)
 
+    def close(self):
+        if self.parser is not None:
+            self.parser.close()
+
 
 class RequestBodyMixin(object):
     def __init__(self, *args, **kwargs):
@@ -1190,20 +1200,23 @@ class RequestBodyMixin(object):
         def on_file(self, file):
             pass
 
-        # Get a form parser.
-        fp = self.form_parser(on_field, on_file)
-
         # Get blocksize.
         blocksize = 1 * 1024 * 1024
         if hasattr(self, 'config'):
             blocksize = self.config.get('INPUT_BLOCKSIZE', blocksize)
 
+        # Get a form parser.
+        fp = self.form_parser(on_field, on_file)
+
         # Feed with data.
-        while True:
-            data = self.input_stream.read(blocksize)
-            fp.write(data)
-            if len(data) == 0:
-                break
+        try:
+            while True:
+                data = self.input_stream.read(blocksize)
+                fp.write(data)
+                if len(data) == 0:
+                    break
+        finally:
+            fp.close()
 
         self.__fields = fields
         self.__files = files

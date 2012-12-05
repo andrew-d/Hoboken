@@ -174,6 +174,9 @@ class TestQuerystringParser(BaseTestCase):
         self.f.append(val)
 
     def assert_fields(self, *args, **kwargs):
+        if kwargs.pop('close', True):
+            self.p.close()
+
         self.assert_equal(self.f, list(args))
         if kwargs.get('reset', True):
             self.f = []
@@ -209,25 +212,21 @@ class TestQuerystringParser(BaseTestCase):
 
     def test_simple_querystring(self):
         self.p.write(b'foo=bar')
-        self.p.write(b'')
 
         self.assert_fields((b'foo', b'bar'))
 
     def test_querystring_blank_beginning(self):
         self.p.write(b'&foo=bar')
-        self.p.write(b'')
 
         self.assert_fields((b'foo', b'bar'))
 
     def test_querystring_blank_end(self):
         self.p.write(b'foo=bar&')
-        self.p.write(b'')
 
         self.assert_fields((b'foo', b'bar'))
 
     def test_multiple_querystring(self):
         self.p.write(b'foo=bar&asdf=baz')
-        self.p.write(b'')
 
         self.assert_fields(
             (b'foo', b'bar'),
@@ -238,38 +237,37 @@ class TestQuerystringParser(BaseTestCase):
         self.p.write(b'foo=bar&')
         self.assert_fields(
             (b'foo', b'bar'),
+            close=False
         )
 
         self.p.write(b'asdf=baz')
-        self.p.write(b'')
         self.assert_fields(
             (b'asdf', b'baz')
         )
 
     def test_streaming_break(self):
         self.p.write(b'foo=one')
-        self.assert_fields()
+        self.assert_fields(close=False)
 
         self.p.write(b'two')
-        self.assert_fields()
+        self.assert_fields(close=False)
 
         self.p.write(b'three')
-        self.assert_fields()
+        self.assert_fields(close=False)
 
         self.p.write(b'&asd')
         self.assert_fields(
-            (b'foo', b'onetwothree')
+            (b'foo', b'onetwothree'),
+            close=False
         )
 
         self.p.write(b'f=baz')
-        self.p.write(b'')
         self.assert_fields(
             (b'asdf', b'baz')
         )
 
     def test_semicolon_seperator(self):
         self.p.write(b'foo=bar;asdf=baz')
-        self.p.write(b'')
 
         self.assert_fields(
             (b'foo', b'bar'),
@@ -302,7 +300,7 @@ class TestOctetStreamParser(BaseTestCase):
 
         self.p = OctetStreamParser(callbacks)
 
-    def assert_data(self, data):
+    def assert_data(self, data, close=True):
         self.assert_equal(b''.join(self.d), data)
         self.d = []
 
@@ -329,26 +327,49 @@ class TestOctetStreamParser(BaseTestCase):
 
         # Finalize, and check
         self.assert_finished(False)
-        self.p.write(b'')
+        self.p.close()
         self.assert_finished()
 
     def test_multiple_chunks(self):
         self.p.write(b'foo')
         self.p.write(b'bar')
         self.p.write(b'baz')
-        self.p.write(b'')
+        self.p.close()
 
         self.assert_data(b'foobarbaz')
         self.assert_finished()
 
 
+class CatchClose(object):
+    def __init__(self, obj):
+        self.o = obj
+
+    def write(self, *args, **kwargs):
+        return self.o.write(*args, **kwargs)
+
+    def read(self, *args, **kwargs):
+        return self.o.read(*args, **kwargs)
+
+    def seek(self, *args, **kwargs):
+        return self.o.seek(*args, **kwargs)
+
+    def truncate(self, *args, **kwargs):
+        return self.o.truncate(*args, **kwargs)
+
+    def close(self):
+        pass
+
+
 class TestBase64Decoder(BaseTestCase):
     # Note: base64('foobar') == 'Zm9vYmFy'
     def setup(self):
-        self.f = BytesIO()
+        self.f = CatchClose(BytesIO())
         self.d = Base64Decoder(self.f)
 
-    def assert_data(self, data):
+    def assert_data(self, data, close=True):
+        if close:
+            self.d.close()
+
         self.f.seek(0)
         self.assert_equal(self.f.read(), data)
         self.f.seek(0)
@@ -368,6 +389,7 @@ class TestBase64Decoder(BaseTestCase):
         for i in range(1, 4):
             first, second = buff[:i], buff[i:]
 
+            self.setup()
             self.d.write(first)
             self.d.write(second)
             self.assert_data(b'foo')
@@ -377,6 +399,7 @@ class TestBase64Decoder(BaseTestCase):
         for i in range(5, 8):
             first, second = buff[:i], buff[i:]
 
+            self.setup()
             self.d.write(first)
             self.d.write(second)
             self.assert_data(b'foobar')
@@ -384,10 +407,13 @@ class TestBase64Decoder(BaseTestCase):
 
 class TestQuotedPrintableDecoder(BaseTestCase):
     def setup(self):
-        self.f = BytesIO()
+        self.f = CatchClose(BytesIO())
         self.d = QuotedPrintableDecoder(self.f)
 
-    def assert_data(self, data):
+    def assert_data(self, data, close=True):
+        if close:
+            self.d.close()
+
         self.f.seek(0)
         self.assert_equal(self.f.read(), data)
         self.f.seek(0)
@@ -395,45 +421,33 @@ class TestQuotedPrintableDecoder(BaseTestCase):
 
     def test_simple(self):
         self.d.write(b'foobar')
-        self.d.write(b'')
-
         self.assert_data(b'foobar')
 
     def test_with_escape(self):
         self.d.write(b'foo=3Dbar')
-        self.d.write(b'')
-
         self.assert_data(b'foo=bar')
 
     def test_with_newline_escape(self):
         self.d.write(b'foo=\r\nbar')
-        self.d.write(b'')
-
         self.assert_data(b'foobar')
 
+    def test_with_only_newline_escape(self):
         self.d.write(b'foo=\nbar')
-        self.d.write(b'')
-
         self.assert_data(b'foobar')
 
     def test_with_split_escape(self):
         self.d.write(b'foo=3')
         self.d.write(b'Dbar')
-        self.d.write(b'')
-
         self.assert_data(b'foo=bar')
 
-    def test_with_split_newline_escape(self):
+    def test_with_split_newline_escape_1(self):
         self.d.write(b'foo=\r')
         self.d.write(b'\nbar')
-        self.d.write(b'')
-
         self.assert_data(b'foobar')
 
+    def test_with_split_newline_escape_2(self):
         self.d.write(b'foo=')
         self.d.write(b'\r\nbar')
-        self.d.write(b'')
-
         self.assert_data(b'foobar')
 
 
