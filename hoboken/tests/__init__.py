@@ -77,7 +77,7 @@ def suite():
     from .test_request_response import suite as suite_7
     from .test_ext import suite as suite_8
 
-    from .test_objects import suite as suite_objects
+    from .objects import suite as suite_objects
 
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
