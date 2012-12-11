@@ -20,10 +20,10 @@ class TestFile(BaseTestCase):
     def setup(self):
         self.c = {}
         self.d = tempfile.mkdtemp()
-        self.f = File('foo.txt', self.c)
+        self.f = File('foo.txt', config=self.c)
 
     def assert_data(self, data):
-        f = self.f.fileobj
+        f = self.f.file_object
         f.seek(0)
         self.assert_equal(f.read(), data)
         f.seek(0)
@@ -464,14 +464,25 @@ for f in os.listdir(http_tests_dir):
 
 
 @parametrize
-class TestMultipartParser(BaseTestCase):
+class TestFormParser(BaseTestCase):
     def make(self, param):
         boundary = param['result']['boundary']
+
+        self.ended = False
         self.files = []
         self.fields = []
 
-        self.callbacks = {}
-        self.p = MultipartParser(boundary, self.callbacks)
+        def on_field(f):
+            self.fields.append(f)
+
+        def on_file(f):
+            self.files.append(f)
+
+        def on_end():
+            self.ended = True
+
+        # Get a form-parser instance.
+        self.f = FormParser('multipart/form-data', on_field, on_file, on_end, boundary=boundary)
 
     @parameters(http_tests,
                 name_func=lambda idx, param: 'test_' + param['name'])
@@ -480,12 +491,36 @@ class TestMultipartParser(BaseTestCase):
         self.make(param)
 
         # Now, we feed the parser with data.
-        # something about param['test']
+        processed = self.f.write(param['test'])
+        self.assert_equal(processed, len(param['test']))
+        self.f.finalize()
+
+        # print(repr(param))
+        print("")
+        print(repr(self.fields))
+        print(repr(self.files))
 
         # Assert that the parser gave us the appropriate fields/files.
         for e in param['result']['expected']:
             # something with e['type'], e['data'], and e['name']
-            pass
+            if e['type'] == 'field':
+                # Find this field in our fields list.
+                found = None
+                for f in self.fields:
+                    if f.field_name == e['name']:
+                        found = f
+                        break
+
+                # Assert that it exists and matches.
+                self.assert_true(found is not None)
+                self.assert_equal(e['data'], found.value)
+
+                # Remove it for future iterations.
+                self.fields.remove(found)
+            elif e['type'] == 'file':
+                pass
+            else:
+                assert False
 
 
 class TestRequestBodyMixin(BaseTestCase):
@@ -501,6 +536,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))
     suite.addTest(unittest.makeSuite(TestBase64Decoder))
     suite.addTest(unittest.makeSuite(TestQuotedPrintableDecoder))
+    suite.addTest(unittest.makeSuite(TestFormParser))
     suite.addTest(unittest.makeSuite(TestRequestBodyMixin))
 
     return suite

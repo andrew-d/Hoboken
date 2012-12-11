@@ -124,8 +124,49 @@ def parse_options_header(value):
     return ctype, options
 
 
-# Simple container for a (field_name, value) tuple.
-Field = namedtuple('Field', ['name', 'value'])
+class Field(object):
+    """
+    Object that represents a form field.  You can subclass this to handle the
+    written data in an alternate method.
+    """
+    def __init__(self, name):
+        self._name = name
+        self._value = []
+
+        # We cache the joined version of _value for speed.
+        self._cache = None
+
+    def write(self, data):
+        return self.on_data(data)
+
+    def on_data(self, data):
+        self._value.append(data)
+        self._cache = None
+        return len(data)
+
+    def on_end(self):
+        self._cache = b''.join(self._value)
+
+    def finalize(self):
+        self.on_end()
+
+    def close(self):
+        # Free our value array.
+        if self._cache is None:
+            self._cache = b''.join(self._value)
+
+        del self.value
+
+    @property
+    def field_name(self):
+        return self._name
+
+    @property
+    def value(self):
+        if self._cache is None:
+            self._cache = b''.join(self._value)
+
+        return self._cache
 
 
 class File(object):
@@ -134,71 +175,96 @@ class File(object):
     either an in-memory file or a temporary file on-disk, if the optional
     threshold is passed.
     """
-    def __init__(self, filename, config={}):
-        self.config = config
-        self.in_memory = True
-        self.bytes_written = 0
-        self.fileobj = BytesIO()
+    def __init__(self, file_name, field_name=None, config={}):
+        # Save configuration, set other variables default.
+        self._config = config
+        self._in_memory = True
+        self._bytes_written = 0
+        self._fileobj = BytesIO()
 
-        # Our file name is None by default.
-        self.file_name = None
+        # Save the provided field/file name.
+        self._field_name = field_name
+        self._file_name = file_name
+
+        # Our actual file name is None by default, since, depending on our
+        # config, we may not actually use the provided name.
+        self._actual_file_name = None
 
         # Split the extension from the filename.
-        fname, ext = os.path.splitext(filename)
-        self._filename = fname
-        self._ext = ext or '.dat'
+        base, ext = os.path.splitext(file_name)
+        self._file_base = base
+        self._ext = ext
 
-    def write(self, data):
-        bwritten = self.fileobj.write(data)
+    @property
+    def field_name(self):
+        """
+        The form field associated with this file.  May be None if there isn't
+        one, for example when we have an application/octet-stream upload.
+        """
+        return self._field_name
 
-        # If the bytes written isn't the same as the length, just return.
-        if bwritten != len(data):
-            return bwritten
+    @property
+    def file_name(self):
+        """
+        The file name that this file is saved as.  Will return None if it's not
+        currently saved on disk.
+        """
+        return self._actual_file_name
 
-        # Keep track of how many bytes we've written.
-        self.bytes_written += bwritten
+    @property
+    def file_object(self):
+        """
+        The file object that we're currently writing to.
+        """
+        return self._fileobj
 
-        # If we're in-memory and are over our limit, we create a file.
-        if (self.in_memory and
-            self.config.get('MAX_MEMORY_FILE_SIZE') is not None and
-            self.bytes_written > self.config.get('MAX_MEMORY_FILE_SIZE')):
-            # Go back to the start of our file.
-            self.fileobj.seek(0)
+    @property
+    def in_memory(self):
+        return self._in_memory
 
-            # Open a new file.
-            new_file = self.get_disk_file()
-            # TODO: check for errors here.
+    def flush_to_disk(self):
+        """
+        If the file is already on-disk, do nothing.  Otherwise, copy from the
+        in-memory buffer to a disk file, and then reassign our internal file
+        object to this new disk file.
+        """
+        if not self._in_memory:
+            return
 
-            # Copy the file objects.
-            shutil.copyfileobj(self.fileobj, new_file)
+        # Go back to the start of our file.
+        self._fileobj.seek(0)
 
-            # Seek to the new position in our new file.
-            new_file.seek(self.bytes_written)
+        # Open a new file.
+        new_file = self.get_disk_file()
+        # TODO: check for errors here.
 
-            # Reassign the fileobject.
-            old_fileobj = self.fileobj
-            self.fileobj = new_file
+        # Copy the file objects.
+        shutil.copyfileobj(self._fileobj, new_file)
 
-            # We're no longer in memory.
-            self.in_memory = False
+        # Seek to the new position in our new file.
+        new_file.seek(self._bytes_written)
 
-            # Close the old file object.
-            old_fileobj.close()
+        # Reassign the fileobject.
+        old_fileobj = self._fileobj
+        self._fileobj = new_file
 
-        # Return the number of bytes written.
-        return bwritten
+        # We're no longer in memory.
+        self._in_memory = False
+
+        # Close the old file object.
+        old_fileobj.close()
 
     def get_disk_file(self):
         """
         This function is responsible for getting a file object on-disk for us.
         """
-        file_dir = self.config.get('UPLOAD_DIR')
-        keep_filename = self.config.get('UPLOAD_KEEP_FILENAME', False)
-        keep_extensions = self.config.get('UPLOAD_KEEP_EXTENSIONS', False)
+        file_dir = self._config.get('UPLOAD_DIR')
+        keep_filename = self._config.get('UPLOAD_KEEP_FILENAME', False)
+        keep_extensions = self._config.get('UPLOAD_KEEP_EXTENSIONS', False)
 
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
-            fname = self._filename
+            fname = self._file_base
             if keep_extensions:
                 fname = fname + self._ext
 
@@ -219,51 +285,39 @@ class File(object):
             tmp_file = tempfile.NamedTemporaryFile(**options)
             fname = tmp_file.name
 
-        self.file_name = fname
+        self._actual_file_name = fname
         return tmp_file
 
+    def write(self, data):
+        return self.on_data(data)
+
+    def on_data(self, data):
+        bwritten = self._fileobj.write(data)
+
+        # If the bytes written isn't the same as the length, just return.
+        if bwritten != len(data):
+            return bwritten
+
+        # Keep track of how many bytes we've written.
+        self._bytes_written += bwritten
+
+        # If we're in-memory and are over our limit, we create a file.
+        if (self._in_memory and
+            self._config.get('MAX_MEMORY_FILE_SIZE') is not None and
+            self._bytes_written > self._config.get('MAX_MEMORY_FILE_SIZE')):
+            self.flush_to_disk()
+
+        # Return the number of bytes written.
+        return bwritten
+
+    def on_end(self):
+        pass
+
+    def finalize(self):
+        self.on_end()
+
     def close(self):
-        self.fileobj.close()
-
-
-class MultipartPart(object):
-    """
-    This class encapsulates a portion of a multipart message.
-    """
-    def __init__(self):
-        self.headers = {}
-
-    def add_header(self, header, val):
-        self.headers[header] = val
-
-    @property
-    def content_type(self):
-        val = self.headers.get('Content-Type', 'text/plain')
-        ctype, options = parse_options_header(val)
-        return ctype
-
-    @property
-    def field_name(self):
-        val = self.headers.get('Content-Disposition')
-        if val is None:
-            return None
-
-        disp, options = parse_options_header(val)
-        return options.get('name')
-
-    @property
-    def file_name(self):
-        val = self.headers.get('Content-Disposition')
-        if val is None:
-            return None
-
-        disp, options = parse_options_header(val)
-        return options.get('filename')
-
-    @property
-    def transfer_encoding(self):
-        # According to RFC1341, the default is 7bit.
-        return self.headers.get('Content-Transfer-Encoding', '7bit')
+        self._fileobj.close()
 
 
 class BaseParser(object):
@@ -286,7 +340,7 @@ class BaseParser(object):
                 return
 
             # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
-            #           end, data[start:end]))
+            #          end, data[start:end]))
             func(data, start, end)
         else:
             # print("Calling %s with no data" % ('on_' + name,))
@@ -535,6 +589,7 @@ class MultipartParser(BaseParser):
             # Get our current character and increment the index.
             c = data[i]
 
+            # print("[!] In state %d with char %r" % (state, c))
             if state == STATE_START:
                 # Skip leading newlines
                 if c == CR or c == LF:
@@ -650,7 +705,7 @@ class MultipartParser(BaseParser):
                 if c == CR:
                     data_callback('header_value')
                     self.callback('header_end')
-                    state == STATE_HEADER_VALUE_ALMOST_DONE
+                    state = STATE_HEADER_VALUE_ALMOST_DONE
 
             elif state == STATE_HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
@@ -674,7 +729,7 @@ class MultipartParser(BaseParser):
 
             elif state == STATE_PART_DATA_START:
                 # Mark the start of our part data.
-                mark('part_data')
+                set_mark('part_data')
 
                 # Start processing part data, including this character.
                 state = STATE_PART_DATA
@@ -810,7 +865,7 @@ class MultipartParser(BaseParser):
                     prev_index = 0
 
                     # Re-set our mark for part data.
-                    mark('part_data')
+                    set_mark('part_data')
 
                     # Re-consider the current character, since this could be
                     # the start of the boundary itself.
@@ -942,8 +997,10 @@ class FormParser(object):
         'UPLOAD_KEEP_EXTENSIONS': False,
     }
 
-    def __init__(self, content_type, on_field, on_file, boundary=None,
-                 content_length=-1, file_name=None, config={}):
+    def __init__(self, content_type, on_field, on_file, on_end=None,
+                 boundary=None, content_length=-1, file_name=None,
+                 FileClass=File, FieldClass=Field, config={}):
+
         # Save variables.
         self.content_length = content_length
         self.boundary = boundary
@@ -953,6 +1010,11 @@ class FormParser(object):
         # Save callbacks.
         self.on_field = on_field
         self.on_file = on_file
+        self.on_end = on_end
+
+        # Save classes.
+        self.FileClass = File
+        self.FieldClass = Field
 
         # Set configuration options.
         self.config = self.DEFAULT_CONFIG.copy()
@@ -960,14 +1022,23 @@ class FormParser(object):
 
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == b'application/octet-stream':
+            f = None
+
             def on_start():
-                pass
+                f = FileClass(file_name, None)
 
             def on_data(data, start, end):
-                pass
+                f.write(data[start:end])
 
             def on_end():
-                pass
+                # Finalize the file itself.
+                f.finalize()
+
+                # Call our callback.
+                on_file(f)
+
+                # Call the on-end callback.
+                self.on_end()
 
             callbacks = {
                 'on_start': on_start,
@@ -982,7 +1053,7 @@ class FormParser(object):
               content_type == b'application/x-url-encoded'):
 
             name_buffer = []
-            data_buffer = []
+            f = None
 
             def on_field_start():
                 pass
@@ -991,18 +1062,15 @@ class FormParser(object):
                 name_buffer.append(data[start:end])
 
             def on_field_data(data, start, end):
-                data_buffer.append(data[start:end])
+                if f is None:
+                    f = FieldClass(b''.join(name_buffer))
+                    del name_buffer[:]
+                f.write(data[start:end])
 
             def on_field_end():
-                f = Field(
-                    name=b''.join(name_buffer),
-                    value=b''.join(data_buffer)
-                )
-
+                # Finalize and call callback.
+                f.finalize()
                 on_field(f)
-
-                del name_buffer[:]
-                del data_buffer[:]
 
             # Setup callbacks.
             callbacks = {
@@ -1022,16 +1090,21 @@ class FormParser(object):
             if boundary is None:
                 raise FormParserError("No boundary given")
 
-            part = None
-            writer = None
+            is_file = False
             header_name = []
             header_value = []
+            headers = {}
+
+            # No 'nonlocal' on Python 2 :-(
+            class vars(object):
+                f = None
+                writer = None
 
             def on_part_begin():
-                part = MultipartPart()
+                pass
 
             def on_part_data(data, start, end):
-                bytes_processed = writer.write(data[start:end])
+                bytes_processed = vars.writer.write(data[start:end])
                 if bytes_processed != (end - start):
                     # TODO: check error code here.
                     pass
@@ -1039,8 +1112,11 @@ class FormParser(object):
                 return bytes_processed
 
             def on_part_end():
-                # TODO: do something with our part.
-                pass
+                vars.f.finalize()
+                if is_file:
+                    on_file(vars.f)
+                else:
+                    on_field(vars.f)
 
             def on_header_field(data, start, end):
                 header_name.append(data[start:end])
@@ -1049,36 +1125,62 @@ class FormParser(object):
                 header_value.append(data[start:end])
 
             def on_header_end():
-                part.add_header(b''.join(header_name), b''.join(header_value))
+                headers[b''.join(header_name)] = b''.join(header_value)
                 del header_name[:]
                 del header_value[:]
 
             def on_headers_finished():
+                # Reset the 'is file' flag.
+                is_file = False
+
+                # Parse the content-disposition header.
+                # TODO: handle mixed case
+                content_disp = headers.get('Content-Disposition')
+                disp, options = parse_options_header(content_disp)
+
+                # Get the field and file name that we're uploading, to create
+                # our File() instance.
+                field_name = options.get('name')
+                file_name = options.get('filename')
+                # TODO: check for errors
+
+                # Create the proper class.
+                if disp == 'form-data':
+                    vars.f = FieldClass(field_name)
+                elif disp == 'attachment':
+                    vars.f = FileClass(file_name, field_name)
+                    is_file = True
+                else:
+                    # TODO: do what?
+                    pass
+
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                if (part.transfer_encoding == b'binary' or
-                    part.transfer_encoding == b'8bit' or
-                    part.transfer_encoding == b'7bit'):
-                    writer = part
+                transfer_encoding = headers.get('Content-Transfer-Encoding', '7bit')
+
+                if (transfer_encoding == b'binary' or
+                    transfer_encoding == b'8bit' or
+                    transfer_encoding == b'7bit'):
+                    vars.writer = vars.f
 
                 elif part.transfer_encoding == b'base64':
-                    writer = Base64Decoder(part)
+                    vars.writer = Base64Decoder(vars.f)
 
                 elif part.transfer_encoding == b'quoted-printable':
-                    writer = QuotedPrintableDecoder(part)
+                    vars.writer = QuotedPrintableDecoder(vars.f)
 
                 else:
                     # TODO: do we really want to raise an exception here?  Or
                     # should we just continue parsing?
                     raise FormParserError(
                         'Unknown Content-Transfer-Encoding "{0}"'.format(
-                            part.transfer_encoding
+                            transfer_encoding
                         )
                     )
 
-            def on_end(self):
-                pass
+            def on_end():
+                self.on_end()
 
             # These are our callbacks for the parser.
             callbacks = {
@@ -1108,11 +1210,11 @@ class FormParser(object):
         return self.parser.write(data)
 
     def finalize(self):
-        if self.parser is not None:
+        if self.parser is not None and hasattr(self.parser, 'finalize'):
             self.parser.finalize()
 
     def close(self):
-        if self.parser is not None:
+        if self.parser is not None and hasattr(self.parser, 'close'):
             self.parser.close()
 
 
@@ -1177,6 +1279,27 @@ class RequestBodyMixin(object):
     #     the data into our file, or save a field.
     #   - Form parser has callbacks on_field and on_file, which are called when
     #     we have a field/file that is finished.
+
+
+    # Total high-level:
+    #   - Form parser has callbacks for 'on_field' and 'on_file', which pass Field/File objects.
+    #   - Field/files are written to.  Can set callbacks on data, or by default we buffer a field and
+    #     write files to disk.
+    #   - Fields and files also have an on_end callback which will pass the final field or file.
+    #   - Summary:
+    #       - FormParser:
+    #           - on_field(field_object)
+    #           - on_file(file_object)
+    #           - on_end()
+    #       - Field:
+    #           - on_data(data)
+    #           - on_end()
+    #       - File:
+    #           - on_data(data)
+    #           - on_end()
+    #   - No callbacks for fields/files, but offer a parameter that lets us pass our own obj-type?
+    #
+    # Low-level: can instantiate the parser directly and consume output.
 
     # TODO: do we make this a property?
     def form_parser(self, on_field, on_file):
