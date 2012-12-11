@@ -174,8 +174,8 @@ class TestQuerystringParser(BaseTestCase):
         self.f.append(val)
 
     def assert_fields(self, *args, **kwargs):
-        if kwargs.pop('close', True):
-            self.p.close()
+        if kwargs.pop('finalize', True):
+            self.p.finalize()
 
         self.assert_equal(self.f, list(args))
         if kwargs.get('reset', True):
@@ -237,7 +237,7 @@ class TestQuerystringParser(BaseTestCase):
         self.p.write(b'foo=bar&')
         self.assert_fields(
             (b'foo', b'bar'),
-            close=False
+            finalize=False
         )
 
         self.p.write(b'asdf=baz')
@@ -247,18 +247,18 @@ class TestQuerystringParser(BaseTestCase):
 
     def test_streaming_break(self):
         self.p.write(b'foo=one')
-        self.assert_fields(close=False)
+        self.assert_fields(finalize=False)
 
         self.p.write(b'two')
-        self.assert_fields(close=False)
+        self.assert_fields(finalize=False)
 
         self.p.write(b'three')
-        self.assert_fields(close=False)
+        self.assert_fields(finalize=False)
 
         self.p.write(b'&asd')
         self.assert_fields(
             (b'foo', b'onetwothree'),
-            close=False
+            finalize=False
         )
 
         self.p.write(b'f=baz')
@@ -300,7 +300,7 @@ class TestOctetStreamParser(BaseTestCase):
 
         self.p = OctetStreamParser(callbacks)
 
-    def assert_data(self, data, close=True):
+    def assert_data(self, data, finalize=True):
         self.assert_equal(b''.join(self.d), data)
         self.d = []
 
@@ -327,48 +327,28 @@ class TestOctetStreamParser(BaseTestCase):
 
         # Finalize, and check
         self.assert_finished(False)
-        self.p.close()
+        self.p.finalize()
         self.assert_finished()
 
     def test_multiple_chunks(self):
         self.p.write(b'foo')
         self.p.write(b'bar')
         self.p.write(b'baz')
-        self.p.close()
+        self.p.finalize()
 
         self.assert_data(b'foobarbaz')
         self.assert_finished()
 
 
-class CatchClose(object):
-    def __init__(self, obj):
-        self.o = obj
-
-    def write(self, *args, **kwargs):
-        return self.o.write(*args, **kwargs)
-
-    def read(self, *args, **kwargs):
-        return self.o.read(*args, **kwargs)
-
-    def seek(self, *args, **kwargs):
-        return self.o.seek(*args, **kwargs)
-
-    def truncate(self, *args, **kwargs):
-        return self.o.truncate(*args, **kwargs)
-
-    def close(self):
-        pass
-
-
 class TestBase64Decoder(BaseTestCase):
     # Note: base64('foobar') == 'Zm9vYmFy'
     def setup(self):
-        self.f = CatchClose(BytesIO())
+        self.f = BytesIO()
         self.d = Base64Decoder(self.f)
 
-    def assert_data(self, data, close=True):
-        if close:
-            self.d.close()
+    def assert_data(self, data, finalize=True):
+        if finalize:
+            self.d.finalize()
 
         self.f.seek(0)
         self.assert_equal(self.f.read(), data)
@@ -407,12 +387,12 @@ class TestBase64Decoder(BaseTestCase):
 
 class TestQuotedPrintableDecoder(BaseTestCase):
     def setup(self):
-        self.f = CatchClose(BytesIO())
+        self.f = BytesIO()
         self.d = QuotedPrintableDecoder(self.f)
 
-    def assert_data(self, data, close=True):
-        if close:
-            self.d.close()
+    def assert_data(self, data, finalize=True):
+        if finalize:
+            self.d.finalize()
 
         self.f.seek(0)
         self.assert_equal(self.f.read(), data)

@@ -305,6 +305,9 @@ class BaseParser(object):
     def close(self):
         pass                # pragma: no cover
 
+    def finalize(self):
+        pass                # pragma: no cover
+
 
 class OctetStreamParser(BaseParser):
     """
@@ -327,7 +330,7 @@ class OctetStreamParser(BaseParser):
         if len(data) > 0:
             self.callback('data', data, 0, len(data))
 
-    def close(self):
+    def finalize(self):
         self.callback('end')
 
 
@@ -426,7 +429,7 @@ class QuerystringParser(BaseParser):
 
         self.state = state
 
-    def close(self):
+    def finalize(self):
         # If we're currently in the middle of a field, we finish it.
         if self.state == STATE_FIELD_DATA:
             self.callback('field_end')
@@ -846,7 +849,7 @@ class MultipartParser(BaseParser):
         # all of it.
         return len(data)
 
-    def close(self):
+    def finalize(self):
         # TODO: verify that we're inthe state STATE_END, otherwise throw an
         # error or otherwise state that we're not finished parsing.
         pass
@@ -885,6 +888,10 @@ class Base64Decoder(object):
         if hasattr(self.underlying, 'close'):
             self.underlying.close()
 
+    def finalize(self):
+        if hasattr(self.underlying, 'finalize'):
+            self.underlying.finalize()
+
 
 class QuotedPrintableDecoder(object):
     def __init__(self, underlying):
@@ -910,13 +917,18 @@ class QuotedPrintableDecoder(object):
         return len(data)
 
     def close(self):
+        if hasattr(self.underlying, 'close'):
+            self.underlying.close()
+
+    def finalize(self):
         # If we have a cache, write and then remove it.
         if len(self.cache) > 0:
             self.underlying.write(binascii.a2b_qp(self.cache))
             self.cache = b''
 
-        # Close our underlying stream.
-        self.underlying.close()
+        # Finalize our underlying stream.
+        if hasattr(self.underlying, 'finalize'):
+            self.underlying.finalize()
 
 
 class FormParser(object):
@@ -1095,6 +1107,10 @@ class FormParser(object):
         # TODO: check the parser's return value for errors?
         return self.parser.write(data)
 
+    def finalize(self):
+        if self.parser is not None:
+            self.parser.finalize()
+
     def close(self):
         if self.parser is not None:
             self.parser.close()
@@ -1215,6 +1231,7 @@ class RequestBodyMixin(object):
                 fp.write(data)
                 if len(data) == 0:
                     break
+            fp.finalize()
         finally:
             fp.close()
 
