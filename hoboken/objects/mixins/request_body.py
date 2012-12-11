@@ -1214,7 +1214,7 @@ class RequestBodyMixin(object):
             fields[field.name] = field
 
         def on_file(self, file):
-            pass
+            files[file.field_name] = file
 
         # Get blocksize.
         blocksize = 1 * 1024 * 1024

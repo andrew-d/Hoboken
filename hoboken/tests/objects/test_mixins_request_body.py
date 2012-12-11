@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from . import BaseTestCase, skip
+from . import BaseTestCase, skip, parametrize, parameters
 import os
+import glob
+import yaml
 import tempfile
 import unittest
 from io import BytesIO
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.request_body import *
+
+
+# Get the current directory for our later test cases.
+curr_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 class TestFile(BaseTestCase):
@@ -429,6 +435,57 @@ class TestQuotedPrintableDecoder(BaseTestCase):
         self.d.write(b'foo=')
         self.d.write(b'\r\nbar')
         self.assert_data(b'foobar')
+
+
+# Load our list of HTTP test cases.
+http_tests_dir = os.path.join(curr_dir, 'multipart_tests', 'http')
+
+# Read in all test cases and load them.
+http_tests = []
+for f in os.listdir(http_tests_dir):
+    # Only load the HTTP test cases.
+    fname, ext = os.path.splitext(f)
+    if ext == '.http':
+        # Get the YAML file and load it too.
+        yaml_file = os.path.join(http_tests_dir, fname + '.yaml')
+
+        # Load both.
+        with open(os.path.join(http_tests_dir, f), 'rb') as f:
+            test_data = f.read()
+
+        with open(yaml_file, 'rb') as f:
+            yaml_data = yaml.load(f)
+
+        http_tests.append({
+            'name': fname,
+            'test': test_data,
+            'result': yaml_data
+        })
+
+
+@parametrize
+class TestMultipartParser(BaseTestCase):
+    def make(self, param):
+        boundary = param['result']['boundary']
+        self.files = []
+        self.fields = []
+
+        self.callbacks = {}
+        self.p = MultipartParser(boundary, self.callbacks)
+
+    @parameters(http_tests,
+                name_func=lambda idx, param: 'test_' + param['name'])
+    def test_http(self, param):
+        # Firstly, create our parser with the given boundary.
+        self.make(param)
+
+        # Now, we feed the parser with data.
+        # something about param['test']
+
+        # Assert that the parser gave us the appropriate fields/files.
+        for e in param['result']['expected']:
+            # something with e['type'], e['data'], and e['name']
+            pass
 
 
 class TestRequestBodyMixin(BaseTestCase):
