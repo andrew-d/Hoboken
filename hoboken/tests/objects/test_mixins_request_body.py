@@ -10,6 +10,7 @@ from io import BytesIO
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.request_body import *
+from hoboken.six import binary_type, text_type
 
 
 # Get the current directory for our later test cases.
@@ -467,6 +468,8 @@ for f in os.listdir(http_tests_dir):
 class TestFormParser(BaseTestCase):
     def make(self, param):
         boundary = param['result']['boundary']
+        if isinstance(boundary, text_type):
+            boundary = boundary.encode('latin-1')
 
         self.ended = False
         self.files = []
@@ -482,7 +485,7 @@ class TestFormParser(BaseTestCase):
             self.ended = True
 
         # Get a form-parser instance.
-        self.f = FormParser('multipart/form-data', on_field, on_file, on_end, boundary=boundary)
+        self.f = FormParser(b'multipart/form-data', on_field, on_file, on_end, boundary=boundary)
 
     @parameters(http_tests,
                 name_func=lambda idx, param: 'test_' + param['name'])
@@ -503,11 +506,14 @@ class TestFormParser(BaseTestCase):
         # Assert that the parser gave us the appropriate fields/files.
         for e in param['result']['expected']:
             # something with e['type'], e['data'], and e['name']
-            if e['type'] == 'field':
+            type = e['type']
+            name = e['name'].encode('latin-1')
+
+            if type == 'field':
                 # Find this field in our fields list.
                 found = None
                 for f in self.fields:
-                    if f.field_name == e['name']:
+                    if f.field_name == name:
                         found = f
                         break
 
@@ -517,7 +523,7 @@ class TestFormParser(BaseTestCase):
 
                 # Remove it for future iterations.
                 self.fields.remove(found)
-            elif e['type'] == 'file':
+            elif type == 'file':
                 pass
             else:
                 assert False

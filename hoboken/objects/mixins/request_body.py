@@ -1135,19 +1135,19 @@ class FormParser(object):
 
                 # Parse the content-disposition header.
                 # TODO: handle mixed case
-                content_disp = headers.get('Content-Disposition')
+                content_disp = headers.get(b'Content-Disposition')
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and file name that we're uploading, to create
                 # our File() instance.
-                field_name = options.get('name')
-                file_name = options.get('filename')
+                field_name = options.get(b'name')
+                file_name = options.get(b'filename')
                 # TODO: check for errors
 
                 # Create the proper class.
-                if disp == 'form-data':
+                if disp == b'form-data':
                     vars.f = FieldClass(field_name)
-                elif disp == 'attachment':
+                elif disp == b'attachment':
                     vars.f = FileClass(file_name, field_name)
                     is_file = True
                 else:
@@ -1157,17 +1157,17 @@ class FormParser(object):
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get('Content-Transfer-Encoding', '7bit')
+                transfer_encoding = headers.get(b'Content-Transfer-Encoding', b'7bit')
 
                 if (transfer_encoding == b'binary' or
                     transfer_encoding == b'8bit' or
                     transfer_encoding == b'7bit'):
                     vars.writer = vars.f
 
-                elif part.transfer_encoding == b'base64':
+                elif transfer_encoding == b'base64':
                     vars.writer = Base64Decoder(vars.f)
 
-                elif part.transfer_encoding == b'quoted-printable':
+                elif transfer_encoding == b'quoted-printable':
                     vars.writer = QuotedPrintableDecoder(vars.f)
 
                 else:
