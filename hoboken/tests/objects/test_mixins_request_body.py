@@ -2,6 +2,7 @@
 
 from . import BaseTestCase, skip, parametrize, parameters
 import os
+import sys
 import glob
 import yaml
 import tempfile
@@ -17,11 +18,18 @@ from hoboken.six import binary_type, text_type
 curr_dir = os.path.abspath(os.path.dirname(__file__))
 
 
+def force_bytes(val):
+    if isinstance(val, text_type):
+        val = val.encode(sys.getfilesystemencoding())
+
+    return val
+
+
 class TestFile(BaseTestCase):
     def setup(self):
         self.c = {}
-        self.d = tempfile.mkdtemp()
-        self.f = File('foo.txt', config=self.c)
+        self.d = force_bytes(tempfile.mkdtemp())
+        self.f = File(b'foo.txt', config=self.c)
 
     def assert_data(self, data):
         f = self.f.file_object
@@ -31,7 +39,7 @@ class TestFile(BaseTestCase):
         f.truncate()
 
     def assert_exists(self):
-        full_path = os.path.join(self.d, self.f.file_name)
+        full_path = os.path.join(self.d, self.f.actual_file_name)
         self.assert_true(os.path.exists(full_path))
 
     def test_simple(self):
@@ -70,7 +78,7 @@ class TestFile(BaseTestCase):
         self.assert_false(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_true(self.f.file_name is not None)
+        self.assert_true(self.f.actual_file_name is not None)
         self.assert_exists()
 
     def test_file_full_name(self):
@@ -84,7 +92,7 @@ class TestFile(BaseTestCase):
         self.assert_false(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_equal(self.f.file_name, 'foo')
+        self.assert_equal(self.f.actual_file_name, b'foo')
         self.assert_exists()
 
     def test_file_full_name_with_ext(self):
@@ -98,7 +106,7 @@ class TestFile(BaseTestCase):
         self.assert_false(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_equal(self.f.file_name, 'foo.txt')
+        self.assert_equal(self.f.actual_file_name, b'foo.txt')
         self.assert_exists()
 
     def test_file_full_name_with_ext(self):
@@ -112,7 +120,7 @@ class TestFile(BaseTestCase):
         self.assert_false(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_equal(self.f.file_name, 'foo.txt')
+        self.assert_equal(self.f.actual_file_name, b'foo.txt')
         self.assert_exists()
 
     def test_no_dir_with_extension(self):
@@ -124,8 +132,8 @@ class TestFile(BaseTestCase):
         self.assert_false(self.f.in_memory)
 
         # Assert that the file exists
-        ext = os.path.splitext(self.f.file_name)[1]
-        self.assert_equal(ext, '.txt')
+        ext = os.path.splitext(self.f.actual_file_name)[1]
+        self.assert_equal(ext, b'.txt')
         self.assert_exists()
 
     # TODO: test uploading two files with the same name.
@@ -495,13 +503,14 @@ class TestFormParser(BaseTestCase):
 
         # Now, we feed the parser with data.
         processed = self.f.write(param['test'])
-        self.assert_equal(processed, len(param['test']))
         self.f.finalize()
 
         # print(repr(param))
         print("")
         print(repr(self.fields))
         print(repr(self.files))
+
+        self.assert_equal(processed, len(param['test']))
 
         # Assert that the parser gave us the appropriate fields/files.
         for e in param['result']['expected']:
@@ -523,8 +532,31 @@ class TestFormParser(BaseTestCase):
 
                 # Remove it for future iterations.
                 self.fields.remove(found)
+
             elif type == 'file':
-                pass
+                # Find this file.
+                found = None
+                for f in self.files:
+                    if f.field_name == name:
+                        found = f
+                        break
+
+                # Assert that we found it.
+                self.assert_true(found is not None)
+
+                # Get info from this file
+                file_name = e['file_name'].encode('latin-1')
+                o = f.file_object
+                o.seek(0)
+                file_data = o.read()
+
+                self.assert_equal(f.file_name, file_name)
+                self.assert_equal(file_data, e['data'])
+
+                # Close our file, and then remove it from our list.
+                f.close()
+                self.files.remove(f)
+
             else:
                 assert False
 

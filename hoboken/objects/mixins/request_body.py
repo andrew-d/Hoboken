@@ -19,6 +19,7 @@ except ImportError:
 
 import os
 import re
+import sys
 import base64
 import shutil
 import binascii
@@ -206,6 +207,13 @@ class File(object):
     @property
     def file_name(self):
         """
+        The file name given in the upload request.
+        """
+        return self._file_name
+
+    @property
+    def actual_file_name(self):
+        """
         The file name that this file is saved as.  Will return None if it's not
         currently saved on disk.
         """
@@ -264,6 +272,7 @@ class File(object):
 
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
+            # Build our filename.
             fname = self._file_base
             if keep_extensions:
                 fname = fname + self._ext
@@ -275,15 +284,30 @@ class File(object):
                 tmp_file = None
                 pass
         else:
+            # Build options array.
+            # Note that on Python 3, tempfile doesn't support byte names.  We
+            # encode our paths using the default filesystem encoding.
             options = {}
             if keep_extensions:
-                options['suffix'] = self._ext
+                ext = self._ext
+                if isinstance(ext, binary_type):
+                    ext = ext.decode(sys.getfilesystemencoding())
+
+                options['suffix'] = ext
             if file_dir is not None:
-                options['dir'] = file_dir
+                d = file_dir
+                if isinstance(d, binary_type):
+                    d = d.decode(sys.getfilesystemencoding())
+
+                options['dir'] = d
 
             # Create a temporary (named) file with the appropriate settings.
             tmp_file = tempfile.NamedTemporaryFile(**options)
             fname = tmp_file.name
+
+            # Encode filename as bytes.
+            if isinstance(fname, text_type):
+                fname = fname.encode(sys.getfilesystemencoding())
 
         self._actual_file_name = fname
         return tmp_file
@@ -339,11 +363,11 @@ class BaseParser(object):
             if start is not None and start == end:
                 return
 
-            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
-            #          end, data[start:end]))
+            print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
+                     end, data[start:end]))
             func(data, start, end)
         else:
-            # print("Calling %s with no data" % ('on_' + name,))
+            print("Calling %s with no data" % ('on_' + name,))
             func()
 
     def set_callback(self, name, new_func):
@@ -988,6 +1012,7 @@ class QuotedPrintableDecoder(object):
 
 class FormParser(object):
     # This is the default configuration for our form parser.
+    # Note: all file paths should be in bytes.
     DEFAULT_CONFIG = {
         'MAX_FIELD_SIZE': 1024,
         'MAX_FILE_SIZE': 10 * 1024 * 1024,
@@ -1090,7 +1115,6 @@ class FormParser(object):
             if boundary is None:
                 raise FormParserError("No boundary given")
 
-            is_file = False
             header_name = []
             header_value = []
             headers = {}
@@ -1099,6 +1123,7 @@ class FormParser(object):
             class vars(object):
                 f = None
                 writer = None
+                is_file = False
 
             def on_part_begin():
                 pass
@@ -1113,7 +1138,7 @@ class FormParser(object):
 
             def on_part_end():
                 vars.f.finalize()
-                if is_file:
+                if vars.is_file:
                     on_file(vars.f)
                 else:
                     on_field(vars.f)
@@ -1131,28 +1156,24 @@ class FormParser(object):
 
             def on_headers_finished():
                 # Reset the 'is file' flag.
-                is_file = False
+                vars.is_file = False
 
                 # Parse the content-disposition header.
                 # TODO: handle mixed case
                 content_disp = headers.get(b'Content-Disposition')
                 disp, options = parse_options_header(content_disp)
 
-                # Get the field and file name that we're uploading, to create
-                # our File() instance.
+                # Get the field and filename.
                 field_name = options.get(b'name')
                 file_name = options.get(b'filename')
                 # TODO: check for errors
 
                 # Create the proper class.
-                if disp == b'form-data':
+                if file_name is None:
                     vars.f = FieldClass(field_name)
-                elif disp == b'attachment':
-                    vars.f = FileClass(file_name, field_name)
-                    is_file = True
                 else:
-                    # TODO: do what?
-                    pass
+                    vars.f = FileClass(file_name, field_name)
+                    vars.is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
