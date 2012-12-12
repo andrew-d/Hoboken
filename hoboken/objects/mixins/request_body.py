@@ -65,16 +65,20 @@ AMPERSAND = b'&'[0]
 SEMICOLON = b';'[0]
 LOWER_A = b'a'[0]
 LOWER_Z = b'z'[0]
+NULL = b'\x00'[0]
 
 # Lower-casing a character is different, because of the difference between
-# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte.
+# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
+# and joining a list of bytes together.
 # These functions abstract that.
 if PY3:
     lower_char = lambda c: c | 0x20
     ord_char = lambda c: c
+    join_bytes = lambda b: bytes(list(b))
 else:
     lower_char = lambda c: c.lower()
     ord_char = lambda c: ord(c)
+    join_bytes = lambda b: b''.join(list(b))
 
 
 # These are regexes for parsing header values.
@@ -156,7 +160,7 @@ class Field(object):
         if self._cache is None:
             self._cache = b''.join(self._value)
 
-        del self.value
+        del self._value
 
     @property
     def field_name(self):
@@ -192,9 +196,10 @@ class File(object):
         self._actual_file_name = None
 
         # Split the extension from the filename.
-        base, ext = os.path.splitext(file_name)
-        self._file_base = base
-        self._ext = ext
+        if file_name is not None:
+            base, ext = os.path.splitext(file_name)
+            self._file_base = base
+            self._ext = ext
 
     @property
     def field_name(self):
@@ -273,6 +278,7 @@ class File(object):
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
             # Build our filename.
+            # TODO: what happens if we don't have a filename?
             fname = self._file_base
             if keep_extensions:
                 fname = fname + self._ext
@@ -559,7 +565,7 @@ class MultipartParser(BaseParser):
         # Note: the +8 is since we can have, at maximum, "\r\n--" + boundary +
         # "--\r\n" at the final boundary, and the length of '\r\n--' and
         # '--\r\n' is 8 bytes.
-        self.lookbehind = [0 for x in range(len(boundary) + 8)]
+        self.lookbehind = [NULL for x in range(len(boundary) + 8)]
 
     def write(self, data):
         # Get values from locals.
@@ -883,7 +889,8 @@ class MultipartParser(BaseParser):
                 # data.
                 elif prev_index > 0:
                     # Callback to write the saved data.
-                    self.callback('part_data', self.lookbehind, 0, prev_index)
+                    lb_data = join_bytes(self.lookbehind)
+                    self.callback('part_data', lb_data, 0, prev_index)
 
                     # Overwrite our previous index.
                     prev_index = 0
@@ -1047,23 +1054,26 @@ class FormParser(object):
 
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == b'application/octet-stream':
-            f = None
+            # Work around the lack of 'nonlocal' in Py2
+            class vars(object):
+                f = None
 
             def on_start():
-                f = FileClass(file_name, None)
+                vars.f = FileClass(file_name, None)
 
             def on_data(data, start, end):
-                f.write(data[start:end])
+                vars.f.write(data[start:end])
 
             def on_end():
                 # Finalize the file itself.
-                f.finalize()
+                vars.f.finalize()
 
                 # Call our callback.
-                on_file(f)
+                on_file(vars.f)
 
                 # Call the on-end callback.
-                self.on_end()
+                if self.on_end is not None:
+                    self.on_end()
 
             callbacks = {
                 'on_start': on_start,
@@ -1078,7 +1088,8 @@ class FormParser(object):
               content_type == b'application/x-url-encoded'):
 
             name_buffer = []
-            f = None
+            class vars(object):
+                f = None
 
             def on_field_start():
                 pass
@@ -1087,15 +1098,16 @@ class FormParser(object):
                 name_buffer.append(data[start:end])
 
             def on_field_data(data, start, end):
-                if f is None:
-                    f = FieldClass(b''.join(name_buffer))
+                if vars.f is None:
+                    vars.f = FieldClass(b''.join(name_buffer))
                     del name_buffer[:]
-                f.write(data[start:end])
+                vars.f.write(data[start:end])
 
             def on_field_end():
                 # Finalize and call callback.
-                f.finalize()
-                on_field(f)
+                vars.f.finalize()
+                on_field(vars.f)
+                vars.f = None
 
             # Setup callbacks.
             callbacks = {
@@ -1201,7 +1213,8 @@ class FormParser(object):
                     )
 
             def on_end():
-                self.on_end()
+                if self.on_end is not None:
+                    self.on_end()
 
             # These are our callbacks for the parser.
             callbacks = {
@@ -1243,21 +1256,9 @@ class RequestBodyMixin(object):
     def __init__(self, *args, **kwargs):
         super(RequestBodyMixin, self).__init__(*args, **kwargs)
 
-        self.__form_config = {}
-
-        # If we have a config object...
-        if hasattr(self, 'config'):
-            # For each option, see if it's set in our config.
-            # NOTE: We can't simply use '.update', since we have some non-form
-            # config values in the dictionary.
-            for f in FormParser.DEFAULT_CONFIG.keys():
-                val = self.config.get(f)
-                if val is not None:
-                    self.__form_config[f] = val
-
         # Our fields and files default to nothing.
-        self.__fields = None
-        self.__files = None
+        self.__fields = []
+        self.__files = []
 
     # Things we might need:
     #   - Upload directory (for temp files)
@@ -1326,17 +1327,28 @@ class RequestBodyMixin(object):
     def form_parser(self, on_field, on_file):
         # Before we do anything else, we need to parse our Content-Type and
         # Content-Length headers.
-        content_length = int(self.headers.get('Content-Length', -1))
-        content_type = self.headers.get('Content-Type')
+        content_length = int(self.headers.get(b'Content-Length', -1))
+        content_type = self.headers.get(b'Content-Type')
         if content_type is None:
             raise ValueError("No Content-Type header given!")
 
         # Try and get our boundary.
         content_type, params = parse_options_header(content_type)
-        boundary = params.get('boundary')
+        boundary = params.get(b'boundary')
 
         # Try and get a filename.
-        file_name = self.headers.get('X-File-Name')
+        file_name = self.headers.get(b'X-File-Name')
+
+        # Get our configuration.
+        form_config = {}
+        if hasattr(self, 'config'):
+            # For each option, see if it's set in our config.
+            # NOTE: We can't simply use '.update', since we have some non-form
+            # config values in the dictionary.
+            for f in FormParser.DEFAULT_CONFIG.keys():
+                val = self.config.get(f)
+                if val is not None:
+                    form_config[f] = val
 
         # Instantiate a form parser.
         form_parser = FormParser(content_type,
@@ -1345,7 +1357,7 @@ class RequestBodyMixin(object):
                                  boundary=boundary,
                                  content_length=content_length,
                                  file_name=file_name,
-                                 config=self.__form_config)
+                                 config=form_config)
 
         # Return our parser.
         return form_parser
@@ -1354,10 +1366,10 @@ class RequestBodyMixin(object):
         fields = {}
         files = {}
 
-        def on_field(self, field):
-            fields[field.name] = field
+        def on_field(field):
+            fields[field.field_name] = field
 
-        def on_file(self, file):
+        def on_file(file):
             files[file.field_name] = file
 
         # Get blocksize.

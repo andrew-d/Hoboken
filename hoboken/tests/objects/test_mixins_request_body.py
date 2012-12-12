@@ -25,6 +25,34 @@ def force_bytes(val):
     return val
 
 
+class TestField(BaseTestCase):
+    def setup(self):
+        self.f = Field(b'foo')
+
+    def test_name(self):
+        self.assert_equal(self.f.field_name, b'foo')
+
+    def test_data(self):
+        self.f.write(b'test123')
+        self.assert_equal(self.f.value, b'test123')
+
+    def test_cache_expiration(self):
+        self.f.write(b'test')
+        self.assert_equal(self.f.value, b'test')
+        self.f.write(b'123')
+        self.assert_equal(self.f.value, b'test123')
+
+    def test_finalize(self):
+        self.f.write(b'test123')
+        self.f.finalize()
+        self.assert_equal(self.f.value, b'test123')
+
+    def test_close(self):
+        self.f.write(b'test123')
+        self.f.close()
+        self.assert_equal(self.f.value, b'test123')
+
+
 class TestFile(BaseTestCase):
     def setup(self):
         self.c = {}
@@ -472,13 +500,20 @@ for f in os.listdir(http_tests_dir):
         })
 
 
+def split_all(val):
+    """
+    This function will split an array all possible ways.  For example:
+        split_all([1,2,3,4])
+    will give:
+        ([1], [2,3,4]), ([1,2], [3,4]), ([1,2,3], [4])
+    """
+    for i in range(1, len(val) - 1):
+        yield (val[:i], val[i:])
+
+
 @parametrize
 class TestFormParser(BaseTestCase):
-    def make(self, param):
-        boundary = param['result']['boundary']
-        if isinstance(boundary, text_type):
-            boundary = boundary.encode('latin-1')
-
+    def make(self, boundary):
         self.ended = False
         self.files = []
         self.fields = []
@@ -495,11 +530,57 @@ class TestFormParser(BaseTestCase):
         # Get a form-parser instance.
         self.f = FormParser(b'multipart/form-data', on_field, on_file, on_end, boundary=boundary)
 
+    def assert_file_data(self, f, data):
+        o = f.file_object
+        o.seek(0)
+        file_data = o.read()
+        self.assert_equal(file_data, data)
+
+    def assert_file(self, field_name, file_name, data):
+        # Find this file.
+        found = None
+        for f in self.files:
+            if f.field_name == field_name:
+                found = f
+                break
+
+        # Assert that we found it.
+        self.assert_true(found is not None)
+
+        try:
+            # Assert about this file.
+            self.assert_file_data(found, data)
+            self.assert_equal(found.file_name, file_name)
+
+            # Remove it from our list.
+            self.files.remove(found)
+        finally:
+            # Close our file
+            found.close()
+
+    def assert_field(self, name, value):
+        # Find this field in our fields list.
+        found = None
+        for f in self.fields:
+            if f.field_name == name:
+                found = f
+                break
+
+        # Assert that it exists and matches.
+        self.assert_true(found is not None)
+        self.assert_equal(value, found.value)
+
+        # Remove it for future iterations.
+        self.fields.remove(found)
+
     @parameters(http_tests,
                 name_func=lambda idx, param: 'test_' + param['name'])
     def test_http(self, param):
         # Firstly, create our parser with the given boundary.
-        self.make(param)
+        boundary = param['result']['boundary']
+        if isinstance(boundary, text_type):
+            boundary = boundary.encode('latin-1')
+        self.make(boundary)
 
         # Now, we feed the parser with data.
         processed = self.f.write(param['test'])
@@ -514,56 +595,179 @@ class TestFormParser(BaseTestCase):
 
         # Assert that the parser gave us the appropriate fields/files.
         for e in param['result']['expected']:
-            # something with e['type'], e['data'], and e['name']
+            # Get our type and name.
             type = e['type']
             name = e['name'].encode('latin-1')
 
             if type == 'field':
-                # Find this field in our fields list.
-                found = None
-                for f in self.fields:
-                    if f.field_name == name:
-                        found = f
-                        break
-
-                # Assert that it exists and matches.
-                self.assert_true(found is not None)
-                self.assert_equal(e['data'], found.value)
-
-                # Remove it for future iterations.
-                self.fields.remove(found)
+                self.assert_field(name, e['data'])
 
             elif type == 'file':
-                # Find this file.
-                found = None
-                for f in self.files:
-                    if f.field_name == name:
-                        found = f
-                        break
-
-                # Assert that we found it.
-                self.assert_true(found is not None)
-
-                # Get info from this file
-                file_name = e['file_name'].encode('latin-1')
-                o = f.file_object
-                o.seek(0)
-                file_data = o.read()
-
-                self.assert_equal(f.file_name, file_name)
-                self.assert_equal(file_data, e['data'])
-
-                # Close our file, and then remove it from our list.
-                f.close()
-                self.files.remove(f)
+                self.assert_file(
+                    name,
+                    e['file_name'].encode('latin-1'),
+                    e['data']
+                )
 
             else:
                 assert False
 
+    def test_random_splitting(self):
+        """
+        This test runs a simple multipart body with one field and one file through every possible split.
+        """
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        # We split the file through all cases.
+        for first, last in split_all(test_data):
+            # Create form parser.
+            self.make(b'boundary')
+
+            # Feed with data in 2 chunks.
+            i = 0
+            i += self.f.write(first)
+            i += self.f.write(last)
+            self.f.finalize()
+
+            # Assert we processed everything.
+            self.assert_equal(i, len(test_data))
+
+            # Assert that our file and field are here.
+            self.assert_field(b'field', b'test1')
+            self.assert_file(b'file', b'file.txt', b'test2')
+
+    def test_octet_stream(self):
+        files = []
+        def on_file(f):
+            files.append(f)
+        on_field = Mock()
+
+        f = FormParser(b'application/octet-stream', on_field, on_file, file_name=b'foo.txt')
+        self.assert_true(isinstance(f.parser, OctetStreamParser))
+
+        f.write(b'test')
+        f.write(b'1234')
+        f.finalize()
+
+        self.assert_false(on_field.called)
+        self.assert_equal(len(files), 1)
+        self.assert_file_data(files[0], b'test1234')
+
+    def test_querystring(self):
+        fields = []
+        def on_field(f):
+            fields.append(f)
+        on_file = Mock()
+
+        def simple_test(f):
+            del fields[:]
+
+            f.write(b'foo=bar')
+            f.write(b'&test=asdf')
+            f.finalize()
+
+            self.assert_false(on_file.called)
+            self.assert_equal(len(fields), 2)
+
+            self.assert_equal(fields[0].field_name, b'foo')
+            self.assert_equal(fields[0].value, b'bar')
+
+            self.assert_equal(fields[1].field_name, b'test')
+            self.assert_equal(fields[1].value, b'asdf')
+
+        f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file)
+        self.assert_true(isinstance(f.parser, QuerystringParser))
+        simple_test(f)
+
+        f = FormParser(b'application/x-url-encoded', on_field, on_file)
+        self.assert_true(isinstance(f.parser, QuerystringParser))
+        simple_test(f)
+
+    def test_close_methods(self):
+        parser = Mock()
+        f = FormParser(b'application/x-url-encoded', None, None)
+        f.parser = parser
+
+        f.finalize()
+        parser.finalize.assert_called_once_with()
+
+        f.close()
+        parser.close.assert_called_once_with()
+
 
 class TestRequestBodyMixin(BaseTestCase):
     def setup(self):
+        class TestClass(object):
+            config = {}
+            headers = {}
+
+        class MixedIn(RequestBodyMixin, TestClass):
+            pass
+
+        self.m = MixedIn()
+
+    def test_form_parser(self):
+        self.m.headers[b'Content-Type'] = b'application/octet-stream'
+        self.m.config['MAX_FIELD_SIZE'] = 1234
+
+        f = self.m.form_parser(None, None)
+        self.assert_true(isinstance(f, FormParser))
+        self.assert_true(isinstance(f.parser, OctetStreamParser))
+        self.assert_equal(f.config.get('MAX_FIELD_SIZE'), 1234)
+
+    def test_form_parser_octet_stream(self):
+        files = []
+        def on_file(f):
+            files.append(f)
+
+        self.m.headers[b'Content-Type'] = b'application/octet-stream'
+        self.m.headers[b'X-File-Name'] = b'foo.txt'
+
+        f = self.m.form_parser(None, on_file)
+        f.write(b'foobar')
+        f.finalize()
+
+        self.assert_equal(len(files), 1)
+        self.assert_equal(files[0].file_name, b'foo.txt')
+
+    def test_form_parser_multipart(self):
+        # TODO: test more!
         pass
+
+    def test_parse_body(self):
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        self.m.headers[b'Content-Type'] = b'multipart/form-data; boundary="boundary"'
+        self.m.input_stream = BytesIO(test_data)
+        self.m.parse_body()
+
+        self.assert_equal(len(self.m.fields), 1)
+        self.assert_true(b'field' in self.m.fields)
+        self.assert_equal(self.m.fields[b'field'].value, b'test1')
+
+        self.assert_equal(len(self.m.files), 1)
+        self.assert_true(b'file' in self.m.files)
+        file_class = self.m.files[b'file']
+        self.assert_equal(file_class.file_name, b'file.txt')
+
+        o = file_class.file_object
+        o.seek(0)
+        file_data = o.read()
+        self.assert_equal(file_data, b'test2')
+
+    def test_default_fields_files(self):
+        self.assert_equal(self.m.fields, [])
+        self.assert_equal(self.m.files, [])
+
+    def test_errors_with_no_content_type(self):
+        with self.assert_raises(ValueError):
+            f = self.m.form_parser(None, None)
 
 
 def suite():
