@@ -644,8 +644,9 @@ class TestFormParser(BaseTestCase):
         def on_file(f):
             files.append(f)
         on_field = Mock()
+        on_end = Mock()
 
-        f = FormParser(b'application/octet-stream', on_field, on_file, file_name=b'foo.txt')
+        f = FormParser(b'application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
         self.assert_true(isinstance(f.parser, OctetStreamParser))
 
         f.write(b'test')
@@ -655,6 +656,7 @@ class TestFormParser(BaseTestCase):
         self.assert_false(on_field.called)
         self.assert_equal(len(files), 1)
         self.assert_file_data(files[0], b'test1234')
+        self.assert_true(on_end.called)
 
     def test_querystring(self):
         fields = []
