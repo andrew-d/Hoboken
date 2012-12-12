@@ -639,6 +639,17 @@ class TestFormParser(BaseTestCase):
             self.assert_field(b'field', b'test1')
             self.assert_file(b'file', b'file.txt', b'test2')
 
+    def test_bad_start_boundary(self):
+        self.make(b'boundary')
+        data = b'--boundary\rfoobar'
+        i = self.f.write(data)
+        self.assert_true(i != len(data))
+
+        self.make(b'boundary')
+        data = b'--boundaryfoobar'
+        i = self.f.write(data)
+        self.assert_true(i != len(data))
+
     def test_octet_stream(self):
         files = []
         def on_file(f):
