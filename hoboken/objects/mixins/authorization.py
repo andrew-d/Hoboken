@@ -4,66 +4,49 @@ import re
 import base64
 import binascii
 
-from hoboken.six import iteritems
+from hoboken.six import binary_type, iteritems
 
+
+# Note: some of below code inspired by the code from WebOb.  Thanks guys!
 valid_authentication_schemes = [b'Basic', b'Digest', b'WSSE', b'HMACDigest',
-                                b'GoogleLogin', b'Cookie', b'OpenID']
+                                b'GoogleLogin', b'Cookie', b'OpenID', b'Bearer']
 _valid_schemes_set = set(valid_authentication_schemes)
 
 AUTH_PARAMS_REGEX = re.compile(br'([a-z]+)=(".*?"|[^,]*)(?:\Z|, *)')
 
 
-class Authorization(object):
-    def __init__(self, type, params):
-        self.type = type
-        self.params = params
+def _parse_auth_params(params):
+    ret = {}
+    for k, v in AUTH_PARAMS_REGEX.findall(params):
+        ret[k] = v.strip(b'"')
+    return ret
 
-    @classmethod
-    def parse(klass, val):
-        if val is None:
-            return None
 
-        authtype, params = val.split(b' ', 1)
-        if authtype in _valid_schemes_set:
-            if authtype == b'Basic' and b'"' not in params:
-                params = klass._parse_basic_auth(params)
-            else:
-                params = klass._parse_auth_params(params)
+def parse_auth(val):
+    if val is None:
+        return None
 
-        return klass(authtype, params)
-
-    @classmethod
-    def _parse_auth_params(klass, params):
-        ret = {}
-        for k, v in AUTH_PARAMS_REGEX.findall(params):
-            ret[k] = v.strip(b'"')
-        return ret
-
-    @classmethod
-    def _parse_basic_auth(klass, value):
-        try:
-            dec = base64.b64decode(value)
-            if not b':' in dec:
-                return value
-
-            username, password = dec.split(b':', 1)
-            return {b'username': username, b'password': password}
-        except (TypeError, binascii.Error):
-            return value
-
-    def serialize(self):
-        if (self.type == b'Basic' and
-            sorted(self.params.keys()) == [b'password', b'username']):
-            v = self.params[b'username'] + b':' + self.params[b'password']
-            enc = base64.b64encode(v)
-
-            return b'Basic ' + enc
+    authtype, params = val.split(b' ', 1)
+    if authtype in _valid_schemes_set:
+        if authtype == b'Basic' and b'"' not in params:
+            pass
         else:
-            p = []
-            for k, v in iteritems(self.params):
-                p.append(k + b'="' + v + b'"')
+            params = _parse_auth_params(params)
 
-            return self.type + b' ' + b', '.join(p)
+    return (authtype, params)
+
+
+def serialize_auth(val):
+    if isinstance(val, (tuple, list)):
+        authtype, params = val
+        if isinstance(params, dict):
+            params = b', '.join([k + b'="' + v + b'"' for k, v in iteritems(params)])
+        if not isinstance(params, binary_type):
+            raise ValueError("Invalid type for 'params': %s" % (params.__class__.__name__))
+
+        return authtype + b' ' + params
+
+    return val
 
 
 class WSGIRequestAuthorizationMixin(object):
@@ -72,7 +55,11 @@ class WSGIRequestAuthorizationMixin(object):
 
     @property
     def authorization(self):
-        return Authorization.parse(self.headers.get('Authorization'))
+        return parse_auth(self.headers.get(b'Authorization'))
+
+    @authorization.setter
+    def authorization(self, val):
+        self.headers[b'Authorization'] = serialize_auth(val)
 
 
 class WSGIResponseAuthorizationMixin(object):
@@ -81,5 +68,9 @@ class WSGIResponseAuthorizationMixin(object):
 
     @property
     def www_authenticate(self):
-        return Authorization.parse(self.headers.get('WWW-Authenticate'))
+        return parse_auth(self.headers.get(b'WWW-Authenticate'))
+
+    @www_authenticate.setter
+    def www_authenticate(self, val):
+        self.headers[b'WWW-Authenticate'] = serialize_auth(val)
 

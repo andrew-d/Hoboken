@@ -8,52 +8,56 @@ from hoboken.objects.mixins.authorization import *
 
 
 class TestAuthorization(BaseTestCase):
-    def test_basic_auth(self):
-        o = Authorization.parse(b'Basic dXNlcm5hbWU6cGFzc3dvcmQ=')
-        self.assert_equal(o.type, b'Basic')
-        self.assert_equal(o.params[b'username'], b'username')
-        self.assert_equal(o.params[b'password'], b'password')
+    def assert_parse(self, input, type, params):
+        parsed_type, parsed_params = parse_auth(input)
+        self.assert_equal(parsed_type, type)
+        self.assert_equal(parsed_params, params)
 
-    def test_basic_no_split(self):
-        o = Authorization.parse(b'Basic Zm9vYmFy')
-        self.assert_equal(o.type, b'Basic')
-        self.assert_equal(o.params, b'Zm9vYmFy')
+    def assert_serialize(self, type, params, output):
+        ser = serialize_auth((type, params))
+        self.assert_equal(ser, output)
+
+    def test_basic_auth(self):
+        self.assert_parse(b'Basic Zm9vYmFy', b'Basic', b'Zm9vYmFy')
 
     def test_with_params(self):
-        o = Authorization.parse(b'Basic realm="ARealm"')
-        self.assert_equal(o.type, b'Basic')
-        self.assert_equal(o.params[b'realm'], b'ARealm')
+        self.assert_parse(b'Basic realm="ARealm"', b'Basic', {b'realm': b'ARealm'})
 
     def test_invalid_parse(self):
-        o = Authorization.parse(None)
+        o = parse_auth(None)
         self.assert_true(o is None)
 
-        o = Authorization.parse(b'Basic invalid')
-        self.assert_equal(o.params, b'invalid')
-
     def test_serialize_basic(self):
-        o = Authorization(b'Basic', {b'username': b'username', b'password': b'password'})
-        s = o.serialize()
-        self.assert_equal(s, b'Basic dXNlcm5hbWU6cGFzc3dvcmQ=')
+        self.assert_serialize(
+            b'Basic',
+            b'Foobar',
+            b'Basic Foobar'
+        )
 
     def test_serialize_params(self):
-        o = Authorization(b'Basic', {b'realm': b'ARealm'})
-        s = o.serialize()
-        self.assert_equal(s, b'Basic realm="ARealm"')
+        self.assert_serialize(
+            b'Basic',
+            {b'realm': b'ARealm'},
+            b'Basic realm="ARealm"'
+        )
 
 
 class TestMixins(BaseTestCase):
     def test_request(self):
         w = WSGIRequestAuthorizationMixin()
         w.headers = {}
-        w.headers['Authorization'] = b'Basic qqqq'
-        self.assert_true(isinstance(w.authorization, Authorization))
+        w.headers[b'Authorization'] = b'Basic qqqq'
+        type, params = w.authorization
+        self.assert_equal(type, b'Basic')
+        self.assert_equal(params, b'qqqq')
 
     def test_response(self):
         w = WSGIResponseAuthorizationMixin()
         w.headers = {}
-        w.headers['WWW-Authenticate'] = b'Basic realm="foo"'
-        self.assert_true(isinstance(w.www_authenticate, Authorization))
+        w.headers[b'WWW-Authenticate'] = b'Basic realm="foo"'
+        type, params = w.www_authenticate
+        self.assert_equal(type, b'Basic')
+        self.assert_equal(params, {b'realm': b'foo'})
 
 
 def suite():
