@@ -873,11 +873,6 @@ class MultipartParser(BaseParser):
                             # No match, so reset index.
                             index = 0
 
-                    # No other flags, which mean we've got no match.  Reset
-                    # our index.
-                    else:
-                        index = 0
-
                 # If we have an index, we need to keep this byte for later, in
                 # case we can't match the full boundary.
                 if index > 0:
