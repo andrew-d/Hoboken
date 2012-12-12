@@ -674,9 +674,11 @@ class TestFormParser(BaseTestCase):
         def on_field(f):
             fields.append(f)
         on_file = Mock()
+        on_end = Mock()
 
         def simple_test(f):
             del fields[:]
+            on_end.reset_mock()
 
             f.write(b'foo=bar')
             f.write(b'&test=asdf')
@@ -691,11 +693,13 @@ class TestFormParser(BaseTestCase):
             self.assert_equal(fields[1].field_name, b'test')
             self.assert_equal(fields[1].value, b'asdf')
 
-        f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file)
+            self.assert_true(on_end.called)
+
+        f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
         self.assert_true(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
-        f = FormParser(b'application/x-url-encoded', on_field, on_file)
+        f = FormParser(b'application/x-url-encoded', on_field, on_file, on_end=on_end)
         self.assert_true(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 

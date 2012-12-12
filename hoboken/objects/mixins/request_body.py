@@ -428,6 +428,7 @@ class QuerystringParser(BaseParser):
         - on_field_name         *
         - on_field_data         *
         - on_field_end
+        - on_end
     """
     SPLIT_RE = re.compile(b'[&;]')
 
@@ -517,6 +518,7 @@ class QuerystringParser(BaseParser):
         # If we're currently in the middle of a field, we finish it.
         if self.state == STATE_FIELD_DATA:
             self.callback('field_end')
+        self.callback('end')
 
 
 class MultipartParser(BaseParser):
@@ -1104,12 +1106,17 @@ class FormParser(object):
                 on_field(vars.f)
                 vars.f = None
 
+            def on_end():
+                if self.on_end is not None:
+                    self.on_end()
+
             # Setup callbacks.
             callbacks = {
                 'on_field_start': on_field_start,
                 'on_field_name': on_field_name,
                 'on_field_data': on_field_data,
                 'on_field_end': on_field_end,
+                'on_end': on_end,
             }
 
             # Instantiate parser.
