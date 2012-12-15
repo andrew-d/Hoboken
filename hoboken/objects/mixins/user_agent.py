@@ -252,5 +252,16 @@ _yaml_file.close()
 parser = FullParser(_yaml)
 
 
-# TODO: write mixins, tests, etc.
+class WSGIUserAgentMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(WSGIUserAgentMixin, self).__init__(*args, **kwargs)
+
+    @property
+    def user_agent(self):
+        val = self.headers.get(b"User-Agent")
+        if val is None:
+            return None
+
+        return parser.parse_all(val)
+
 # TODO: include license from project here.

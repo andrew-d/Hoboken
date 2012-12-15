@@ -204,9 +204,11 @@ from .mixins.cache import WSGIRequestCacheMixin
 from .mixins.date import WSGIRequestDateMixin
 from .mixins.etag import WSGIRequestEtagMixin
 from .mixins.request_building import WSGIRequestBuilderMixin
+from .mixins.user_agent import WSGIUserAgentMixin
 
 class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestAuthorizationMixin,
                       WSGIRequestCacheMixin, RequestVarsMixin,
                       WSGIRequestEtagMixin, WSGIRequestDateMixin,
-                      WSGIRequestBuilderMixin, WSGIRequest):
+                      WSGIRequestBuilderMixin, WSGIUserAgentMixin,
+                      WSGIRequest):
     pass

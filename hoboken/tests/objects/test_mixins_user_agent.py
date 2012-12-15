@@ -114,11 +114,35 @@ class TestFullResults(BaseTestCase):
         self.assert_equal(self.r.full_string, b'Other')
 
 
+class TestUserAgentMixin(BaseTestCase):
+    def setup(self):
+        class Foo(object):
+            headers = {}
+
+        class MixedIn(WSGIUserAgentMixin, Foo):
+            pass
+
+        self.c = MixedIn()
+
+    def test_with_None(self):
+        self.assert_true(self.c.user_agent is None)
+
+    def test_with_value(self):
+        # Value chosen semi-randomly.
+        self.c.headers[b'User-Agent'] = b'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.16 (KHTML, like Gecko) Ubuntu/10.10 Chromium/10.0.648.133 Chrome/10.0.648.133 Safari/534.16'
+
+        ua = self.c.user_agent
+        self.assert_equal(ua.family, b'Chromium')
+        self.assert_equal(ua.major, b'10')
+        self.assert_equal(ua.minor, b'0')
+        self.assert_equal(ua.patch, b'648')
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestParsers))
     suite.addTest(unittest.makeSuite(TestOSClass))
     suite.addTest(unittest.makeSuite(TestFullResults))
+    suite.addTest(unittest.makeSuite(TestUserAgentMixin))
 
     return suite
 
