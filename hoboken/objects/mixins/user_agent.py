@@ -7,17 +7,28 @@ import yaml
 from hoboken.six import binary_type, text_type
 
 
+def _e(val):
+    if val is None:
+        return None
+
+    if isinstance(val, text_type):
+        return val.encode('latin-1')
+    elif isinstance(val, binary_type):
+        return val
+    else:
+        raise ValueError("Unknown type for encoding!")  # pragma: no cover
+
+
 class DeviceParser(object):
     def __init__(self, regexes):
-        self.parsers = map(self._make_parser, regexes)
+        self.parsers = list(map(self._make_parser, regexes))
 
     def _make_parser(self, obj):
         replace = obj.get('device_replacement')
 
-        # TODO: compile to byte pattern
-        regex = re.compile(obj['regex'])
+        regex = re.compile(_e(obj['regex']))
 
-        return (regex, replace)
+        return (regex, _e(replace))
 
     def parse(self, val):
         for regex, rep in self.parsers:
@@ -31,14 +42,14 @@ class DeviceParser(object):
                 return family
 
         # If we get here, no match.
-        return 'Other'
+        return b'Other'
 
 
 class OSClass(object):
     def __init__(self, family=None, major=None, minor=None, patch=None,
                  patch_minor=None):
         # Save attributes on self.
-        self.family = family or 'Other'
+        self.family = family or b'Other'
         self.major = major
         self.minor = minor
         self.patch = patch
@@ -54,33 +65,34 @@ class OSClass(object):
             output.append(self.major)
 
             if self.minor is not None:
-                output.append('.')
+                output.append(b'.')
                 output.append(self.minor)
 
                 if self.patch is not None:
                     if has_digit(self.patch):
-                        output.append('.')
+                        output.append(b'.')
                     output.append(self.patch)
 
                     if self.patch_minor is not None:
                         if has_digit(self.patch_minor):
-                            output.append('.')
+                            output.append(b'.')
 
                         output.append(self.patch_minor)
 
-        return ''.join(output)
+        return b''.join(output)
 
-    def __str__(self):
+    @property
+    def full_string(self):
         suff = self.version_string
         if len(suff) > 0:
-            return self.family + ' ' + suff
+            return self.family + b' ' + suff
         else:
             return self.family
 
 
 class OSParser(object):
     def __init__(self, regexes):
-        self.parsers = map(self._make_parser, regexes)
+        self.parsers = list(map(self._make_parser, regexes))
 
     def _make_parser(self, obj):
         fam = obj.get('os_replacement')
@@ -89,21 +101,28 @@ class OSParser(object):
         patch = obj.get('os_v3_replacement')
         patch_minor = obj.get('os_v4_replacement')
 
-        regex = re.compile(obj['regex'])
+        # Compile as a byte pattern, not text.
+        regex = re.compile(_e(obj['regex']))
 
-        return (regex, fam, major, minor, patch, patch_minor)
+        return (
+            regex, _e(fam), _e(major), _e(minor),
+            _e(patch), _e(patch_minor)
+        )
 
     def parse(self, val):
         for regex, family, major, minor, patch, patch_minor in self.parsers:
             m = regex.search(val)
             if m is not None:
-                if family:
-                    family = family.replace('$1', m.group(1))
+                if family is not None:
+                    if b'$1' in family:
+                        family = family.replace(b'$1', m.group(1))
+
+                    # Otherwise, family = family.
                 else:
                     family = m.group(1)
 
                 def get_match(i):
-                    if m.lastindex and m.lastindex >= i:
+                    if m.lastindex is not None and m.lastindex >= i:
                         return m.group(i)
                     return None
 
@@ -119,7 +138,7 @@ class OSParser(object):
 
 class UAClass(OSClass):
     def __init__(self, family=None, major=None, minor=None, patch=None):
-        self.family = family or 'Other'
+        self.family = family or b'Other'
         self.major = major
         self.minor = minor
         self.patch = patch
@@ -128,7 +147,7 @@ class UAClass(OSClass):
 
 class UAParser(object):
     def __init__(self, regexes):
-        self.parsers = map(self._make_parser, regexes)
+        self.parsers = list(map(self._make_parser, regexes))
 
     def _make_parser(self, obj):
         fam = obj.get('family_replacement')
@@ -136,24 +155,28 @@ class UAParser(object):
         minor = obj.get('v2_replacement')
         patch = obj.get('v3_replacement')
 
-        regex = re.compile(obj['regex'])
+        # Compile as a byte pattern, not text.
+        patt = obj['regex']
+        if isinstance(patt, text_type):
+            patt = patt.encode('latin-1')
+        regex = re.compile(patt)
 
-        return (regex, fam, major, minor, patch)
+        return (regex, _e(fam), _e(major), _e(minor), _e(patch))
 
     def parse(self, val):
         for regex, family, major, minor, patch in self.parsers:
             m = regex.search(val)
             if m is not None:
                 if family is not None:
-                    if '$1' in family:
-                        family = family.replace('$1', m.group(1))
+                    if b'$1' in family:
+                        family = family.replace(b'$1', m.group(1))
 
                     # Otherwise, family = family.
                 else:
                     family = m.group(1)
 
                 def get_match(i):
-                    if m.lastindex and m.lastindex >= i:
+                    if m.lastindex is not None and m.lastindex >= i:
                         return m.group(i)
                     return None
 
@@ -189,9 +212,9 @@ class FullResults(OSClass):
 
     @property
     def full_string(self):
-        s = str(self)
+        s = OSClass.full_string.__get__(self)
         if self.os is not None:
-            return s + "/" + str(self.os)
+            return s + b"/" + self.os.full_string
         else:
             return s
 
