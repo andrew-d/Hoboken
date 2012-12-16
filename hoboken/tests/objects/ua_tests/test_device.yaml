@@ -1,3 +1,9 @@
+# The data contained in this file is Copyright 2009 Google Inc. and available
+# under the Apache License, Version 2.0.
+# Please see http://www.apache.org/licenses/LICENSE-2.0 for a copy of the
+# license, and https://github.com/tobie/ua-parser for the original source of
+# these files and the associated test cases.
+
 test_cases:
 
   - user_agent_string: 'Mozilla/5.0 (iPad; U; CPU OS 3_2 like Mac OS X; en-us) AppleWebKit/531.21.10 (KHTML, like Gecko) Version/4.0.4 Mobile/7B367 Safari/531.21.10'

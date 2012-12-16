@@ -1,3 +1,9 @@
+# The data contained in this file is Copyright 2009 Google Inc. and available
+# under the Apache License, Version 2.0.
+# Please see http://www.apache.org/licenses/LICENSE-2.0 for a copy of the
+# license, and https://github.com/tobie/ua-parser for the original source of
+# these files and the associated test cases.
+
 test_cases:
 
   - user_agent_string: 'Mozilla/5.0 (Linux x86_64) AppleWebKit/534.26+ WebKitGTK+/1.4.1 luakit/f3a2dbe'

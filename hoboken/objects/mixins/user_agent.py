@@ -264,4 +264,3 @@ class WSGIUserAgentMixin(object):
 
         return parser.parse_all(val)
 
-# TODO: include license from project here.
