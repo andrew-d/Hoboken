@@ -521,7 +521,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         except Exception as e:
             # Also, check if the exception has other information attached,
             # like a code/body.
-            # TODO: Handle other HTTPExceptions from webob?
             self.on_exception(e)
 
             # Must set this, or we get clobbered by the 404 handler.

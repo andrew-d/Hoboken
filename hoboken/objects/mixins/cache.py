@@ -6,6 +6,7 @@ from hoboken.six import text_type
 from hoboken.objects.util import cached_property
 from hoboken.objects.oproperty import property_overriding, oproperty
 
+
 class _boolean_property(object):
     def __init__(self, property_name):
         self.name = property_name
@@ -24,6 +25,7 @@ class _boolean_property(object):
 
     def __delete__(self, obj):
         obj.set_property(self.name, False)
+
 
 class _value_property(object):
     def __init__(self, property_name):

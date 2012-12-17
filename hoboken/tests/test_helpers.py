@@ -180,8 +180,7 @@ class TestExpires(HobokenTestCase):
             now_function.return_value = test_time
             resp = self.call_app("/ccoffset")
 
-        # Note that webob assumes the input time is a UTC value, so we simply
-        # remove the timezone info from the expires value to check it.
+        # Remove the timezone from any time to test.
         expires_timestamp = time.mktime(resp.expires.replace(tzinfo=None).timetuple())
         test_timestamp = time.mktime(test_time.timetuple())
         self.assert_equal(expires_timestamp, test_timestamp + 10)
@@ -193,8 +192,7 @@ class TestExpires(HobokenTestCase):
             now_function.return_value = test_time
             resp = self.call_app("/ccabsolute")
 
-        # Note that webob assumes the input time is a UTC value, so we simply
-        # remove the timezone info from the expires value to check it.
+        # Remove the timezone from any time to test.
         expires_timestamp = time.mktime(resp.expires.timetuple())
         test_timestamp = time.mktime(test_time.timetuple())
         self.assert_equal(expires_timestamp, test_timestamp + 60)
