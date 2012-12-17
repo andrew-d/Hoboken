@@ -109,14 +109,6 @@ class TestWSGIResponseEtagMixin(BaseTestCase):
         self.m.headers['Etag'] = b'w/"Foobar"'
         self.assert_equal(self.m.etag, (b'Foobar', False))
 
-    # TODO: make these work
-    # def test_etag_unquoted(self):
-    #     self.m.headers['Etag'] = b'Foobar'
-    #     self.assert_equal(self.m.etag, (b'Foobar', True))
-
-    #     self.m.headers['Etag'] = b'W/Foobar'
-    #     self.assert_equal(self.m.etag, (b'Foobar', False))
-
     def test_set_etag(self):
         self.m.etag = b'SomeEtag'
         self.assert_equal(self.m.headers['Etag'], b'"SomeEtag"')

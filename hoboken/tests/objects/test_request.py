@@ -112,9 +112,11 @@ class TestWSGIRequest(BaseTestCase):
         self.environ['SERVER_PORT'] = '444'
         self.assert_equal(self.r.port, 444)
 
-    # def test_port_by_scheme(self):
-    #     self.environ['wsgi.url_scheme'] = b'https'
-    #     self.assert_equal(self.r.port, 443)
+    def test_port_by_scheme(self):
+        # XXX: I'm not convinced this is correct.
+        self.environ['wsgi.url_scheme'] = 'https'
+        self.environ['SERVER_PORT'] = '443'
+        self.assert_equal(self.r.port, 443)
 
     def test_path(self):
         class TestClass(object):
