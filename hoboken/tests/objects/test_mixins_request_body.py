@@ -213,6 +213,26 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(p[b'filename'], b'file.txt')
 
 
+class TestBaseParser(unittest.TestCase):
+    def setUp(self):
+        self.b = BaseParser()
+        self.b.callbacks = {}
+
+    def test_callbacks(self):
+        # The stupid list-ness is to get around lack of nonlocal on py2
+        l = [0]
+        def on_foo():
+            l[0] += 1
+
+        self.b.set_callback('foo', on_foo)
+        self.b.callback('foo')
+        self.assertEqual(l[0], 1)
+
+        self.b.set_callback('foo', None)
+        self.b.callback('foo')
+        self.assertEqual(l[0], 1)
+
+
 class TestQuerystringParser(unittest.TestCase):
     def on_field(self, val):
         self.f.append(val)
@@ -790,6 +810,7 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestFile))
     suite.addTest(unittest.makeSuite(TestParseOptionsHeader))
+    suite.addTest(unittest.makeSuite(TestBaseParser))
     suite.addTest(unittest.makeSuite(TestQuerystringParser))
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))
     suite.addTest(unittest.makeSuite(TestBase64Decoder))

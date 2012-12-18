@@ -382,9 +382,9 @@ class BaseParser(object):
         if new_func is None.
         """
         if new_func is None:
-            self.callbacks.pop(name, None)
+            self.callbacks.pop('on_' + name, None)
         else:
-            self.callbacks[name] = new_func
+            self.callbacks['on_' + name] = new_func
 
     def close(self):
         pass                # pragma: no cover
