@@ -102,6 +102,9 @@ class TestMIMEAccept(unittest.TestCase):
         self.assertFalse(self.m._match(b"one/*", b"two/three"))
         self.assertFalse(self.m._match(b"foo/bar", b"bar/baz"))
 
+    def test_for_coverage(self):
+        self.assertFalse(self.m._match(b"*/*", b"*/two"))
+
 
 class TestLanguageAccept(unittest.TestCase):
     def setUp(self):
@@ -130,6 +133,9 @@ class TestCharsetAccept(unittest.TestCase):
     def test_wildcard_match(self):
         self.assertTrue(self.c._match(b"utf-8", b"*"))
 
+    def test_invalid(self):
+        self.assertTrue(self.c._match(b'INVALID', b'invAlId'))
+
 
 class TestWSGIAcceptMixin(unittest.TestCase):
     def make_obj(self, types):
@@ -153,7 +159,7 @@ class TestWSGIAcceptMixin(unittest.TestCase):
         self.make_obj([b'application/other'])
         self.assertFalse(WSGIAcceptMixin.accepts_xhtml.__get__(self.o))
 
-    def test_accepts_xhtml(self):
+    def test_accepts_html(self):
         self.make_obj([b'text/html'])
         self.o.accepts_xhtml = False
         self.assertTrue(WSGIAcceptMixin.accepts_html.__get__(self.o))
@@ -161,6 +167,16 @@ class TestWSGIAcceptMixin(unittest.TestCase):
         self.make_obj([b'text/plain'])
         self.o.accepts_xhtml = False
         self.assertFalse(WSGIAcceptMixin.accepts_html.__get__(self.o))
+
+    def test_properties(self):
+        class MixedIn(WSGIAcceptMixin):
+            headers = {}
+
+        o = MixedIn()
+        o.accept_mimetypes
+        o.accept_charsets
+        o.accept_encodings
+        o.accept_languages
 
 
 def suite():

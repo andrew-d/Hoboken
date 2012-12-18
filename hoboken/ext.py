@@ -51,9 +51,11 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
 
     def escape_string(self, string):
         escapes = {
-            '&': '\\u0026', '>': '\\u003E', '<': '\\u003C',
             b'&': b'\\u0026', b'>': b'\\u003E', b'<': b'\\u003C'
         }
+        for k, v in iteritems(escapes):
+            escapes[k.decode('latin-1')] = v.decode('latin-1')
+
         def encoder(match):
             v = match.group(0)
             return escapes[v]

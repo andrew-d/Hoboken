@@ -83,6 +83,13 @@ class TestCacheObject(unittest.TestCase):
         self.assertEqual(n._serialize_cache_control(),
                           b'quoted="foo and bar"')
 
+    def test_serialize_cache_control_unicode(self):
+        val = b'foobar'.decode('latin-1')
+        m = CacheObject(None, initial_properties={
+            b'no-cache': val
+        })
+        self.assertEqual(m._serialize_cache_control(), b'no-cache=foobar')
+
     def test_reparse(self):
         class tmp(object):
             headers = {}

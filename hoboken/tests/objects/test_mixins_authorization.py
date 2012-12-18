@@ -40,6 +40,12 @@ class TestAuthorization(unittest.TestCase):
             b'Basic realm="ARealm"'
         )
 
+    def test_serialize_bad(self):
+        self.assertEqual(serialize_auth(123), 123)
+
+        with self.assertRaises(ValueError):
+            serialize_auth([123, 123])
+
 
 class TestMixins(unittest.TestCase):
     def test_request(self):
@@ -50,6 +56,9 @@ class TestMixins(unittest.TestCase):
         self.assertEqual(type, b'Basic')
         self.assertEqual(params, b'qqqq')
 
+        w.authorization = (b'Basic', b'Foobar')
+        self.assertEqual(w.headers[b'Authorization'], b'Basic Foobar')
+
     def test_response(self):
         w = WSGIResponseAuthorizationMixin()
         w.headers = {}
@@ -57,6 +66,9 @@ class TestMixins(unittest.TestCase):
         type, params = w.www_authenticate
         self.assertEqual(type, b'Basic')
         self.assertEqual(params, {b'realm': b'foo'})
+
+        w.www_authenticate = (b'Basic', b'Foobar')
+        self.assertEqual(w.headers[b'WWW-Authenticate'], b'Basic Foobar')
 
 
 def suite():

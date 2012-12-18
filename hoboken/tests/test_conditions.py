@@ -1,5 +1,6 @@
 from . import HobokenTestCase
 from hoboken import condition
+from hoboken.six import u
 from hoboken.conditions import *
 
 import unittest
@@ -13,7 +14,7 @@ class TestUserAgentCondition(HobokenTestCase):
         def route_one():
             return "one"
 
-        @condition(user_agent("^Uagent2"))
+        @condition(user_agent(u("^Uagent2")))
         @self.app.get("/")
         def route_two():
             return "two"
@@ -32,7 +33,7 @@ class TestHostCondition(HobokenTestCase):
         def sub1():
             return 'sub1'
 
-        @condition(host("sub2.foobar.com"))
+        @condition(host(u("sub2.foobar.com")))
         @self.app.get('/')
         def sub2():
             return 'sub2'

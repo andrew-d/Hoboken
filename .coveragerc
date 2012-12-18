@@ -34,3 +34,6 @@ exclude_lines =
     # Ignore import exceptions
     except ImportError:
 
+    # Ignore python compatibility.
+    if PY3
+

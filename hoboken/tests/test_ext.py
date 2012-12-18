@@ -6,6 +6,8 @@ import pytest
 import unittest
 from mock import patch, MagicMock
 
+from hoboken.six import u
+
 class TestHobokenJsonApplication(unittest.TestCase):
     def setUp(self):
         self.app = HobokenJsonApplication('')
@@ -17,8 +19,8 @@ class TestHobokenJsonApplication(unittest.TestCase):
         self.assertEqual(self.app.config.json_escape, True)
 
     def test_will_escape_string(self):
-        val = 'escape </> me'
-        output = 'escape \\u003C/\\u003E me'
+        val = b'escape </> me'.decode('latin-1')
+        output = b'escape \\u003C/\\u003E me'.decode('latin-1')
         self.assertEqual(self.app.escape_string(val), output)
 
     def test_will_escape_bytes(self):

@@ -7,7 +7,7 @@ import yaml
 from hoboken.six import binary_type, text_type
 
 
-def _e(val):
+def _e(val):                    # pragma: no cover
     if val is None:
         return None
 
@@ -113,12 +113,7 @@ class OSParser(object):
         for regex, family, major, minor, patch, patch_minor in self.parsers:
             m = regex.search(val)
             if m is not None:
-                if family is not None:
-                    if b'$1' in family:
-                        family = family.replace(b'$1', m.group(1))
-
-                    # Otherwise, family = family.
-                else:
+                if family is None:
                     family = m.group(1)
 
                 def get_match(i):
@@ -157,7 +152,7 @@ class UAParser(object):
 
         # Compile as a byte pattern, not text.
         patt = obj['regex']
-        if isinstance(patt, text_type):
+        if isinstance(patt, text_type):         # pragma: no cover
             patt = patt.encode('latin-1')
         regex = re.compile(patt)
 
