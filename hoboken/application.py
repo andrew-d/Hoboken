@@ -14,16 +14,15 @@ except:                     # pragma: no cover
     import dummy_threading as threading
 #from functools import wraps
 
-# External dependencies
-from webob.exc import HTTPMethodNotAllowed, HTTPNotFound, HTTPInternalServerError
-
 # In-package dependencies
-from .exceptions import *
-from .matchers import *
-from .objects import *
+from hoboken.exceptions import *
+from hoboken.matchers import *
+from hoboken.objects import WSGIFullRequest as Request
+from hoboken.objects import WSGIFullResponse as Response
 
 # Compatibility.
-from .six import with_metaclass, text_type, binary_type, string_types, callable, iteritems
+from hoboken.six import (with_metaclass, text_type, binary_type, string_types,
+                         callable, iteritems)
 
 
 def get_func_attr(func, attr, default=None, delete=False):
@@ -347,7 +346,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # If a code is specified, we take that.
         if code is None:
             # If no code, we send a 303 if it's supported and we aren't already using GET.
-            if self.request.http_version == 'HTTP/1.1' and self.request.method != 'GET':
+            if self.request.http_version == b'HTTP/1.1' and self.request.method != 'GET':
                 code = 303
             else:
                 code = 302
@@ -398,7 +397,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def before(self, match=None):
         # If the match isn't provided, we match anything.
         if match is None:
-            match = re.compile(".*")
+            match = re.compile(b".*")
 
         def internal_decorator(func):
             self.add_before_filter(match, func)
@@ -412,7 +411,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def after(self, match=None):
         # If the match isn't provided, we match anything.
         if match is None:
-            match = re.compile(".*")
+            match = re.compile(b".*")
 
         def internal_decorator(func):
             self.add_after_filter(match, func)
@@ -425,7 +424,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         route function into the request body.  Override this in a subclass
         to customize how values are returned.
         """
-        print('value is: {0!r}, {1}'.format(value, type(value)))
+        # print('value is: {0!r}, {1}'.format(value, type(value)))
         if isinstance(value, text_type):
             resp.text = value
         elif isinstance(value, binary_type):
@@ -484,7 +483,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # TODO: hook.
 
             # Send "invalid method" exception.
-            response.status_code = 405
+            response.status_int = 405
             return
 
         matched = False
@@ -504,7 +503,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         except HaltRoutingException as ex:
             # Set the various parameters.
             if ex.code is not None:
-                response.status_code = ex.code
+                response.status_int = ex.code
 
             if ex.body is not None:
                 # We pass the body through to on_returned_body.
@@ -522,7 +521,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         except Exception as e:
             # Also, check if the exception has other information attached,
             # like a code/body.
-            # TODO: Handle other HTTPExceptions from webob?
             self.on_exception(e)
 
             # Must set this, or we get clobbered by the 404 handler.
@@ -549,10 +547,10 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             self.response = self.request.get_response(self.sub_app)
         else:
             # By default, return a 404 request.
-            self.response.status_code = 404
+            self.response.status_int = 404
 
     def on_exception(self, exception):
-        self.response.status_code = 500
+        self.response.status_int = 500
         if self.config.debug:
             # Format the current traceback
             tb = traceback.format_exc()

@@ -45,6 +45,8 @@ class TestHostCondition(HobokenTestCase):
 
 class TestAcceptsCondition(HobokenTestCase):
     def after_setup(self):
+        self.app.config.debug = True
+
         @condition(accepts("text/html"))
         @self.app.get('/')
         def html():
@@ -55,7 +57,7 @@ class TestAcceptsCondition(HobokenTestCase):
         def plain():
             return 'plain'
 
-        @condition(accepts("text/*"))
+        @condition(accepts(b"text/*".decode('latin-1')))
         @self.app.get("/")
         def text():
             return 'text'
@@ -76,9 +78,8 @@ class TestAcceptsCondition(HobokenTestCase):
     def test_other_accept(self):
         self.assert_body_is("plain", accepts="text/plain")
 
-    @skip("Since webob won't match this mime type")
     def test_general_match(self):
-        self.assert_body_is("text", "text/otherfoo")
+        self.assert_body_is("text", accepts="text/otherfoo")
 
     def test_list_of_accepts(self):
         self.assert_body_is("two", path="/two", accepts="application/json")

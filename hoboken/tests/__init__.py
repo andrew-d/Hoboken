@@ -4,10 +4,10 @@ from .helpers import *
 
 import os
 import unittest
-from webob import Request
 
 ensure_in_path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import hoboken
+from hoboken.application import Request
 
 
 class HobokenTestCase(BaseTestCase):
@@ -35,16 +35,16 @@ class HobokenTestCase(BaseTestCase):
         """
         This function calls our application, and returns a tuple of (status, body)
         """
-        req = Request.blank(path)
+        req = Request.build(path)
         req.method = method
         if user_agent is not None:
             req.headers['User-Agent'] = user_agent
 
         if host is not None:
-            req.host = host
+            req.headers['Host'] = host
 
         if accepts is not None:
-            req.accept = accepts
+            req.headers['Accept'] = accepts
 
         resp = req.get_response(self.app)
         return resp.status_int, resp.text
@@ -77,6 +77,8 @@ def suite():
     from .test_request_response import suite as suite_7
     from .test_ext import suite as suite_8
 
+    from .objects import suite as suite_objects
+
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
     suite.addTest(suite_2())
@@ -87,6 +89,8 @@ def suite():
     suite.addTest(suite_7())
     suite.addTest(suite_8())
 
+    suite.addTest(suite_objects())
+
     return suite
 
 
@@ -94,10 +98,9 @@ def main():
     """
     This runs the our tests, suitable for a command-line application
     """
-    try:
-        unittest.main(defaultTest='suite')
-    except Exception as e:
-        print("Exception: {0!s}".format(e))
+    unittest.main(defaultTest='suite', exit=False)
+    print("Number of assertions: {0}".format(BaseTestCase.number_of_assertions))
+    print("")
 
 if __name__ == "__main__":
     main()

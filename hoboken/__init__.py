@@ -10,7 +10,7 @@ __copyright__ = "Copyright (c) 2012, Andrew Dunham"
 from ._version import __version__
 
 # Imports we import into the namespace.
-from .application import HobokenBaseApplication, condition, halt, \
+from hoboken.application import HobokenBaseApplication, condition, halt, \
         pass_route
 
 # Submodules we pull in here.
@@ -18,7 +18,7 @@ from . import matchers
 from . import exceptions
 
 # Grab mixins.
-from .helpers import *
+from hoboken.helpers import *
 
 # Build our actual application.
 class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin, HobokenRenderMixin):

@@ -3,7 +3,7 @@ Hoboken
 
 [![Build Status](https://secure.travis-ci.org/andrew-d/Hoboken.png?branch=master)](http://travis-ci.org/andrew-d/Hoboken)
 
-Hoboken is a Sinatra-like web framework for Python.  It attempts to make writing simple web applications both easy, but also provide enough power to accomplish more complex things.  Hoboken officially supports Python 2.6, 2.7, and 3.2 (as these are the platforms on which WebOb is supported).  Unofficially, the tests pass on Python 3.0 (but *not* 3.1).
+Hoboken is a Sinatra-like web framework for Python.  It attempts to make writing simple web applications both easy, but also provide enough power to accomplish more complex things.  Hoboken officially supports Python 2.6, 2.7, 3.1, 3.2, 3.3, and PyPy. Unofficially, the tests pass on Python 3.0, but I won't officially be supporting it.
 
 Currently, Hoboken is in alpha.  There are plenty of tests (actually, test coverage is 100%), but documentation is somewhat lacking.  That said, here's a simple "hello world" application:
 
@@ -17,15 +17,16 @@ Currently, Hoboken is in alpha.  There are plenty of tests (actually, test cover
 
 And here's another application that demonstrates a few more of Hoboken's capabilities:
 
+    import json
     from hoboken import HobokenApplication
 
     app = HobokenApplication(__name__)
 
     @app.get("/greet/:name")
     def greeting(name=None):
-        app.response.json_body = {
+        return json.dumps({
             "greeting": "Hello {0}!".format(name)
-        }
+        })
 
 You can then host this using any WSGI server (since Hoboken applications are WSGI applications).  There's also a built-in test server, so if we use this to test our application: `app.test_server(port=8080)`, we can do this:
 

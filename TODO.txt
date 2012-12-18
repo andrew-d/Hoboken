@@ -149,3 +149,119 @@ def request_handler():
     param = app.request.urlvars['param']
 
 
+New Request / Response Ideas
+============================
+
+ - BaseRequest class that defines the interface that all request objects must conform to
+ - WSGIRequest subclass that will fill out the request given a WSGI environ
+ - Mixins to add additional functionality
+ - In the short term, maybe just have BaseRequest/mixins, and ignore the non-WSGI case for now?
+
+TODO:
+ - Read-only, read-but-not-modify-underlying, or read-write request objects?
+ - Should be able to modify request somehow
+    - Maybe make it such that the request object is read-only, but if you want to modify the request, you can just change the underlying environ?
+    - Advantages: makes the Request simple
+    - Disadvantages: makes changing harder than necessary (especially headers or anything that requires advanced parsing (e.g. changing the etag that's incoming)).
+    - I like this for now - can always make a read-write version later.
+ - Place logic in WSGIRequest, or in BaseRequest class?  Both?
+ - Compute everything in __init__, on demand, or Werkzeug-like "once but cache"?
+ - What about properties that are dependent on other properties?
+ - Some properties might be read-only?
+ - We need to be able to turn a Request into an 'environ', so that when we're middleware, we can modify the request and pass the changes through.
+
+Another thought:
+ - Base WSGI request that just exposes the various environ variables through properties, and then another layer ontop of that that exposes stuff like full URL, etc. via @properties.  In future, can even have it such that BaseWSGIRequest is NOT a subclass of BaseRequest (i.e. since it may not implement the full API), but the full WSGIRequest is (since the various properties on that will implement the corresponding API).
+
+Unicode Thoughts
+===========================================================
+As I do more with WSGI (including work on custom request objects), the more I think I need a comprehensive plan for handling Unicode data across Python 2/3.  Some thoughts:
+
+ - Notes:
+   - Input environ entries are str on both Python 2 and Python 3 (according to my testing, anyway)
+   - Python3: environ entries should be strings that contain only latin-1 codepoints
+   - Python3: the body should be a sequence of bytes
+
+ - Encoding ideas
+   - For routes, we encode text-types (unicde/str on Py2/3) as utf-8 first, and then run through the standard escaping process.
+   - Return values, if binary type, are set as the body.  If text-type, encoded using the app's default encoding (utf-8) and then set as the body.
+   - Headers:
+     - Python2
+       - Getting - return everything as 'str' instances
+       - Setting - only let the user set a string?  we could default-encode unicode instances...
+     - Python3
+       - Getting - headers seem to be passed in environ() as a str
+       - Setting - set as a 'str' instance (but verify?), or, if given bytes, set as bytes.decode('latin-1')
+   - Return headers the same as above
+   - Input and return bodies are both bytestrings.
+   - HTTP deals in bytes.  I'm tempted to make the internals of Hoboken all bytes, and then convert at the 'edges' - i.e., if we're given a 'str', automatically encode it as the app's internal representation
+     - Encode all the environment keys/values as bytes if they're not?
+     - Can do fun stuff with metaclasses to get a request object that returns objects in bytes, but encodes as strings
+     - Or just make explicit (i.e. instead of 'return bytes_val', 'return self.conf(bytes_val)' which will convert the bytes value to a string representation
+       - Downside: this is a lot of boilerplate
+     - Might be worth writing the API assuming 'bytes' and then writing some conversion layer on top?
+     - Other thoughts
+       - Metaclass that wraps each function
+       - Similarly, a class decorator
+       - Explicitly calling something like conv(value) a lot.
+       - ?
+   - To be pythonic, we should adhere to the 'only one, preferably obvious way to do things' rule.
+     - But it would be useful to be able to set bytes.
+
+ - Some problems:
+   - Values in the environ are a binary type on Python2, but Unicode on Py3
+   - I *really* dislike how values in the environ are 'str' instance s on Py3
+   - Converting might break
+     - Could have a list of 'headers we're interested in'?
+   - Changing dynamically is irritating, since it's slower
+     - Also, if we end up creating a mixin/whatever that makes us return unicode strings, we end up doing the conversion backwards and then forwards: from the str environ --> bytes internally --> str on the user-facing side.  This is especially irritating.
+     - Maybe the mixin overrides a conversion function?
+==========
+- environ_prop calls self.text_converter to get back an arbitrary value
+- self.text_converter returns bytes by default
+- mixin can make it return string values
+- can save on property creation to avoid lookup
+- can do the same, self.text_encoder in reverse.
+- downside: the various helper functions (e.g. host, host_with_port, etc.) can't assume either bytes OR strings, and need to byte/string encode/decode all literals, which might get irritating.
+
+class FooRequest(object):
+    def _tenc(self, text):
+        if isinstance(text, text_type):
+            return text.encode(self.charset)
+        else:
+            return text
+
+    def _tdec(self, text):
+        if isinstance(text, binary_type):
+            return text.decode(self.charset)
+        else:
+            return text
+
+    ...
+
+    @property
+    def method(self):
+        return self._tenc(self.environ['REQUEST_METHOD'])
+
+    @method.setter
+    def method(self, value):
+        self.environ['REQUEST_METHOD'] = self._tdec(value)
+
+- Above is the idea (in reality, `method` would be generated by _environ_prop, or something like that) for the concept of a request/response object that handles different encodings.
+  - A mixin can override the _tenc/_tdec functions to return native `str`s instead of bytes.
+- The dictionary (environ) keys are always native `str`s, to match the WSGI spec.
+- I like Tornado's "to_wsgi_str" and "from_wsgi_str" functions, too.
+==========
+
+
+Current Plan
+============
+- All of the various properties will return values in bytes
+- Input values are set directly, if they're bytes, or converted according to self.charset and then set directly, if a string type.
+  - If on Python3, we then decode bytes as latin-1 and set.  Yes, this might lead to double-encoding if we pass a string in.
+- Headers, too, are indexed by strings, but always return values as bytes.  We support indexing headers as bytes - just decode them as latin-1 first.
+- We don't convert the strings in the original environ to bytes.
+
+
+class WSGIBaseRequest(BaseRequest):
+    pass

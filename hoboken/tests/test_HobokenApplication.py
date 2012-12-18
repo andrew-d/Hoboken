@@ -9,8 +9,8 @@ import os
 import re
 import sys
 import unittest
-from webob import Request
 import mock
+from hoboken.application import Request
 
 
 class TestHasHTTPMethods(HobokenTestCase):
@@ -46,7 +46,7 @@ class TestWorksWithConditions(HobokenTestCase):
 class TestConditionCanAbortRequest(HobokenTestCase):
     def after_setup(self):
         def no_foo_in_path(req):
-            return req.path.find('foo') == -1
+            return req.path.find(b'foo') == -1
 
         @condition(no_foo_in_path)
         @self.app.get('/:param')
@@ -106,12 +106,12 @@ class TestBodyReturnValues(HobokenTestCase):
             return b'f\xc3\xb8\xc3\xb8'.decode('utf-8')
 
     def test_bytes(self):
-        req = Request.blank('/bytes')
+        req = Request.build('/bytes')
         resp = req.get_response(self.app)
         self.assert_equal(resp.body, b'byte string')
 
     def test_bytes(self):
-        req = Request.blank('/string')
+        req = Request.build('/string')
         resp = req.get_response(self.app)
         self.assert_equal(resp.text, b'f\xc3\xb8\xc3\xb8'.decode('utf-8'))
 
@@ -136,7 +136,7 @@ class TestHaltHelper(HobokenTestCase):
         """Helper function to set the halt value and assert"""
         self.halt_code = code
         self.halt_body = body
-        req = Request.blank(path)
+        req = Request.build(path)
         resp = req.get_response(self.app)
         self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, body)
@@ -162,15 +162,15 @@ class TestPassHelper(HobokenTestCase):
         @self.app.before("/pass/before")
         def pass_before():
             pass_route()
-            self.app.response.text = 'bad'
+            self.app.response.body = b'bad'
 
         @self.app.before("/pass/*")
         def before_pass_all(splat):
-            self.app.response.text += 'good'
+            self.app.response.body += b'good'
 
         @self.app.get("/pass/*")
         def pass_before_route(splat):
-            self.app.response.text += 'foo'
+            self.app.response.body += b'foo'
 
         self.app.config.debug = True
 
@@ -204,29 +204,29 @@ class TestRedirectHelper(HobokenTestCase):
         self.app.config.debug = True
 
     def test_redirect(self):
-        req = Request.blank("/upload", method='POST')
+        req = Request.build("/upload", method='POST')
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 302)
-        self.assert_true(resp.location.endswith('/uploaded'))
+        self.assert_true(resp.headers['Location'].endswith(b'/uploaded'))
 
     def test_redirect_code(self):
         for code in [301, 302, 303]:
             self.redirect_code = code
 
-            req = Request.blank("/redirect")
+            req = Request.build("/redirect")
             resp = req.get_response(self.app)
 
             self.assert_equal(resp.status_int, code)
-            self.assert_true(resp.location.endswith('/foo'))
+            self.assert_true(resp.headers['Location'].endswith(b'/foo'))
 
     def test_redirect_with_non_get(self):
-        req = Request.blank("/upload", method='POST')
+        req = Request.build("/upload", method='POST')
         req.http_version = "HTTP/1.1"
         resp = req.get_response(self.app)
 
         self.assert_equal(resp.status_int, 303)
-        self.assert_true(resp.location.endswith('/uploaded'))
+        self.assert_true(resp.headers['Location'].endswith(b'/uploaded'))
 
 
 class TestRoute(HobokenTestCase):
@@ -238,7 +238,8 @@ class TestRoute(HobokenTestCase):
 
 class TestMatcherTypes(HobokenTestCase):
     def test_will_handle_regex(self):
-        r = re.compile("(.*?)")
+        r = re.compile(b"(.*?)")
+
         @self.app.get(r)
         def regex_get():
             return b'body'
@@ -247,59 +248,59 @@ class TestMatcherTypes(HobokenTestCase):
         self.assert_true(isinstance(route.matcher, RegexMatcher))
 
     def test_will_handle_regex_named_captures(self):
-        r = re.compile("/(.*?)foo(?P<name>.*?)bar")
+        r = re.compile(b"/(.*?)foo(?P<name>.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg, name=None):
-            self.assert_equal(arg, 'ONE')
-            self.assert_equal(name, 'TWO')
+            self.assert_equal(arg, b'ONE')
+            self.assert_equal(name, b'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_2(self):
-        r = re.compile("/(?P<first>.*?)foo(?P<second>.*?)bar")
+        r = re.compile(b"/(?P<first>.*?)foo(?P<second>.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(first=None, second=None):
-            self.assert_equal(first, 'ONE')
-            self.assert_equal(second, 'TWO')
+            self.assert_equal(first, b'ONE')
+            self.assert_equal(second, b'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_3(self):
-        r = re.compile("/(.*?)foo(.*?)bar")
+        r = re.compile(b"/(.*?)foo(.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg1, arg2):
-            self.assert_equal(arg1, 'ONE')
-            self.assert_equal(arg2, 'TWO')
+            self.assert_equal(arg1, b'ONE')
+            self.assert_equal(arg2, b'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_4(self):
-        r = re.compile("/(?P<first>.*?)foo(.*?)bar")
+        r = re.compile(b"/(?P<first>.*?)foo(.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg, first=None):
-            self.assert_equal(first, 'ONE')
-            self.assert_equal(arg, 'TWO')
+            self.assert_equal(first, b'ONE')
+            self.assert_equal(arg, b'TWO')
             return b'param'
 
-        r = Request.blank("/ONEfooTWObar")
+        r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'param')
 
     def test_will_handle_custom_matcher(self):
@@ -312,9 +313,9 @@ class TestMatcherTypes(HobokenTestCase):
             self.assert_equal(val, 'kwarg')
             return b'body'
 
-        r = Request.blank("/")
+        r = Request.build("/")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(m.match.call_count, 1)
 
 
@@ -355,11 +356,11 @@ class TestMiscellaneousMethods(HobokenTestCase):
         def index():
             return b'foo'
 
-        r = Request.blank("/")
+        r = Request.build("/")
         r.method = 'OTHER'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 405)
+        self.assert_equal(resp.status_int, 405)
 
     def test_will_error_on_invalid_body(self):
         req = mock.MagicMock()
@@ -397,12 +398,12 @@ class TestConfig(HobokenTestCase):
         def two():
             self.assert_true('foo' not in app.g)
 
-        r = Request.blank("/one")
+        r = Request.build("/one")
         resp = r.get_response(app)
 
         self.assert_true('foo' not in app.g)
 
-        r = Request.blank("/two")
+        r = Request.build("/two")
         resp = r.get_response(app)
 
 

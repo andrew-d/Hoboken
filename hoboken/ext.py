@@ -1,5 +1,3 @@
-from .application import HobokenBaseApplication
-from .helpers import *
 import re
 import sys
 try:
@@ -7,7 +5,9 @@ try:
 except ImportError:
     import simplejson as json
 
-from .six import PY3, string_types, binary_type, text_type, iteritems
+from hoboken.six import PY3, string_types, binary_type, text_type, u, iteritems
+from hoboken.application import HobokenBaseApplication
+from hoboken.helpers import *
 
 
 class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
@@ -50,10 +50,16 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
         resp.content_type = 'application/json'
 
     def escape_string(self, string):
-        escapes = {'&': '\\u0026', '>': '\\u003E', '<': '\\u003C'}
+        escapes = {
+            '&': '\\u0026', '>': '\\u003E', '<': '\\u003C',
+            b'&': b'\\u0026', b'>': b'\\u003E', b'<': b'\\u003C'
+        }
         def encoder(match):
             v = match.group(0)
             return escapes[v]
 
-        return re.sub(r"[&<>]", encoder, string)
+        if isinstance(string, text_type):
+            return re.sub(u(r"[&<>]"), encoder, string)
+        else:
+            return re.sub(br"[&<>]", encoder, string)
 

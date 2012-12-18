@@ -25,7 +25,6 @@ setup(name='Hoboken',
       platforms='any',
       zip_safe=False,
       install_requires=[
-        'WebOb>=1.2',
         'Shift==0.0.4'
       ],
       tests_require=[

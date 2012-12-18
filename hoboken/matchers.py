@@ -6,10 +6,10 @@ import re
 import sys
 
 # In-package dependencies
-from .exceptions import *
+from hoboken.exceptions import *
 
 # Compatibility.
-from .six import string_types, text_type, PY3
+from hoboken.six import string_types, text_type, PY3
 
 RegexType = type(re.compile(""))
 RegexMatchType = type(re.compile(".*").match("asdf"))
@@ -259,7 +259,7 @@ class HobokenRouteMatcher(AbstractMatcher):
         pattern = self.MATCH_REGEX_BYTES.sub(convert_match, pattern)
         pattern = br'\A' + pattern + br'\Z'
 
-        return pattern.decode('ascii')
+        return pattern
 
     def match(self, request):
         match = self.match_re.match(request.path_info)

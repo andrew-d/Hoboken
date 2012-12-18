@@ -6,8 +6,10 @@ import sys
 import time
 import unittest
 import datetime
-from webob import Request
 from mock import patch, MagicMock
+
+from hoboken.application import Request
+import hoboken.helpers
 
 
 class TestLastModified(HobokenTestCase):
@@ -31,55 +33,55 @@ class TestLastModified(HobokenTestCase):
             return b'foo'
 
     def test_has_last_modified(self):
-        r = Request.blank("/resource")
+        r = Request.build("/resource")
         resp = r.get_response(self.app)
         self.assert_true(resp.last_modified is not None)
 
     def test_no_last_modified(self):
-        r = Request.blank("/bad")
+        r = Request.build("/bad")
         resp = r.get_response(self.app)
         self.assert_true(resp.last_modified is None)
 
     def test_no_last_modified_if_etag(self):
-        r = Request.blank("/resource")
-        r.if_none_match = 'foobar'
+        r = Request.build("/resource")
+        r.headers['If-None-Match'] = 'foobar'
         resp = r.get_response(self.app)
         self.assert_true(resp.last_modified is not None)
 
     def test_will_return_304_for_get(self):
-        r = Request.blank("/resource")
+        r = Request.build("/resource")
         r.if_modified_since = datetime.datetime(year=2012, month=7, day=20)
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 304)
+        self.assert_equal(resp.status_int, 304)
         self.assert_equal(resp.body, b'')
 
     def test_will_return_200_for_newer(self):
-        r = Request.blank("/resource")
+        r = Request.build("/resource")
         r.if_modified_since = datetime.datetime(year=2012, month=7, day=1)
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'resource value')
 
     def test_if_unmodified_since(self):
-        r = Request.blank("/resource", method='PUT')
+        r = Request.build("/resource", method='PUT')
         r.if_unmodified_since = datetime.datetime(year=2012, month=7, day=20)
         r.body = b'put this here'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
 
     def test_if_unmodified_since_precondition_fail(self):
-        r = Request.blank("/resource", method='PUT')
+        r = Request.build("/resource", method='PUT')
         r.if_unmodified_since = datetime.datetime(year=2012, month=7, day=1)
         r.body = b'put this here'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 412)
+        self.assert_equal(resp.status_int, 412)
 
 
 class TestETag(HobokenTestCase):
     def after_setup(self):
-        self.etag = 'some etag'
+        self.etag = b'some etag'
         self.app.config.debug = True
 
         @self.app.get("/resource")
@@ -93,41 +95,41 @@ class TestETag(HobokenTestCase):
             return b'success'
 
     def call_app(self, path, *args, **kwargs):
-        req = Request.blank(path, *args, **kwargs)
+        req = Request.build(path, *args, **kwargs)
         resp = req.get_response(self.app)
         return resp
 
     def test_etag(self):
         resp = self.call_app("/resource")
-        self.assert_equal(resp.etag, self.etag)
+        self.assert_equal(resp.etag[0], self.etag)
 
     def test_etag_will_return_304_for_correct_if_none_match(self):
-        resp = self.call_app("/resource", if_none_match=self.etag)
-        self.assert_equal(resp.status_code, 304)
+        resp = self.call_app("/resource", headers={'If-None-Match': self.etag})
+        self.assert_equal(resp.status_int, 304)
 
     def test_etag_will_return_304_for_incorrect_if_none_match(self):
-        resp = self.call_app("/resource", method='PUT', if_none_match=self.etag)
-        self.assert_equal(resp.status_code, 412)
+        resp = self.call_app("/resource", method='PUT', headers={'If-None-Match': self.etag})
+        self.assert_equal(resp.status_int, 412)
 
     def test_etag_will_return_200_for_no_if_none_match(self):
-        resp = self.call_app("/resource", method='PUT', if_none_match=self.etag + 'false')
-        self.assert_equal(resp.status_code, 200)
+        resp = self.call_app("/resource", method='PUT', headers={'If-None-Match': self.etag + b'false'})
+        self.assert_equal(resp.status_int, 200)
 
     def test_etag_will_return_200_for_correct_if_match(self):
-        resp = self.call_app("/resource", method='PUT', if_match=self.etag)
-        self.assert_equal(resp.status_code, 200)
+        resp = self.call_app("/resource", method='PUT', headers={'If-Match': self.etag})
+        self.assert_equal(resp.status_int, 200)
 
     def test_etag_will_return_412_for_incorrect_if_match(self):
-        resp = self.call_app("/resource", method='PUT', if_match=self.etag + 'fail')
-        self.assert_equal(resp.status_code, 412)
+        resp = self.call_app("/resource", method='PUT', headers={'If-Match': self.etag + b'fail'})
+        self.assert_equal(resp.status_int, 412)
 
     def test_wildcard_etag_if_match(self):
-        resp = self.call_app("/resource", method='PUT', if_match='*')
-        self.assert_equal(resp.status_code, 200)
+        resp = self.call_app("/resource", method='PUT', headers={'If-Match': b'*'})
+        self.assert_equal(resp.status_int, 200)
 
     def test_wildcard_etag_if_none_match(self):
-        resp = self.call_app("/resource", method='PUT', if_none_match='*')
-        self.assert_equal(resp.status_code, 412)
+        resp = self.call_app("/resource", method='PUT', headers={'If-None-Match': b'*'})
+        self.assert_equal(resp.status_int, 412)
 
 
 class TestCacheControl(HobokenTestCase):
@@ -138,7 +140,7 @@ class TestCacheControl(HobokenTestCase):
             return b'resource'
 
     def call_app(self, path, *args, **kwargs):
-        req = Request.blank(path, *args, **kwargs)
+        req = Request.build(path, *args, **kwargs)
         resp = req.get_response(self.app)
         return resp
 
@@ -168,43 +170,38 @@ class TestExpires(HobokenTestCase):
             return b'resource'
 
     def call_app(self, path, *args, **kwargs):
-        req = Request.blank(path, *args, **kwargs)
+        req = Request.build(path, *args, **kwargs)
         resp = req.get_response(self.app)
         return resp
 
-    @skip_if(is_pypy(), "Apparently mocking standard types doesn't work well on PyPy")
     def test_cache_control_with_offset(self):
         test_time = datetime.datetime(year=2012, month=7, day=15, hour=0, minute=0, second=0)
-        with patch('datetime.datetime', wraps=datetime.datetime) as new_datetime:
-            new_datetime.now.return_value = test_time
+        with patch('hoboken.helpers._now') as now_function:
+            now_function.return_value = test_time
             resp = self.call_app("/ccoffset")
 
-        # Note that webob assumes the input time is a UTC value, so we simply
-        # remove the timezone info from the expires value to check it.
+        # Remove the timezone from any time to test.
         expires_timestamp = time.mktime(resp.expires.replace(tzinfo=None).timetuple())
         test_timestamp = time.mktime(test_time.timetuple())
         self.assert_equal(expires_timestamp, test_timestamp + 10)
         self.assert_equal(resp.cache_control.max_age, 10)
 
-    @skip_if(is_pypy(), "Apparently mocking standard types doesn't work well on PyPy")
     def test_cache_control_with_absolute(self):
         test_time = datetime.datetime(year=2012, month=7, day=15, hour=0, minute=0, second=0)
-        with patch('datetime.datetime', wraps=datetime.datetime) as new_datetime:
-            new_datetime.now.return_value = test_time
+        with patch('hoboken.helpers._now') as now_function:
+            now_function.return_value = test_time
             resp = self.call_app("/ccabsolute")
 
-        # Note that webob assumes the input time is a UTC value, so we simply
-        # remove the timezone info from the expires value to check it.
-        expires_timestamp = time.mktime(resp.expires.replace(tzinfo=None).timetuple())
+        # Remove the timezone from any time to test.
+        expires_timestamp = time.mktime(resp.expires.timetuple())
         test_timestamp = time.mktime(test_time.timetuple())
         self.assert_equal(expires_timestamp, test_timestamp + 60)
         self.assert_equal(resp.cache_control.max_age, 60)
 
-    @skip_if(is_pypy(), "Apparently mocking standard types doesn't work well on PyPy")
     def test_cache_control_already_expired(self):
         test_time = datetime.datetime(year=2012, month=7, day=15, hour=1, minute=0, second=0)
-        with patch('datetime.datetime', wraps=datetime.datetime) as new_datetime:
-            new_datetime.now.return_value = test_time
+        with patch('hoboken.helpers._now') as now_function:
+            now_function.return_value = test_time
             resp = self.call_app("/ccexpired")
 
         self.assert_equal(resp.cache_control.max_age, 0)
@@ -212,6 +209,8 @@ class TestExpires(HobokenTestCase):
 
 class TestRedirection(HobokenTestCase):
     def after_setup(self):
+        self.app.config.debug = True
+
         @self.app.get("/redirect_back")
         def redirect():
             self.app.redirect_back()
@@ -230,25 +229,25 @@ class TestRedirection(HobokenTestCase):
             self.app.redirect_to(target)
 
     def test_redirect_back_success(self):
-        r = Request.blank("/redirect_back", referer='http://www.google.com')
+        r = Request.build("/redirect_back", headers={'Referer': b'http://www.google.com'})
         resp = r.get_response(self.app)
 
-        self.assert_true(300 <= resp.status_int <= 399)
-        self.assert_equal(resp.location, 'http://www.google.com')
+        self.assert_between(resp.status_int, 300, 399)
+        self.assert_equal(resp.headers['Location'], b'http://www.google.com')
 
     def test_redirect_back_failure(self):
-        r = Request.blank("/redirect_fail", referer='')
+        r = Request.build("/redirect_fail", headers={'Referer': b''})
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_code, 200)
+        self.assert_equal(resp.status_int, 200)
         self.assert_equal(resp.body, b'no redirect')
 
     def test_redirect_to(self):
-        r = Request.blank("/redirect_to")
+        r = Request.build("/redirect_to")
         resp = r.get_response(self.app)
 
-        self.assert_true(300 <= resp.status_int <= 399)
-        self.assert_true(resp.location.endswith('/to_me'))
+        self.assert_between(resp.status_int, 300, 399)
+        self.assert_true(resp.headers['Location'].endswith(b'/to_me'))
 
 
 class TestShift(HobokenTestCase):

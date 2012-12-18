@@ -4,7 +4,6 @@ from . import BaseTestCase, skip_if, is_python3
 from ..ext import HobokenJsonApplication
 import unittest
 from mock import patch, MagicMock
-from webob import Request
 
 class TestHobokenJsonApplication(BaseTestCase):
     def setup(self):
@@ -21,10 +20,10 @@ class TestHobokenJsonApplication(BaseTestCase):
         output = 'escape \\u003C/\\u003E me'
         self.assert_equal(self.app.escape_string(val), output)
 
-    # def test_will_escape_bytes(self):
-    #     val = b'escape </> me'
-    #     output = b'escape \\u003C\\u002F\\u003E me'
-    #     self.assert_equal(self.app.recursive_escape(val), output)
+    def test_will_escape_bytes(self):
+        val = b'escape </> me'
+        output = b'escape \\u003C/\\u003E me'
+        self.assert_equal(self.app.escape_string(val), output)
 
     def test_will_not_escape_if_requested(self):
         self.app.config.json_escape = False
