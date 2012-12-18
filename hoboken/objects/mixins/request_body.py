@@ -582,10 +582,6 @@ class MultipartParser(BaseParser):
         # Our index defaults to 0.
         i = 0
 
-        # Get a mark.
-        def get_mark(name):
-            return self.marks.get(name)
-
         # Set a mark.
         def set_mark(name):
             self.marks[name] = i
@@ -618,7 +614,6 @@ class MultipartParser(BaseParser):
 
         # For each byte...
         while i < len(data):
-            # Get our current character and increment the index.
             c = data[i]
 
             # print("[!] In state %d with char %r" % (state, c))
@@ -776,7 +771,7 @@ class MultipartParser(BaseParser):
                 # boundary.
 
                 # Save the current value of our index.  We use this in case we
-                # find part of a boundary, but it doesn't match fully
+                # find part of a boundary, but it doesn't match fully.
                 prev_index = index
 
                 # Set up variables.
@@ -806,9 +801,10 @@ class MultipartParser(BaseParser):
                 if index < boundary_length:
                     # If the character matches...
                     if boundary[index] == c:
+                        # If we found a match for our boundary, we send the
+                        # existing data.
                         if index == 0:
                             data_callback('part_data')
-                            pass
 
                         # The current character matches, so continue!
                         index += 1
@@ -867,7 +863,7 @@ class MultipartParser(BaseParser):
                         # We need a second hyphen here.
                         if c == HYPHEN:
                             # Callback to end the current part, and then the
-                            # mesaage.
+                            # message.
                             self.callback('part_end')
                             self.callback('end')
                             state = STATE_END

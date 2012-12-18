@@ -4,6 +4,7 @@ import os
 import sys
 import glob
 import yaml
+import base64
 import tempfile
 import unittest
 from io import BytesIO
@@ -454,6 +455,16 @@ class TestBase64Decoder(unittest.TestCase):
             self.d.write(second)
             self.assert_data(b'foobar')
 
+    def test_close_and_finalize(self):
+        parser = Mock()
+        f = Base64Decoder(parser)
+
+        f.finalize()
+        parser.finalize.assert_called_once_with()
+
+        f.close()
+        parser.close.assert_called_once_with()
+
 
 class TestQuotedPrintableDecoder(unittest.TestCase):
     def setUp(self):
@@ -499,6 +510,16 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         self.d.write(b'foo=')
         self.d.write(b'\r\nbar')
         self.assert_data(b'foobar')
+
+    def test_close_and_finalize(self):
+        parser = Mock()
+        f = QuotedPrintableDecoder(parser)
+
+        f.finalize()
+        parser.finalize.assert_called_once_with()
+
+        f.close()
+        parser.close.assert_called_once_with()
 
 
 # Load our list of HTTP test cases.
@@ -745,6 +766,56 @@ class TestFormParser(object):
         f.close()
         parser.close.assert_called_once_with()
 
+    def test_bad_content_type(self):
+        # We should raise a ValueError for a bad Content-Type
+        try:
+            f = FormParser(b'application/bad', None, None)
+        except ValueError:
+            pass
+        else:
+            assert False
+
+    def test_no_boundary_given(self):
+        # We should raise a FormParserError when parsing a multipart message
+        # without a boundary.
+        try:
+            f = FormParser(b'multipart/form-data', None, None)
+        except FormParserError:
+            pass
+        else:
+            assert False
+
+    def test_bad_content_transfer_encoding(self):
+        # The data blob below is the following:
+        #
+        #       ----boundary
+        #       Content-Disposition: form-data; name="file"; filename="test.txt"
+        #       Content-Type: text/plain
+        #       Content-Transfer-Encoding: badstuff
+        #
+        #       Test
+        #       ----boundary
+
+        data = b"LS0tLWJvdW5kYXJ5DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImZpbGUiOyBmaWxlbmFtZT0idGVzdC50eHQiDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW4NCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IGJhZHN0dWZmDQoNClRlc3QNCi0tLS1ib3VuZGFyeS0tDQo="
+        dec = base64.b64decode(data)
+
+        files = []
+        def on_file(f):
+            files.append(f)
+        on_field = Mock()
+        on_end = Mock()
+
+        f = FormParser(b'multipart/form-data', on_field, on_file,
+                       on_end=on_end, boundary=b'--boundary')
+
+        try:
+            f.write(dec)
+            f.finalize()
+        except FormParserError:
+            pass
+        else:
+            assert False
+
 
 class TestRequestBodyMixin(unittest.TestCase):
     def setUp(self):
@@ -832,3 +903,6 @@ def suite():
 
     return suite
 
+
+# TODO: base64-encoded body, quoted-printable body
+# TODO: figure out how to test the irritating things that won't be tested.
