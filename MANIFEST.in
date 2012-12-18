@@ -1,4 +1,4 @@
 include requirements.txt README.md LICENSE.txt
-recursive-include hoboken *.py *.yaml *.bare LICENSE*.*
+recursive-include hoboken *.py *.yaml *.bare *.http LICENSE*.*
 recursive-exclude hoboken *.pyc *.pyo *.pyd
 
