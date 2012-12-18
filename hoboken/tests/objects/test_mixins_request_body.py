@@ -86,6 +86,12 @@ class TestFile(unittest.TestCase):
         self.assertFalse(self.f.in_memory)
         self.assert_data(b'123')
 
+        # Test flushing too.
+        old_obj = self.f.file_object
+        self.f.flush_to_disk()
+        self.assertFalse(self.f.in_memory)
+        self.assertIs(self.f.file_object, old_obj)
+
     def test_file_fallback_with_data(self):
         self.c['MAX_MEMORY_FILE_SIZE'] = 10
 
@@ -606,10 +612,16 @@ class TestFormParser(object):
         self.f.finalize()
 
         # print(repr(param))
-        print("")
-        print(repr(self.fields))
-        print(repr(self.files))
+        # print("")
+        # print(repr(self.fields))
+        # print(repr(self.files))
 
+        # Do we expect an error?
+        if 'error' in param['result']['expected']:
+            assert param['result']['expected']['error'] == processed
+            return
+
+        # No error!
         assert processed == len(param['test'])
 
         # Assert that the parser gave us the appropriate fields/files.

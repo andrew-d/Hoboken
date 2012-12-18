@@ -508,7 +508,7 @@ class QuerystringParser(BaseParser):
                     i = len(data)
 
             else:
-                return i
+                return i            # pragma: no cover (since this is an error case)
 
             i += 1
 
@@ -903,7 +903,7 @@ class MultipartParser(BaseParser):
                 # Do nothing and just consume a byte in the end state.
                 pass
 
-            else:
+            else:                   # pragma: no cover (since this is an error case)
                 # We got into a strange state somehow!  Just stop processing.
                 print('ERROR: in a strange state!')
                 return i

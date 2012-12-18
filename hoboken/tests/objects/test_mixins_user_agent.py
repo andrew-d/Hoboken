@@ -24,6 +24,7 @@ def _e(val):
         raise ValueError("Unknown type for encoding (%r)!" % (val,))
 
 
+@pytest.mark.slowtest
 class TestParsers(unittest.TestCase):
     def setUp(self):
         self.d = os.path.join(
