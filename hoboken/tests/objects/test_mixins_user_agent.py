@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from . import BaseTestCase, skip, parametrize, parameters
 import os
 import sys
 import yaml
 import unittest
 
+import pytest
 from mock import Mock
 
 from hoboken.objects.mixins.user_agent import *
@@ -24,27 +24,27 @@ def _e(val):
         raise ValueError("Unknown type for encoding (%r)!" % (val,))
 
 
-class TestParsers(BaseTestCase):
-    def setup(self):
+class TestParsers(unittest.TestCase):
+    def setUp(self):
         self.d = os.path.join(
             os.path.abspath(os.path.dirname(__file__)),
             "ua_tests"
         )
 
     def assert_ua_results(self, results, expected):
-        self.assert_equal(results.ua.family, _e(expected['family']))
-        self.assert_equal(results.ua.major, _e(expected['major']))
-        self.assert_equal(results.ua.minor, _e(expected['minor']))
-        self.assert_equal(results.ua.patch, _e(expected['patch']))
+        self.assertEqual(results.ua.family, _e(expected['family']))
+        self.assertEqual(results.ua.major, _e(expected['major']))
+        self.assertEqual(results.ua.minor, _e(expected['minor']))
+        self.assertEqual(results.ua.patch, _e(expected['patch']))
 
     def assert_os_results(self, results, expected):
-        self.assert_equal(results.os.family, _e(expected['family']))
-        self.assert_equal(results.os.major, _e(expected['major']))
-        self.assert_equal(results.os.minor, _e(expected['minor']))
-        self.assert_equal(results.os.patch, _e(expected['patch']))
+        self.assertEqual(results.os.family, _e(expected['family']))
+        self.assertEqual(results.os.major, _e(expected['major']))
+        self.assertEqual(results.os.minor, _e(expected['minor']))
+        self.assertEqual(results.os.patch, _e(expected['patch']))
 
     def assert_device_results(self, results, expected):
-        self.assert_equal(results.device, _e(expected['family']))
+        self.assertEqual(results.device, _e(expected['family']))
 
     def check_from_file(self, file, assert_func):
         with open(os.path.join(self.d, file), 'rb') as f:
@@ -76,8 +76,8 @@ class TestParsers(BaseTestCase):
         self.check_from_file('test_device.yaml', self.assert_device_results)
 
 
-class TestOSClass(BaseTestCase):
-    def setup(self):
+class TestOSClass(unittest.TestCase):
+    def setUp(self):
         self.o = OSClass(
             family=b"FooFamily",
             major=b'123',
@@ -87,17 +87,17 @@ class TestOSClass(BaseTestCase):
         )
 
     def test_version_string(self):
-        self.assert_equal(self.o.version_string, b'123.456.789.0')
+        self.assertEqual(self.o.version_string, b'123.456.789.0')
 
     def test_str(self):
-        self.assert_equal(self.o.full_string, b"FooFamily 123.456.789.0")
+        self.assertEqual(self.o.full_string, b"FooFamily 123.456.789.0")
 
         s = OSClass(family=b"AnotherFam").full_string
-        self.assert_equal(s, b"AnotherFam")
+        self.assertEqual(s, b"AnotherFam")
 
 
-class TestFullResults(BaseTestCase):
-    def setup(self):
+class TestFullResults(unittest.TestCase):
+    def setUp(self):
         u = UAClass()
         class DummyOS(object):
             @property
@@ -108,14 +108,14 @@ class TestFullResults(BaseTestCase):
         self.r = FullResults(ua=u, os=o, device=b'')
 
     def test_full_string(self):
-        self.assert_equal(self.r.full_string, b'Other/Oper')
+        self.assertEqual(self.r.full_string, b'Other/Oper')
 
         self.r.os = None
-        self.assert_equal(self.r.full_string, b'Other')
+        self.assertEqual(self.r.full_string, b'Other')
 
 
-class TestUserAgentMixin(BaseTestCase):
-    def setup(self):
+class TestUserAgentMixin(unittest.TestCase):
+    def setUp(self):
         class Foo(object):
             headers = {}
 
@@ -125,17 +125,17 @@ class TestUserAgentMixin(BaseTestCase):
         self.c = MixedIn()
 
     def test_with_None(self):
-        self.assert_true(self.c.user_agent is None)
+        self.assertIsNone(self.c.user_agent)
 
     def test_with_value(self):
         # Value chosen semi-randomly.
         self.c.headers[b'User-Agent'] = b'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.16 (KHTML, like Gecko) Ubuntu/10.10 Chromium/10.0.648.133 Chrome/10.0.648.133 Safari/534.16'
 
         ua = self.c.user_agent
-        self.assert_equal(ua.family, b'Chromium')
-        self.assert_equal(ua.major, b'10')
-        self.assert_equal(ua.minor, b'0')
-        self.assert_equal(ua.patch, b'648')
+        self.assertEqual(ua.family, b'Chromium')
+        self.assertEqual(ua.major, b'10')
+        self.assertEqual(ua.minor, b'0')
+        self.assertEqual(ua.patch, b'648')
 
 def suite():
     suite = unittest.TestSuite()

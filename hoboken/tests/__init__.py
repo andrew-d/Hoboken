@@ -1,20 +1,46 @@
 from __future__ import with_statement, print_function
 
-from .helpers import *
-
 import os
+import sys
 import unittest
+
+def ensure_in_path(path):
+    """
+    Ensure that a given path is in the sys.path array
+    """
+    if not os.path.isdir(path):
+        raise RuntimeError('Tried to add nonexisting path')
+
+    def _samefile(x, y):
+        try:
+            return os.path.samefile(x, y)
+        except (IOError, OSError):
+            return False
+        except AttributeError:
+            # Probably on Windows.
+            path1 = os.path.abspath(x).lower()
+            path2 = os.path.abspath(y).lower()
+            return path1 == path2
+
+    # Remove existing copies of it.
+    for pth in sys.path:
+        if _samefile(pth, path):
+            sys.path.remove(pth)
+
+    # Add it at the beginning.
+    sys.path.insert(0, path)
+
 
 ensure_in_path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import hoboken
 from hoboken.application import Request
 
 
-class HobokenTestCase(BaseTestCase):
+class HobokenTestCase(unittest.TestCase):
     """
     This is a testcase for Hoboken that contains helpful functions specifically for Hoboken
     """
-    def setup(self):
+    def setUp(self):
         # We create an application for each test.
         self.app = hoboken.HobokenApplication(self.__class__.__name__)
         self.after_setup()
@@ -55,15 +81,15 @@ class HobokenTestCase(BaseTestCase):
         and verifying that it succeeded and that the body matches a given set of data.
         """
         status, data = self.call_app(*args, **kwargs)
-        self.assert_equal(status, 200)
-        self.assert_equal(data, body)
+        self.assertEqual(status, 200)
+        self.assertEqual(data, body)
 
     def assert_not_found(self, *args, **kwargs):
         """
         This is a helper function that simply asserts that a given request is not found
         """
         status, _ = self.call_app(*args, **kwargs)
-        self.assert_equal(status, 404)
+        self.assertEqual(status, 404)
 
 
 def suite():

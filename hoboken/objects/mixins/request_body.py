@@ -71,7 +71,7 @@ NULL = b'\x00'[0]
 # str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
 # and joining a list of bytes together.
 # These functions abstract that.
-if PY3:
+if PY3:                         # pragma: no cover
     lower_char = lambda c: c | 0x20
     ord_char = lambda c: c
     join_bytes = lambda b: bytes(list(b))

@@ -1,8 +1,9 @@
-from . import HobokenTestCase, skip
+from . import HobokenTestCase
 from hoboken import condition
 from hoboken.conditions import *
 
 import unittest
+import pytest
 
 
 class TestUserAgentCondition(HobokenTestCase):

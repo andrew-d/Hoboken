@@ -9,38 +9,38 @@ class TestRequest(HobokenTestCase):
     def test_is_safe(self):
         for method in ['GET', 'HEAD', 'OPTIONS', 'TRACE']:
             r = Request.build("/", method=method)
-            self.assert_true(r.is_safe)
+            self.assertTrue(r.is_safe)
 
     def test_is_idempotent(self):
         for method in ['PUT', 'DELETE']:
             r = Request.build("/", method=method)
-            self.assert_true(r.is_idempotent)
+            self.assertTrue(r.is_idempotent)
 
 
 class TestResponse(HobokenTestCase):
     def test_is_informational(self):
         e = Response(status_int=100)
-        self.assert_true(e.is_informational)
+        self.assertTrue(e.is_informational)
 
     def test_is_success(self):
         e = Response(status_int=200)
-        self.assert_true(e.is_success)
+        self.assertTrue(e.is_success)
 
     def test_is_redirect(self):
         e = Response(status_int=300)
-        self.assert_true(e.is_redirect)
+        self.assertTrue(e.is_redirect)
 
     def test_is_client_error(self):
         e = Response(status_int=400)
-        self.assert_true(e.is_client_error)
+        self.assertTrue(e.is_client_error)
 
     def test_is_server_error(self):
         e = Response(status_int=500)
-        self.assert_true(e.is_server_error)
+        self.assertTrue(e.is_server_error)
 
     def test_is_not_found(self):
         e = Response(status_int=404)
-        self.assert_true(e.is_not_found)
+        self.assertTrue(e.is_not_found)
 
 
 

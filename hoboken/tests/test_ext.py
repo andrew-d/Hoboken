@@ -1,29 +1,30 @@
 # -*- coding: utf-8 -*-
 
-from . import BaseTestCase, skip_if, is_python3
 from ..ext import HobokenJsonApplication
+
+import pytest
 import unittest
 from mock import patch, MagicMock
 
-class TestHobokenJsonApplication(BaseTestCase):
-    def setup(self):
+class TestHobokenJsonApplication(unittest.TestCase):
+    def setUp(self):
         self.app = HobokenJsonApplication('')
 
     def test_will_set_default_indent_config(self):
-        self.assert_true('json_indent' in self.app.config)
+        self.assertTrue('json_indent' in self.app.config)
 
     def test_will_set_default_escape_config(self):
-        self.assert_equal(self.app.config.json_escape, True)
+        self.assertEqual(self.app.config.json_escape, True)
 
     def test_will_escape_string(self):
         val = 'escape </> me'
         output = 'escape \\u003C/\\u003E me'
-        self.assert_equal(self.app.escape_string(val), output)
+        self.assertEqual(self.app.escape_string(val), output)
 
     def test_will_escape_bytes(self):
         val = b'escape </> me'
         output = b'escape \\u003C/\\u003E me'
-        self.assert_equal(self.app.escape_string(val), output)
+        self.assertEqual(self.app.escape_string(val), output)
 
     def test_will_not_escape_if_requested(self):
         self.app.config.json_escape = False
@@ -54,12 +55,12 @@ class TestHobokenJsonApplication(BaseTestCase):
         value = b'some val'
 
         self.app.on_returned_body(request_mock, response_mock, value)
-        self.assert_equal(value, response_mock.body)
+        self.assertEqual(value, response_mock.body)
 
     def test_will_handle_non_escapable(self):
         val = '{"no_escape": 0}'
         output = '{"no_escape": 0}'
-        self.assert_equal(self.app.escape_string(val), output)
+        self.assertEqual(self.app.escape_string(val), output)
 
 
 def suite():

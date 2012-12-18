@@ -1,8 +1,9 @@
-from . import HobokenTestCase, skip, hoboken
+from . import HobokenTestCase, hoboken
 import os
 import yaml
 import unittest
-from .helpers import parametrize, parameters
+
+import pytest
 
 from hoboken.application import Request
 from hoboken.six import iteritems, text_type
@@ -40,9 +41,9 @@ class TestHeadFallback(HobokenTestCase):
         r.method = "HEAD"
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(len(resp.body), 0)
-        self.assert_equal(resp.headers['X-Custom-Header'], b'foobar')
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(len(resp.body), 0)
+        self.assertEqual(resp.headers['X-Custom-Header'], b'foobar')
 
 
 # Load our list of test cases from our yaml file.
@@ -52,12 +53,9 @@ with open(test_file, 'rb') as f:
     file_data = f.read()
 test_cases = list(yaml.load_all(file_data))
 
-def make_name(idx, param):
-    return "test_" + param['name']
 
-@parametrize
-class TestRouting(HobokenTestCase):
-    @parameters(test_cases, name_func=make_name)
+class TestRouting(object):
+    @pytest.mark.parametrize('param', test_cases)
     def test_route(self, param):
         if 'skip' in param:
             if hasattr(unittest, 'SkipTest'):
@@ -66,7 +64,7 @@ class TestRouting(HobokenTestCase):
 
         matcher = Matcher(param['path'])
         regex = param['regex'].encode('latin-1')
-        self.assert_equal(matcher.match_re.pattern, regex)
+        assert matcher.match_re.pattern == regex
 
         class FakeRequest(object):
             path_info = None
@@ -83,23 +81,23 @@ class TestRouting(HobokenTestCase):
                 if isinstance(v, text_type):
                     v = v.encode('latin-1')
                 expected_kwargs[k] = v
-            self.assert_equal(matched, True)
-            self.assert_equal(args, expected_args)
-            self.assert_equal(kwargs, expected_kwargs)
+            assert matched is True
+            assert args == expected_args
+            assert kwargs == expected_kwargs
 
         for fail in param.get('failures', []):
             r = FakeRequest()
             r.path = fail
             matched, _, _ = matcher.match(r)
 
-            self.assert_equal(matched, False)
+            assert matched is False
 
 
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestMethods))
     suite.addTest(unittest.makeSuite(TestHeadFallback))
-    suite.addTest(unittest.makeSuite(TestRouting))
+    # suite.addTest(unittest.makeSuite(TestRouting))
 
     return suite
 
