@@ -76,6 +76,13 @@ class TestFile(unittest.TestCase):
         self.f.write(b'foobar')
         self.assert_data(b'foobar')
 
+    def test_invalid_write(self):
+        m = Mock()
+        m.write.return_value = 5
+        self.f._fileobj = m
+        v = self.f.write(b'foobar')
+        self.assertEqual(v, 5)
+
     def test_file_fallback(self):
         self.c['MAX_MEMORY_FILE_SIZE'] = 1
 

@@ -561,7 +561,7 @@ class MultipartParser(BaseParser):
         self.boundary = b'\r\n--' + boundary
 
         # Get a set of characters that belong to our boundary.
-        self.boundary_chars = set(boundary)
+        self.boundary_chars = set(self.boundary)
 
         # We also create a lookbehind list.
         # Note: the +8 is since we can have, at maximum, "\r\n--" + boundary +
@@ -929,7 +929,7 @@ class MultipartParser(BaseParser):
         return len(data)
 
     def finalize(self):
-        # TODO: verify that we're inthe state STATE_END, otherwise throw an
+        # TODO: verify that we're in the state STATE_END, otherwise throw an
         # error or otherwise state that we're not finished parsing.
         pass
 
@@ -968,6 +968,7 @@ class Base64Decoder(object):
             self.underlying.close()
 
     def finalize(self):
+        # TODO: handle remaining bytes in the cache?
         if hasattr(self.underlying, 'finalize'):
             self.underlying.finalize()
 
@@ -1140,10 +1141,7 @@ class FormParser(object):
 
             def on_part_data(data, start, end):
                 bytes_processed = vars.writer.write(data[start:end])
-                if bytes_processed != (end - start):
-                    # TODO: check error code here.
-                    pass
-
+                # TODO: check for error here.
                 return bytes_processed
 
             def on_part_end():
@@ -1211,6 +1209,7 @@ class FormParser(object):
                     )
 
             def on_end():
+                vars.writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
 
