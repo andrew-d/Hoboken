@@ -179,6 +179,26 @@ class TestFile(unittest.TestCase):
         self.assertEqual(ext, b'.txt')
         self.assert_exists()
 
+    def test_invalid_dir_with_name(self):
+        # Write to this dir.
+        self.c['UPLOAD_DIR'] = force_bytes(os.path.join('/', 'tmp', 'notexisting'))
+        self.c['UPLOAD_KEEP_FILENAME'] = True
+        self.c['MAX_MEMORY_FILE_SIZE'] = 5
+
+        # Write.
+        with self.assertRaises(FileError):
+            self.f.write(b'1234567890')
+
+    def test_invalid_dir_no_name(self):
+        # Write to this dir.
+        self.c['UPLOAD_DIR'] = force_bytes(os.path.join('/', 'tmp', 'notexisting'))
+        self.c['UPLOAD_KEEP_FILENAME'] = False
+        self.c['MAX_MEMORY_FILE_SIZE'] = 5
+
+        # Write.
+        with self.assertRaises(FileError):
+            self.f.write(b'1234567890')
+
     # TODO: test uploading two files with the same name.
 
 

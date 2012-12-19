@@ -90,6 +90,12 @@ OPTION_RE = re.compile(OPTION_RE_STR)
 
 
 class FormParserError(ValueError):
+    """Base error class for our form parser."""
+    pass
+
+
+class FileError(IOError, OSError):
+    """Exception class for problems with the File class."""
     pass
 
 
@@ -283,12 +289,13 @@ class File(object):
             if keep_extensions:
                 fname = fname + self._ext
 
+            # TODO: what do we do if we have an error?  For now, ignore it.
+            path = os.path.join(file_dir, fname)
             try:
-                tmp_file = open(os.path.join(file_dir, fname), 'w+b')
-            except IOError as e:
-                # TODO: what do we do?
+                tmp_file = open(path, 'w+b')
+            except (IOError, OSError) as e:
                 tmp_file = None
-                pass
+                raise FileError("Error opening temporary file: %r" % path)
         else:
             # Build options array.
             # Note that on Python 3, tempfile doesn't support byte names.  We
@@ -308,7 +315,11 @@ class File(object):
                 options['dir'] = d
 
             # Create a temporary (named) file with the appropriate settings.
-            tmp_file = tempfile.NamedTemporaryFile(**options)
+            try:
+                tmp_file = tempfile.NamedTemporaryFile(**options)
+            except (IOError, OSError) as e:
+                raise FileError("Error creating named temporary file")
+
             fname = tmp_file.name
 
             # Encode filename as bytes.
