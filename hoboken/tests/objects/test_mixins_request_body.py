@@ -930,6 +930,4 @@ def suite():
 
     return suite
 
-
-# TODO: base64-encoded body, quoted-printable body
-# TODO: figure out how to test the irritating things that won't be tested.
+# TODO: test stuff where we set flags to FLAG_LAST_BOUNDARY, but don't finish it, and then back to PART_BOUNDARY.  Also the reverse

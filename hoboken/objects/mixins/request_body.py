@@ -865,8 +865,9 @@ class MultipartParser(BaseParser):
                             continue
 
                         # We didn't find an LF character, so no match.  Reset
-                        # our index.
+                        # our index and clear our flag.
                         index = 0
+                        flags &= (~FLAG_PART_BOUNDARY)
 
                     # Otherwise, if we're at the last boundary (i.e. we've
                     # seen a hyphen already)...
