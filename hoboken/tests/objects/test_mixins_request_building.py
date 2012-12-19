@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import unittest
+from hoboken.tests.compat import unittest
 from mock import MagicMock, call, patch
 
 from hoboken.objects.mixins.request_building import *

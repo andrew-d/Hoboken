@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import unittest
+from hoboken.tests.compat import unittest
 from io import BytesIO
 from mock import MagicMock, Mock, patch
 

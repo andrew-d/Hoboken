@@ -3,7 +3,7 @@
 from ..ext import HobokenJsonApplication
 
 import pytest
-import unittest
+from hoboken.tests.compat import unittest
 from mock import patch, MagicMock
 
 from hoboken.six import u

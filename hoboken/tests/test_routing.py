@@ -1,7 +1,7 @@
 from . import HobokenTestCase, hoboken
 import os
 import yaml
-import unittest
+from hoboken.tests.compat import unittest
 
 import pytest
 

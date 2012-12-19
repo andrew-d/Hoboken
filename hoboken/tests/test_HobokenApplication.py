@@ -8,7 +8,7 @@ from ..exceptions import *
 import os
 import re
 import sys
-import unittest
+from hoboken.tests.compat import unittest
 import mock
 from hoboken.application import Request
 

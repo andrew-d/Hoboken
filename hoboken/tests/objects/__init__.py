@@ -1,12 +1,10 @@
 from __future__ import with_statement, print_function
 
-
 import os
-import sys
-import unittest
 
-from .. import ensure_in_path
+from hoboken.tests.compat import unittest, ensure_in_path
 ensure_in_path(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
 import hoboken
 
 

@@ -2,7 +2,7 @@
 
 from . import HobokenTestCase
 from ..application import Request, Response
-import unittest
+from hoboken.tests.compat import unittest
 
 
 class TestRequest(HobokenTestCase):

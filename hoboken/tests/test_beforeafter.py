@@ -1,6 +1,6 @@
 from . import HobokenTestCase
 import pytest
-import unittest
+from hoboken.tests.compat import unittest
 
 class TestFilters(HobokenTestCase):
     def after_setup(self):

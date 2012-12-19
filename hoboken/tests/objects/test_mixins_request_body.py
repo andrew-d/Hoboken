@@ -6,7 +6,7 @@ import glob
 import yaml
 import base64
 import tempfile
-import unittest
+from hoboken.tests.compat import unittest
 from io import BytesIO
 
 import pytest

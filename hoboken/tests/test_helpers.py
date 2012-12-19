@@ -4,7 +4,7 @@ from . import HobokenTestCase
 import os
 import sys
 import time
-import unittest
+from hoboken.tests.compat import unittest
 import datetime
 
 import pytest

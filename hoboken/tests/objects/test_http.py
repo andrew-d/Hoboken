@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import unittest
+from hoboken.tests.compat import unittest
 from mock import Mock
 
 from hoboken.objects.http import *

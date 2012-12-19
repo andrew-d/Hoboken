@@ -6,7 +6,7 @@ import re
 import os
 import sys
 import yaml
-import unittest
+from hoboken.tests.compat import unittest
 
 import pytest
 from mock import patch, MagicMock
