@@ -4,7 +4,10 @@
 # Change to True some day?
 branch = False
 # branch = True
-omit = *six.py
+omit =
+    *six.py
+    hoboken/tests/*
+    hoboken/objects/oproperty/*
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -30,4 +33,7 @@ exclude_lines =
 
     # Ignore import exceptions
     except ImportError:
+
+    # Ignore python compatibility.
+    if PY3
 

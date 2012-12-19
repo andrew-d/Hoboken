@@ -31,12 +31,12 @@ def unquote(val, encoding='utf-8'):
         val = val.encode(encoding)
 
     chars = []
-    if PY3:
+    if PY3:             # pragma: no cover
         def _unquoter(match_obj):
             enc = match_obj.group(0)
             val = int(enc[1:], 16)
             return bytes([val])
-    else:
+    else:               # pragma: no cover
         def _unquoter(match_obj):
             enc = match_obj.group(0)
             val = int(enc[1:], 16)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from . import HobokenTestCase, is_python3
+from . import HobokenTestCase
 from .. import HobokenApplication, condition
 from ..application import HobokenBaseApplication, Route, halt, pass_route
 from ..matchers import RegexMatcher
@@ -8,7 +8,7 @@ from ..exceptions import *
 import os
 import re
 import sys
-import unittest
+from hoboken.tests.compat import unittest
 import mock
 from hoboken.application import Request
 
@@ -40,7 +40,7 @@ class TestWorksWithConditions(HobokenTestCase):
 
     def test_condtions_order(self):
         self.assert_body_is("success")
-        self.assert_equal(self.calls, ["below", "above", "body"])
+        self.assertEqual(self.calls, ["below", "above", "body"])
 
 
 class TestConditionCanAbortRequest(HobokenTestCase):
@@ -91,7 +91,7 @@ class TestHandlesExceptions(HobokenTestCase):
 
     def test_exception_handling(self):
         code, body = self.call_app(path='/errors')
-        self.assert_equal(code, 500)
+        self.assertEqual(code, 500)
 
 
 class TestBodyReturnValues(HobokenTestCase):
@@ -108,12 +108,12 @@ class TestBodyReturnValues(HobokenTestCase):
     def test_bytes(self):
         req = Request.build('/bytes')
         resp = req.get_response(self.app)
-        self.assert_equal(resp.body, b'byte string')
+        self.assertEqual(resp.body, b'byte string')
 
     def test_bytes(self):
         req = Request.build('/string')
         resp = req.get_response(self.app)
-        self.assert_equal(resp.text, b'f\xc3\xb8\xc3\xb8'.decode('utf-8'))
+        self.assertEqual(resp.text, b'f\xc3\xb8\xc3\xb8'.decode('utf-8'))
 
 
 class TestHaltHelper(HobokenTestCase):
@@ -138,8 +138,8 @@ class TestHaltHelper(HobokenTestCase):
         self.halt_body = body
         req = Request.build(path)
         resp = req.get_response(self.app)
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(resp.body, body)
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.body, body)
 
     def test_before_can_halt(self):
         self.assert_halts_with(200, b'foobar', '/before/halt')
@@ -207,8 +207,8 @@ class TestRedirectHelper(HobokenTestCase):
         req = Request.build("/upload", method='POST')
         resp = req.get_response(self.app)
 
-        self.assert_equal(resp.status_int, 302)
-        self.assert_true(resp.headers['Location'].endswith(b'/uploaded'))
+        self.assertEqual(resp.status_int, 302)
+        self.assertTrue(resp.headers['Location'].endswith(b'/uploaded'))
 
     def test_redirect_code(self):
         for code in [301, 302, 303]:
@@ -217,23 +217,23 @@ class TestRedirectHelper(HobokenTestCase):
             req = Request.build("/redirect")
             resp = req.get_response(self.app)
 
-            self.assert_equal(resp.status_int, code)
-            self.assert_true(resp.headers['Location'].endswith(b'/foo'))
+            self.assertEqual(resp.status_int, code)
+            self.assertTrue(resp.headers['Location'].endswith(b'/foo'))
 
     def test_redirect_with_non_get(self):
         req = Request.build("/upload", method='POST')
         req.http_version = "HTTP/1.1"
         resp = req.get_response(self.app)
 
-        self.assert_equal(resp.status_int, 303)
-        self.assert_true(resp.headers['Location'].endswith(b'/uploaded'))
+        self.assertEqual(resp.status_int, 303)
+        self.assertTrue(resp.headers['Location'].endswith(b'/uploaded'))
 
 
 class TestRoute(HobokenTestCase):
     def test_route_uppercases_method(self):
         m = Route(None, None)
         m.method = 'get'
-        self.assert_equal(m.method, 'GET')
+        self.assertEqual(m.method, 'GET')
 
 
 class TestMatcherTypes(HobokenTestCase):
@@ -245,63 +245,63 @@ class TestMatcherTypes(HobokenTestCase):
             return b'body'
 
         route = self.app.find_route(regex_get)
-        self.assert_true(isinstance(route.matcher, RegexMatcher))
+        self.assertTrue(isinstance(route.matcher, RegexMatcher))
 
     def test_will_handle_regex_named_captures(self):
         r = re.compile(b"/(.*?)foo(?P<name>.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg, name=None):
-            self.assert_equal(arg, b'ONE')
-            self.assert_equal(name, b'TWO')
+            self.assertEqual(arg, b'ONE')
+            self.assertEqual(name, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(resp.body, b'param')
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_2(self):
         r = re.compile(b"/(?P<first>.*?)foo(?P<second>.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(first=None, second=None):
-            self.assert_equal(first, b'ONE')
-            self.assert_equal(second, b'TWO')
+            self.assertEqual(first, b'ONE')
+            self.assertEqual(second, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(resp.body, b'param')
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_3(self):
         r = re.compile(b"/(.*?)foo(.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg1, arg2):
-            self.assert_equal(arg1, b'ONE')
-            self.assert_equal(arg2, b'TWO')
+            self.assertEqual(arg1, b'ONE')
+            self.assertEqual(arg2, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(resp.body, b'param')
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.body, b'param')
 
     def test_will_handle_regex_named_captures_4(self):
         r = re.compile(b"/(?P<first>.*?)foo(.*?)bar")
 
         @self.app.get(r)
         def regex_get_params(arg, first=None):
-            self.assert_equal(first, b'ONE')
-            self.assert_equal(arg, b'TWO')
+            self.assertEqual(first, b'ONE')
+            self.assertEqual(arg, b'TWO')
             return b'param'
 
         r = Request.build("/ONEfooTWObar")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(resp.body, b'param')
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.body, b'param')
 
     def test_will_handle_custom_matcher(self):
         m = mock.MagicMock()
@@ -309,23 +309,23 @@ class TestMatcherTypes(HobokenTestCase):
 
         @self.app.get(m)
         def custom_get(arg, val=None):
-            self.assert_equal(arg, 'arg')
-            self.assert_equal(val, 'kwarg')
+            self.assertEqual(arg, 'arg')
+            self.assertEqual(val, 'kwarg')
             return b'body'
 
         r = Request.build("/")
         resp = r.get_response(self.app)
-        self.assert_equal(resp.status_int, 200)
-        self.assert_equal(m.match.call_count, 1)
+        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(m.match.call_count, 1)
 
 
 class TestMiscellaneousMethods(HobokenTestCase):
     def test_add_route_will_throw(self):
-        with self.assert_raises(HobokenException):
+        with self.assertRaises(HobokenException):
             self.app.add_route('bad', None, None)
 
     def test_invalid_matcher_type(self):
-        with self.assert_raises(InvalidMatchTypeException):
+        with self.assertRaises(InvalidMatchTypeException):
             @self.app.get(123)
             def bad():
                 pass
@@ -335,17 +335,17 @@ class TestMiscellaneousMethods(HobokenTestCase):
             pass
 
         res = self.app.find_route(not_exist)
-        self.assert_true(res is None)
+        self.assertTrue(res is None)
 
     def test_url_for_will_return_none_on_failure(self):
         def not_a_route():
             pass
 
         url = self.app.url_for(not_a_route)
-        self.assert_true(url is None)
+        self.assertTrue(url is None)
 
     def test_only_one_route_per_function(self):
-        with self.assert_raises(RouteExistsException):
+        with self.assertRaises(RouteExistsException):
             @self.app.get("/one")
             @self.app.get("/two")
             def route_func():
@@ -360,32 +360,32 @@ class TestMiscellaneousMethods(HobokenTestCase):
         r.method = 'OTHER'
         resp = r.get_response(self.app)
 
-        self.assert_equal(resp.status_int, 405)
+        self.assertEqual(resp.status_int, 405)
 
     def test_will_error_on_invalid_body(self):
         req = mock.MagicMock()
         resp = mock.MagicMock()
         value = 123
 
-        with self.assert_raises(ValueError):
+        with self.assertRaises(ValueError):
             self.app.on_returned_body(req, resp, value)
 
 class TestConfig(HobokenTestCase):
     def test_can_get_set_values(self):
         self.app.config.foo = 'asdf'
-        self.assert_equal(self.app.config.foo, 'asdf')
-        self.assert_equal(self.app.config['foo'], 'asdf')
+        self.assertEqual(self.app.config.foo, 'asdf')
+        self.assertEqual(self.app.config['foo'], 'asdf')
 
     def test_can_delete_values(self):
         self.app.config.foo = 'bar'
         del self.app.config.foo
 
-        self.assert_true('foo' not in self.app.config)
+        self.assertTrue('foo' not in self.app.config)
 
     def test_will_fill_missing_views_dir(self):
         app = HobokenApplication('', root_directory='foo')
         expected_views = os.path.join('foo', 'views')
-        self.assert_equal(app.config.views_directory, expected_views)
+        self.assertEqual(app.config.views_directory, expected_views)
 
     def test_g(self):
         app = HobokenApplication('')
@@ -396,12 +396,12 @@ class TestConfig(HobokenTestCase):
 
         @app.get("/two")
         def two():
-            self.assert_true('foo' not in app.g)
+            self.assertTrue('foo' not in app.g)
 
         r = Request.build("/one")
         resp = r.get_response(app)
 
-        self.assert_true('foo' not in app.g)
+        self.assertTrue('foo' not in app.g)
 
         r = Request.build("/two")
         resp = r.get_response(app)
@@ -423,8 +423,8 @@ class TestInheritance(HobokenTestCase):
 
         cls = Inherited("foobar")
 
-        self.assert_true("inherited" in calls)
-        self.assert_true("mixin" in calls)
+        self.assertTrue("inherited" in calls)
+        self.assertTrue("mixin" in calls)
 
 
 def suite():

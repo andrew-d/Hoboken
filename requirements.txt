@@ -2,6 +2,7 @@
 Shift==0.0.4
 
 # Testing help
+pytest
+pytest-cov
 mock
 PyYAML
-fabric

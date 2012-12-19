@@ -1,18 +1,20 @@
-from . import HobokenTestCase, skip
+from . import HobokenTestCase
 from hoboken import condition
+from hoboken.six import u
 from hoboken.conditions import *
 
-import unittest
+from hoboken.tests.compat import unittest
+import pytest
 
 
 class TestUserAgentCondition(HobokenTestCase):
     def after_setup(self):
-        @condition(user_agent("^Uagent1"))
+        @condition(user_agent(b"^Uagent1"))
         @self.app.get("/")
         def route_one():
             return "one"
 
-        @condition(user_agent("^Uagent2"))
+        @condition(user_agent(u("^Uagent2")))
         @self.app.get("/")
         def route_two():
             return "two"
@@ -26,12 +28,12 @@ class TestUserAgentCondition(HobokenTestCase):
 
 class TestHostCondition(HobokenTestCase):
     def after_setup(self):
-        @condition(host("sub1.foobar.com"))
+        @condition(host(b"sub1.foobar.com"))
         @self.app.get('/')
         def sub1():
             return 'sub1'
 
-        @condition(host("sub2.foobar.com"))
+        @condition(host(u("sub2.foobar.com")))
         @self.app.get('/')
         def sub2():
             return 'sub2'
@@ -47,12 +49,12 @@ class TestAcceptsCondition(HobokenTestCase):
     def after_setup(self):
         self.app.config.debug = True
 
-        @condition(accepts("text/html"))
+        @condition(accepts(b"text/html"))
         @self.app.get('/')
         def html():
             return 'html'
 
-        @condition(accepts("text/plain"))
+        @condition(accepts(b"text/plain"))
         @self.app.get('/')
         def plain():
             return 'plain'

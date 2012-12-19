@@ -71,11 +71,11 @@ NULL = b'\x00'[0]
 # str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
 # and joining a list of bytes together.
 # These functions abstract that.
-if PY3:
+if PY3:                         # pragma: no cover
     lower_char = lambda c: c | 0x20
     ord_char = lambda c: c
     join_bytes = lambda b: bytes(list(b))
-else:
+else:                           # pragma: no cover
     lower_char = lambda c: c.lower()
     ord_char = lambda c: ord(c)
     join_bytes = lambda b: b''.join(list(b))
@@ -90,7 +90,20 @@ OPTION_RE = re.compile(OPTION_RE_STR)
 
 
 class FormParserError(ValueError):
+    """Base error class for our form parser."""
     pass
+
+
+# On Python 3.3, IOError is the same as OSError, so we don't want to inherit
+# from both of them.  We handle this case below.
+if IOError is not OSError:      # pragma: no cover
+    class FileError(IOError, OSError):
+        """Exception class for problems with the File class."""
+        pass
+else:                           # pragma: no cover
+    class FileError(OSError):
+        """Exception class for problems with the File class."""
+        pass
 
 
 def parse_options_header(value):
@@ -283,12 +296,13 @@ class File(object):
             if keep_extensions:
                 fname = fname + self._ext
 
+            # TODO: what do we do if we have an error?  For now, ignore it.
+            path = os.path.join(file_dir, fname)
             try:
-                tmp_file = open(os.path.join(file_dir, fname), 'w+b')
-            except IOError as e:
-                # TODO: what do we do?
+                tmp_file = open(path, 'w+b')
+            except (IOError, OSError) as e:
                 tmp_file = None
-                pass
+                raise FileError("Error opening temporary file: %r" % path)
         else:
             # Build options array.
             # Note that on Python 3, tempfile doesn't support byte names.  We
@@ -308,7 +322,11 @@ class File(object):
                 options['dir'] = d
 
             # Create a temporary (named) file with the appropriate settings.
-            tmp_file = tempfile.NamedTemporaryFile(**options)
+            try:
+                tmp_file = tempfile.NamedTemporaryFile(**options)
+            except (IOError, OSError) as e:
+                raise FileError("Error creating named temporary file")
+
             fname = tmp_file.name
 
             # Encode filename as bytes.
@@ -369,11 +387,11 @@ class BaseParser(object):
             if start is not None and start == end:
                 return
 
-            print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
-                     end, data[start:end]))
+            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
+            #          end, data[start:end]))
             func(data, start, end)
         else:
-            print("Calling %s with no data" % ('on_' + name,))
+            # print("Calling %s with no data" % ('on_' + name,))
             func()
 
     def set_callback(self, name, new_func):
@@ -382,9 +400,9 @@ class BaseParser(object):
         if new_func is None.
         """
         if new_func is None:
-            self.callbacks.pop(name, None)
+            self.callbacks.pop('on_' + name, None)
         else:
-            self.callbacks[name] = new_func
+            self.callbacks['on_' + name] = new_func
 
     def close(self):
         pass                # pragma: no cover
@@ -508,7 +526,7 @@ class QuerystringParser(BaseParser):
                     i = len(data)
 
             else:
-                return i
+                return i            # pragma: no cover (since this is an error case)
 
             i += 1
 
@@ -561,7 +579,7 @@ class MultipartParser(BaseParser):
         self.boundary = b'\r\n--' + boundary
 
         # Get a set of characters that belong to our boundary.
-        self.boundary_chars = set(boundary)
+        self.boundary_chars = set(self.boundary)
 
         # We also create a lookbehind list.
         # Note: the +8 is since we can have, at maximum, "\r\n--" + boundary +
@@ -581,10 +599,6 @@ class MultipartParser(BaseParser):
 
         # Our index defaults to 0.
         i = 0
-
-        # Get a mark.
-        def get_mark(name):
-            return self.marks.get(name)
 
         # Set a mark.
         def set_mark(name):
@@ -618,7 +632,6 @@ class MultipartParser(BaseParser):
 
         # For each byte...
         while i < len(data):
-            # Get our current character and increment the index.
             c = data[i]
 
             # print("[!] In state %d with char %r" % (state, c))
@@ -776,7 +789,7 @@ class MultipartParser(BaseParser):
                 # boundary.
 
                 # Save the current value of our index.  We use this in case we
-                # find part of a boundary, but it doesn't match fully
+                # find part of a boundary, but it doesn't match fully.
                 prev_index = index
 
                 # Set up variables.
@@ -806,9 +819,10 @@ class MultipartParser(BaseParser):
                 if index < boundary_length:
                     # If the character matches...
                     if boundary[index] == c:
+                        # If we found a match for our boundary, we send the
+                        # existing data.
                         if index == 0:
                             data_callback('part_data')
-                            pass
 
                         # The current character matches, so continue!
                         index += 1
@@ -858,8 +872,9 @@ class MultipartParser(BaseParser):
                             continue
 
                         # We didn't find an LF character, so no match.  Reset
-                        # our index.
+                        # our index and clear our flag.
                         index = 0
+                        flags &= (~FLAG_PART_BOUNDARY)
 
                     # Otherwise, if we're at the last boundary (i.e. we've
                     # seen a hyphen already)...
@@ -867,7 +882,7 @@ class MultipartParser(BaseParser):
                         # We need a second hyphen here.
                         if c == HYPHEN:
                             # Callback to end the current part, and then the
-                            # mesaage.
+                            # message.
                             self.callback('part_end')
                             self.callback('end')
                             state = STATE_END
@@ -903,7 +918,7 @@ class MultipartParser(BaseParser):
                 # Do nothing and just consume a byte in the end state.
                 pass
 
-            else:
+            else:                   # pragma: no cover (since this is an error case)
                 # We got into a strange state somehow!  Just stop processing.
                 print('ERROR: in a strange state!')
                 return i
@@ -933,7 +948,7 @@ class MultipartParser(BaseParser):
         return len(data)
 
     def finalize(self):
-        # TODO: verify that we're inthe state STATE_END, otherwise throw an
+        # TODO: verify that we're in the state STATE_END, otherwise throw an
         # error or otherwise state that we're not finished parsing.
         pass
 
@@ -972,6 +987,7 @@ class Base64Decoder(object):
             self.underlying.close()
 
     def finalize(self):
+        # TODO: handle remaining bytes in the cache?
         if hasattr(self.underlying, 'finalize'):
             self.underlying.finalize()
 
@@ -1144,10 +1160,7 @@ class FormParser(object):
 
             def on_part_data(data, start, end):
                 bytes_processed = vars.writer.write(data[start:end])
-                if bytes_processed != (end - start):
-                    # TODO: check error code here.
-                    pass
-
+                # TODO: check for error here.
                 return bytes_processed
 
             def on_part_end():
@@ -1215,6 +1228,7 @@ class FormParser(object):
                     )
 
             def on_end():
+                vars.writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
 

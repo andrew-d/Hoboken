@@ -1,5 +1,6 @@
-from . import HobokenTestCase, skip
-import unittest
+from . import HobokenTestCase
+import pytest
+from hoboken.tests.compat import unittest
 
 class TestFilters(HobokenTestCase):
     def after_setup(self):
@@ -33,23 +34,23 @@ class TestFilters(HobokenTestCase):
 
     def test_neither(self):
         self.assert_body_is("neither", path="/neither")
-        self.assert_equal(self.calls, ["body"])
+        self.assertEqual(self.calls, ["body"])
 
     def test_before(self):
         self.assert_body_is("before/stuff", path="/before/stuff")
-        self.assert_equal(self.calls, ["before", "body"])
+        self.assertEqual(self.calls, ["before", "body"])
 
     def test_after(self):
         self.assert_body_is("after/stuff", path="/after/stuff")
-        self.assert_equal(self.calls, ["body", "after"])
+        self.assertEqual(self.calls, ["body", "after"])
 
     def test_both(self):
         self.assert_body_is("both/stuff", path="/both/stuff")
-        self.assert_equal(self.calls, ["before", "body", "after"])
+        self.assertEqual(self.calls, ["before", "body", "after"])
 
     def test_both_at_once(self):
         self.assert_body_is("both_at_once/stuff", path="/both_at_once/stuff")
-        self.assert_equal(self.calls, ["both_at_once", "body", "both_at_once"])
+        self.assertEqual(self.calls, ["both_at_once", "body", "both_at_once"])
 
 
 class TestFilterCanModifyRoute(HobokenTestCase):
@@ -91,11 +92,11 @@ class TestFilterParams(HobokenTestCase):
 
     def test_before_params(self):
         self.call_app(path='/before/one/two/params')
-        self.assert_equal(self.val, b'one\ntwo\nparams')
+        self.assertEqual(self.val, b'one\ntwo\nparams')
 
     def test_after_params(self):
         self.call_app(path='/after/abcd/morestuff/defg')
-        self.assert_equal(self.val, b'abcd\nmorestuff\ndefg')
+        self.assertEqual(self.val, b'abcd\nmorestuff\ndefg')
 
 
 class TestCatchallFilters(HobokenTestCase):
@@ -117,7 +118,7 @@ class TestCatchallFilters(HobokenTestCase):
 
     def test_catchall_filters(self):
         self.call_app(path='/')
-        self.assert_equal(self.calls, ['before', 'body', 'after'])
+        self.assertEqual(self.calls, ['before', 'body', 'after'])
 
 
 def suite():

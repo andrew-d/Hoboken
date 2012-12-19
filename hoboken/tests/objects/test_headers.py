@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from . import BaseTestCase
-import unittest
+from hoboken.tests.compat import unittest
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.headers import WSGIHeaders
 
-class TestWSGIHeaders(BaseTestCase):
-    def setup(self):
+class TestWSGIHeaders(unittest.TestCase):
+    def setUp(self):
         self.environ = {
             'HTTP_HEADER': b'value',
             'HTTP_OTHER_HEADER': b'other'
@@ -15,45 +14,45 @@ class TestWSGIHeaders(BaseTestCase):
         self.h = WSGIHeaders(self.environ)
 
     def test_realname(self):
-        self.assert_equal(self.h._realname('header'), 'HTTP_HEADER')
-        self.assert_equal(self.h._realname('dash-header'), 'HTTP_DASH_HEADER')
+        self.assertEqual(self.h._realname('header'), 'HTTP_HEADER')
+        self.assertEqual(self.h._realname('dash-header'), 'HTTP_DASH_HEADER')
 
-        self.assert_equal(self.h._realname(b'byte-header'), 'HTTP_BYTE_HEADER')
+        self.assertEqual(self.h._realname(b'byte-header'), 'HTTP_BYTE_HEADER')
 
     def test_get_item(self):
-        self.assert_equal(self.h['header'], b'value')
+        self.assertEqual(self.h['header'], b'value')
 
     def test_set_item(self):
         self.h['foo'] = 'bar'
-        self.assert_equal(self.h['foo'], b'bar')
+        self.assertEqual(self.h['foo'], b'bar')
 
         self.h['header'] = 'baz'
-        self.assert_equal(self.h['header'], b'baz')
+        self.assertEqual(self.h['header'], b'baz')
 
     def test_delete_item(self):
         del self.h['header']
-        self.assert_true('HTTP_HEADER' not in self.environ)
+        self.assertTrue('HTTP_HEADER' not in self.environ)
 
     def test_contains(self):
         self.h['Foo'] = 'bar'
-        self.assert_true('Foo' in self.h)
-        self.assert_false('Bad' in self.h)
+        self.assertTrue('Foo' in self.h)
+        self.assertFalse('Bad' in self.h)
 
     def test_misc(self):
-        self.assert_equal(len(self.h), 2)
+        self.assertEqual(len(self.h), 2)
 
-        self.assert_equal(sorted(self.h.keys()), ['Header', 'Other-Header'])
+        self.assertEqual(sorted(self.h.keys()), ['Header', 'Other-Header'])
 
     def test_with_no_environ(self):
         env = {}
         h = WSGIHeaders(env)
 
         h['Header'] = b'123'
-        self.assert_equal(h['Header'], b'123')
+        self.assertEqual(h['Header'], b'123')
 
     def test_to_list(self):
         l = sorted(self.h.to_list())
-        self.assert_equal(l, [('Header', b'value'), ('Other-Header', b'other')])
+        self.assertEqual(l, [('Header', b'value'), ('Other-Header', b'other')])
 
 
 def suite():

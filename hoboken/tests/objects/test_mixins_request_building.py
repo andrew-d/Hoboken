@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from . import BaseTestCase
 import sys
-import unittest
+from hoboken.tests.compat import unittest
 from mock import MagicMock, call, patch
 
 from hoboken.objects.mixins.request_building import *
 
 
-class TestBuildMethod(BaseTestCase):
+class TestBuildMethod(unittest.TestCase):
     DEFAULT_ENV = {
         'SERVER_PROTOCOL': 'HTTP/1.0',
         'SCRIPT_NAME': '',
@@ -23,7 +22,7 @@ class TestBuildMethod(BaseTestCase):
         'SERVER_PORT': '80',
     }
 
-    def setup(self):
+    def setUp(self):
         self.req = MagicMock()
         self.req_type = MagicMock()
         self.req_type.return_value = self.req
@@ -41,7 +40,7 @@ class TestBuildMethod(BaseTestCase):
     def assert_headers(self, *header_list):
         for x in header_list:
             c = call(*x)
-            self.assert_true(c in self.req.headers.__setitem__.call_args_list)
+            self.assertTrue(c in self.req.headers.__setitem__.call_args_list)
 
     def test_default(self):
         self.build('/')
@@ -76,8 +75,8 @@ class TestBuildMethod(BaseTestCase):
         self.assert_env('/', QUERY_STRING='foo=bar&asdf=baz')
 
 
-class TestCallApplication(BaseTestCase):
-    def setup(self):
+class TestCallApplication(unittest.TestCase):
+    def setUp(self):
         # Default values to return.
         self.return_val = None
         self.return_iter = None
@@ -115,20 +114,20 @@ class TestCallApplication(BaseTestCase):
 
     def test_simple_call(self):
         status, headers, it = self.build_and_call('/')
-        self.assert_equal(self.environ, self.req.environ)
-        self.assert_equal(status, self.return_val)
-        self.assert_equal(headers, self.return_headers)
-        self.assert_equal(it, self.return_iter)
+        self.assertEqual(self.environ, self.req.environ)
+        self.assertEqual(status, self.return_val)
+        self.assertEqual(headers, self.return_headers)
+        self.assertEqual(it, self.return_iter)
 
     def test_call_with_status(self):
         status, headers, it = self.build_and_call('/', status='403 Forbidden')
 
-        self.assert_equal(status, '403 Forbidden')
+        self.assertEqual(status, '403 Forbidden')
 
     def test_call_with_iter(self):
         exp = [b'foo', b'bar']
         status, headers, it = self.build_and_call('/', iter=exp)
-        self.assert_equal(it, exp)
+        self.assertEqual(it, exp)
 
     def test_call_will_close(self):
         it = MagicMock()
@@ -149,7 +148,7 @@ class TestCallApplication(BaseTestCase):
         self.req = self.Type.build('/')
         status, headers, it = self.req.call_application(dummy_app)
 
-        self.assert_equal(list(it), [b'foo', b'bar'])
+        self.assertEqual(list(it), [b'foo', b'bar'])
         app_it.close.assert_called_once_with()
 
     def test_call_application_with_exception(self):
@@ -164,7 +163,7 @@ class TestCallApplication(BaseTestCase):
 
         self.req = self.Type.build('/')
 
-        with self.assert_raises(ZeroDivisionError):
+        with self.assertRaises(ZeroDivisionError):
             status, headers, it = self.req.call_application(dummy_app)
 
         status, headers, it, err = self.req.call_application(dummy_app, catch_exc_info=True)
@@ -177,10 +176,10 @@ class TestCallApplication(BaseTestCase):
         self.req.ResponseClass = MagicMock
         resp = self.req.get_response(self.app)
 
-        self.assert_true(isinstance(resp, MagicMock))
-        self.assert_equal(resp.status, self.return_val)
-        self.assert_equal(resp.headers, self.return_headers)
-        self.assert_equal(resp.response_iter, self.return_iter)
+        self.assertTrue(isinstance(resp, MagicMock))
+        self.assertEqual(resp.status, self.return_val)
+        self.assertEqual(resp.headers, self.return_headers)
+        self.assertEqual(resp.response_iter, self.return_iter)
 
     def test_get_response_with_err(self):
         def dummy_app(environ, start_response):
@@ -195,7 +194,7 @@ class TestCallApplication(BaseTestCase):
         self.req = self.Type.build('/')
         self.req.ResponseClass = MagicMock
         resp = self.req.get_response(dummy_app, catch_exc_info=True)
-        self.assert_equal(resp.status, '500 Internal Server Error')
+        self.assertEqual(resp.status, '500 Internal Server Error')
 
 
 def suite():

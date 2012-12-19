@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from . import BaseTestCase, skip, parametrize, parameters
 import os
 import sys
 import glob
 import yaml
+import base64
 import tempfile
-import unittest
+from hoboken.tests.compat import unittest
 from io import BytesIO
+
+import pytest
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.request_body import *
@@ -25,36 +27,36 @@ def force_bytes(val):
     return val
 
 
-class TestField(BaseTestCase):
-    def setup(self):
+class TestField(unittest.TestCase):
+    def setUp(self):
         self.f = Field(b'foo')
 
     def test_name(self):
-        self.assert_equal(self.f.field_name, b'foo')
+        self.assertEqual(self.f.field_name, b'foo')
 
     def test_data(self):
         self.f.write(b'test123')
-        self.assert_equal(self.f.value, b'test123')
+        self.assertEqual(self.f.value, b'test123')
 
     def test_cache_expiration(self):
         self.f.write(b'test')
-        self.assert_equal(self.f.value, b'test')
+        self.assertEqual(self.f.value, b'test')
         self.f.write(b'123')
-        self.assert_equal(self.f.value, b'test123')
+        self.assertEqual(self.f.value, b'test123')
 
     def test_finalize(self):
         self.f.write(b'test123')
         self.f.finalize()
-        self.assert_equal(self.f.value, b'test123')
+        self.assertEqual(self.f.value, b'test123')
 
     def test_close(self):
         self.f.write(b'test123')
         self.f.close()
-        self.assert_equal(self.f.value, b'test123')
+        self.assertEqual(self.f.value, b'test123')
 
 
-class TestFile(BaseTestCase):
-    def setup(self):
+class TestFile(unittest.TestCase):
+    def setUp(self):
         self.c = {}
         self.d = force_bytes(tempfile.mkdtemp())
         self.f = File(b'foo.txt', config=self.c)
@@ -62,37 +64,50 @@ class TestFile(BaseTestCase):
     def assert_data(self, data):
         f = self.f.file_object
         f.seek(0)
-        self.assert_equal(f.read(), data)
+        self.assertEqual(f.read(), data)
         f.seek(0)
         f.truncate()
 
     def assert_exists(self):
         full_path = os.path.join(self.d, self.f.actual_file_name)
-        self.assert_true(os.path.exists(full_path))
+        self.assertTrue(os.path.exists(full_path))
 
     def test_simple(self):
         self.f.write(b'foobar')
         self.assert_data(b'foobar')
 
+    def test_invalid_write(self):
+        m = Mock()
+        m.write.return_value = 5
+        self.f._fileobj = m
+        v = self.f.write(b'foobar')
+        self.assertEqual(v, 5)
+
     def test_file_fallback(self):
         self.c['MAX_MEMORY_FILE_SIZE'] = 1
 
         self.f.write(b'1')
-        self.assert_true(self.f.in_memory)
+        self.assertTrue(self.f.in_memory)
         self.assert_data(b'1')
 
         self.f.write(b'123')
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
         self.assert_data(b'123')
+
+        # Test flushing too.
+        old_obj = self.f.file_object
+        self.f.flush_to_disk()
+        self.assertFalse(self.f.in_memory)
+        self.assertIs(self.f.file_object, old_obj)
 
     def test_file_fallback_with_data(self):
         self.c['MAX_MEMORY_FILE_SIZE'] = 10
 
         self.f.write(b'1' * 10)
-        self.assert_true(self.f.in_memory)
+        self.assertTrue(self.f.in_memory)
 
         self.f.write(b'2' * 10)
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
 
         self.assert_data(b'11111111112222222222')
 
@@ -103,10 +118,10 @@ class TestFile(BaseTestCase):
 
         # Write.
         self.f.write(b'12345678901')
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_true(self.f.actual_file_name is not None)
+        self.assertTrue(self.f.actual_file_name is not None)
         self.assert_exists()
 
     def test_file_full_name(self):
@@ -117,10 +132,10 @@ class TestFile(BaseTestCase):
 
         # Write.
         self.f.write(b'12345678901')
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_equal(self.f.actual_file_name, b'foo')
+        self.assertEqual(self.f.actual_file_name, b'foo')
         self.assert_exists()
 
     def test_file_full_name_with_ext(self):
@@ -131,10 +146,10 @@ class TestFile(BaseTestCase):
 
         # Write.
         self.f.write(b'12345678901')
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_equal(self.f.actual_file_name, b'foo.txt')
+        self.assertEqual(self.f.actual_file_name, b'foo.txt')
         self.assert_exists()
 
     def test_file_full_name_with_ext(self):
@@ -145,10 +160,10 @@ class TestFile(BaseTestCase):
 
         # Write.
         self.f.write(b'12345678901')
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assert_equal(self.f.actual_file_name, b'foo.txt')
+        self.assertEqual(self.f.actual_file_name, b'foo.txt')
         self.assert_exists()
 
     def test_no_dir_with_extension(self):
@@ -157,62 +172,102 @@ class TestFile(BaseTestCase):
 
         # Write.
         self.f.write(b'12345678901')
-        self.assert_false(self.f.in_memory)
+        self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
         ext = os.path.splitext(self.f.actual_file_name)[1]
-        self.assert_equal(ext, b'.txt')
+        self.assertEqual(ext, b'.txt')
         self.assert_exists()
+
+    def test_invalid_dir_with_name(self):
+        # Write to this dir.
+        self.c['UPLOAD_DIR'] = force_bytes(os.path.join('/', 'tmp', 'notexisting'))
+        self.c['UPLOAD_KEEP_FILENAME'] = True
+        self.c['MAX_MEMORY_FILE_SIZE'] = 5
+
+        # Write.
+        with self.assertRaises(FileError):
+            self.f.write(b'1234567890')
+
+    def test_invalid_dir_no_name(self):
+        # Write to this dir.
+        self.c['UPLOAD_DIR'] = force_bytes(os.path.join('/', 'tmp', 'notexisting'))
+        self.c['UPLOAD_KEEP_FILENAME'] = False
+        self.c['MAX_MEMORY_FILE_SIZE'] = 5
+
+        # Write.
+        with self.assertRaises(FileError):
+            self.f.write(b'1234567890')
 
     # TODO: test uploading two files with the same name.
 
 
-class TestParseOptionsHeader(BaseTestCase):
+class TestParseOptionsHeader(unittest.TestCase):
     def test_simple(self):
         t, p = parse_options_header(b'application/json')
-        self.assert_equal(t, b'application/json')
-        self.assert_equal(p, {})
+        self.assertEqual(t, b'application/json')
+        self.assertEqual(p, {})
 
     def test_blank(self):
         t, p = parse_options_header(b'')
-        self.assert_equal(t, b'')
-        self.assert_equal(p, {})
+        self.assertEqual(t, b'')
+        self.assertEqual(p, {})
 
     def test_single_param(self):
         t, p = parse_options_header(b'application/json;par=val')
-        self.assert_equal(t, b'application/json')
-        self.assert_equal(p, {b'par': b'val'})
+        self.assertEqual(t, b'application/json')
+        self.assertEqual(p, {b'par': b'val'})
 
     def test_single_param_with_spaces(self):
         t, p = parse_options_header(b'application/json;     par=val')
-        self.assert_equal(t, b'application/json')
-        self.assert_equal(p, {b'par': b'val'})
+        self.assertEqual(t, b'application/json')
+        self.assertEqual(p, {b'par': b'val'})
 
     def test_multiple_params(self):
         t, p = parse_options_header(b'application/json;par=val;asdf=foo')
-        self.assert_equal(t, b'application/json')
-        self.assert_equal(p, {b'par': b'val', b'asdf': b'foo'})
+        self.assertEqual(t, b'application/json')
+        self.assertEqual(p, {b'par': b'val', b'asdf': b'foo'})
 
     def test_quoted_param(self):
         t, p = parse_options_header(b'application/json;param="quoted"')
-        self.assert_equal(t, b'application/json')
-        self.assert_equal(p, {b'param': b'quoted'})
+        self.assertEqual(t, b'application/json')
+        self.assertEqual(p, {b'param': b'quoted'})
 
     def test_quoted_param_with_semicolon(self):
         t, p = parse_options_header(b'application/json;param="quoted;with;semicolons"')
-        self.assert_equal(p[b'param'], b'quoted;with;semicolons')
+        self.assertEqual(p[b'param'], b'quoted;with;semicolons')
 
     def test_quoted_param_with_escapes(self):
         t, p = parse_options_header(b'application/json;param="This \\" is \\" a \\" quote"')
-        self.assert_equal(p[b'param'], b'This " is " a " quote')
+        self.assertEqual(p[b'param'], b'This " is " a " quote')
 
     def test_handles_ie6_bug(self):
         t, p = parse_options_header(b'text/plain; filename="C:\\this\\is\\a\\path\\file.txt"')
 
-        self.assert_equal(p[b'filename'], b'file.txt')
+        self.assertEqual(p[b'filename'], b'file.txt')
 
 
-class TestQuerystringParser(BaseTestCase):
+class TestBaseParser(unittest.TestCase):
+    def setUp(self):
+        self.b = BaseParser()
+        self.b.callbacks = {}
+
+    def test_callbacks(self):
+        # The stupid list-ness is to get around lack of nonlocal on py2
+        l = [0]
+        def on_foo():
+            l[0] += 1
+
+        self.b.set_callback('foo', on_foo)
+        self.b.callback('foo')
+        self.assertEqual(l[0], 1)
+
+        self.b.set_callback('foo', None)
+        self.b.callback('foo')
+        self.assertEqual(l[0], 1)
+
+
+class TestQuerystringParser(unittest.TestCase):
     def on_field(self, val):
         self.f.append(val)
 
@@ -220,11 +275,11 @@ class TestQuerystringParser(BaseTestCase):
         if kwargs.pop('finalize', True):
             self.p.finalize()
 
-        self.assert_equal(self.f, list(args))
+        self.assertEqual(self.f, list(args))
         if kwargs.get('reset', True):
             self.f = []
 
-    def setup(self):
+    def setUp(self):
         self.f = []
 
         name_buffer = []
@@ -320,8 +375,8 @@ class TestQuerystringParser(BaseTestCase):
     # TODO: test overlarge fields, blank values, and strict parsing
 
 
-class TestOctetStreamParser(BaseTestCase):
-    def setup(self):
+class TestOctetStreamParser(unittest.TestCase):
+    def setUp(self):
         self.d = []
         self.started = 0
         self.finished = 0
@@ -344,20 +399,20 @@ class TestOctetStreamParser(BaseTestCase):
         self.p = OctetStreamParser(callbacks)
 
     def assert_data(self, data, finalize=True):
-        self.assert_equal(b''.join(self.d), data)
+        self.assertEqual(b''.join(self.d), data)
         self.d = []
 
     def assert_started(self, val=True):
         if val:
-            self.assert_equal(self.started, 1)
+            self.assertEqual(self.started, 1)
         else:
-            self.assert_equal(self.started, 0)
+            self.assertEqual(self.started, 0)
 
     def assert_finished(self, val=True):
         if val:
-            self.assert_equal(self.finished, 1)
+            self.assertEqual(self.finished, 1)
         else:
-            self.assert_equal(self.finished, 0)
+            self.assertEqual(self.finished, 0)
 
     def test_simple(self):
         # Assert is not started
@@ -383,9 +438,9 @@ class TestOctetStreamParser(BaseTestCase):
         self.assert_finished()
 
 
-class TestBase64Decoder(BaseTestCase):
+class TestBase64Decoder(unittest.TestCase):
     # Note: base64('foobar') == 'Zm9vYmFy'
-    def setup(self):
+    def setUp(self):
         self.f = BytesIO()
         self.d = Base64Decoder(self.f)
 
@@ -394,7 +449,7 @@ class TestBase64Decoder(BaseTestCase):
             self.d.finalize()
 
         self.f.seek(0)
-        self.assert_equal(self.f.read(), data)
+        self.assertEqual(self.f.read(), data)
         self.f.seek(0)
         self.f.truncate()
 
@@ -412,7 +467,7 @@ class TestBase64Decoder(BaseTestCase):
         for i in range(1, 4):
             first, second = buff[:i], buff[i:]
 
-            self.setup()
+            self.setUp()
             self.d.write(first)
             self.d.write(second)
             self.assert_data(b'foo')
@@ -422,14 +477,24 @@ class TestBase64Decoder(BaseTestCase):
         for i in range(5, 8):
             first, second = buff[:i], buff[i:]
 
-            self.setup()
+            self.setUp()
             self.d.write(first)
             self.d.write(second)
             self.assert_data(b'foobar')
 
+    def test_close_and_finalize(self):
+        parser = Mock()
+        f = Base64Decoder(parser)
 
-class TestQuotedPrintableDecoder(BaseTestCase):
-    def setup(self):
+        f.finalize()
+        parser.finalize.assert_called_once_with()
+
+        f.close()
+        parser.close.assert_called_once_with()
+
+
+class TestQuotedPrintableDecoder(unittest.TestCase):
+    def setUp(self):
         self.f = BytesIO()
         self.d = QuotedPrintableDecoder(self.f)
 
@@ -438,7 +503,7 @@ class TestQuotedPrintableDecoder(BaseTestCase):
             self.d.finalize()
 
         self.f.seek(0)
-        self.assert_equal(self.f.read(), data)
+        self.assertEqual(self.f.read(), data)
         self.f.seek(0)
         self.f.truncate()
 
@@ -472,6 +537,16 @@ class TestQuotedPrintableDecoder(BaseTestCase):
         self.d.write(b'foo=')
         self.d.write(b'\r\nbar')
         self.assert_data(b'foobar')
+
+    def test_close_and_finalize(self):
+        parser = Mock()
+        f = QuotedPrintableDecoder(parser)
+
+        f.finalize()
+        parser.finalize.assert_called_once_with()
+
+        f.close()
+        parser.close.assert_called_once_with()
 
 
 # Load our list of HTTP test cases.
@@ -511,8 +586,7 @@ def split_all(val):
         yield (val[:i], val[i:])
 
 
-@parametrize
-class TestFormParser(BaseTestCase):
+class TestFormParser(object):
     def make(self, boundary):
         self.ended = False
         self.files = []
@@ -534,7 +608,7 @@ class TestFormParser(BaseTestCase):
         o = f.file_object
         o.seek(0)
         file_data = o.read()
-        self.assert_equal(file_data, data)
+        assert file_data == data
 
     def assert_file(self, field_name, file_name, data):
         # Find this file.
@@ -545,12 +619,12 @@ class TestFormParser(BaseTestCase):
                 break
 
         # Assert that we found it.
-        self.assert_true(found is not None)
+        assert found is not None
 
         try:
             # Assert about this file.
             self.assert_file_data(found, data)
-            self.assert_equal(found.file_name, file_name)
+            assert found.file_name == file_name
 
             # Remove it from our list.
             self.files.remove(found)
@@ -567,14 +641,13 @@ class TestFormParser(BaseTestCase):
                 break
 
         # Assert that it exists and matches.
-        self.assert_true(found is not None)
-        self.assert_equal(value, found.value)
+        assert found is not None
+        assert value == found.value
 
         # Remove it for future iterations.
         self.fields.remove(found)
 
-    @parameters(http_tests,
-                name_func=lambda idx, param: 'test_' + param['name'])
+    @pytest.mark.parametrize('param', http_tests)
     def test_http(self, param):
         # Firstly, create our parser with the given boundary.
         boundary = param['result']['boundary']
@@ -587,11 +660,17 @@ class TestFormParser(BaseTestCase):
         self.f.finalize()
 
         # print(repr(param))
-        print("")
-        print(repr(self.fields))
-        print(repr(self.files))
+        # print("")
+        # print(repr(self.fields))
+        # print(repr(self.files))
 
-        self.assert_equal(processed, len(param['test']))
+        # Do we expect an error?
+        if 'error' in param['result']['expected']:
+            assert param['result']['expected']['error'] == processed
+            return
+
+        # No error!
+        assert processed == len(param['test'])
 
         # Assert that the parser gave us the appropriate fields/files.
         for e in param['result']['expected']:
@@ -633,7 +712,7 @@ class TestFormParser(BaseTestCase):
             self.f.finalize()
 
             # Assert we processed everything.
-            self.assert_equal(i, len(test_data))
+            assert i == len(test_data)
 
             # Assert that our file and field are here.
             self.assert_field(b'field', b'test1')
@@ -643,12 +722,12 @@ class TestFormParser(BaseTestCase):
         self.make(b'boundary')
         data = b'--boundary\rfoobar'
         i = self.f.write(data)
-        self.assert_true(i != len(data))
+        assert i != len(data)
 
         self.make(b'boundary')
         data = b'--boundaryfoobar'
         i = self.f.write(data)
-        self.assert_true(i != len(data))
+        assert i != len(data)
 
     def test_octet_stream(self):
         files = []
@@ -658,16 +737,16 @@ class TestFormParser(BaseTestCase):
         on_end = Mock()
 
         f = FormParser(b'application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
-        self.assert_true(isinstance(f.parser, OctetStreamParser))
+        assert isinstance(f.parser, OctetStreamParser)
 
         f.write(b'test')
         f.write(b'1234')
         f.finalize()
 
-        self.assert_false(on_field.called)
-        self.assert_equal(len(files), 1)
+        assert not on_field.called
+        assert len(files) == 1
         self.assert_file_data(files[0], b'test1234')
-        self.assert_true(on_end.called)
+        assert on_end.called
 
     def test_querystring(self):
         fields = []
@@ -684,23 +763,23 @@ class TestFormParser(BaseTestCase):
             f.write(b'&test=asdf')
             f.finalize()
 
-            self.assert_false(on_file.called)
-            self.assert_equal(len(fields), 2)
+            assert not on_file.called
+            assert len(fields) == 2
 
-            self.assert_equal(fields[0].field_name, b'foo')
-            self.assert_equal(fields[0].value, b'bar')
+            assert fields[0].field_name == b'foo'
+            assert fields[0].value == b'bar'
 
-            self.assert_equal(fields[1].field_name, b'test')
-            self.assert_equal(fields[1].value, b'asdf')
+            assert fields[1].field_name == b'test'
+            assert fields[1].value == b'asdf'
 
-            self.assert_true(on_end.called)
+            assert on_end.called
 
         f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
-        self.assert_true(isinstance(f.parser, QuerystringParser))
+        assert isinstance(f.parser, QuerystringParser)
         simple_test(f)
 
         f = FormParser(b'application/x-url-encoded', on_field, on_file, on_end=on_end)
-        self.assert_true(isinstance(f.parser, QuerystringParser))
+        assert isinstance(f.parser, QuerystringParser)
         simple_test(f)
 
     def test_close_methods(self):
@@ -714,9 +793,59 @@ class TestFormParser(BaseTestCase):
         f.close()
         parser.close.assert_called_once_with()
 
+    def test_bad_content_type(self):
+        # We should raise a ValueError for a bad Content-Type
+        try:
+            f = FormParser(b'application/bad', None, None)
+        except ValueError:
+            pass
+        else:
+            assert False
 
-class TestRequestBodyMixin(BaseTestCase):
-    def setup(self):
+    def test_no_boundary_given(self):
+        # We should raise a FormParserError when parsing a multipart message
+        # without a boundary.
+        try:
+            f = FormParser(b'multipart/form-data', None, None)
+        except FormParserError:
+            pass
+        else:
+            assert False
+
+    def test_bad_content_transfer_encoding(self):
+        # The data blob below is the following:
+        #
+        #       ----boundary
+        #       Content-Disposition: form-data; name="file"; filename="test.txt"
+        #       Content-Type: text/plain
+        #       Content-Transfer-Encoding: badstuff
+        #
+        #       Test
+        #       ----boundary
+
+        data = b"LS0tLWJvdW5kYXJ5DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImZpbGUiOyBmaWxlbmFtZT0idGVzdC50eHQiDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW4NCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IGJhZHN0dWZmDQoNClRlc3QNCi0tLS1ib3VuZGFyeS0tDQo="
+        dec = base64.b64decode(data)
+
+        files = []
+        def on_file(f):
+            files.append(f)
+        on_field = Mock()
+        on_end = Mock()
+
+        f = FormParser(b'multipart/form-data', on_field, on_file,
+                       on_end=on_end, boundary=b'--boundary')
+
+        try:
+            f.write(dec)
+            f.finalize()
+        except FormParserError:
+            pass
+        else:
+            assert False
+
+
+class TestRequestBodyMixin(unittest.TestCase):
+    def setUp(self):
         class TestClass(object):
             config = {}
             headers = {}
@@ -731,9 +860,9 @@ class TestRequestBodyMixin(BaseTestCase):
         self.m.config['MAX_FIELD_SIZE'] = 1234
 
         f = self.m.form_parser(None, None)
-        self.assert_true(isinstance(f, FormParser))
-        self.assert_true(isinstance(f.parser, OctetStreamParser))
-        self.assert_equal(f.config.get('MAX_FIELD_SIZE'), 1234)
+        self.assertTrue(isinstance(f, FormParser))
+        self.assertTrue(isinstance(f.parser, OctetStreamParser))
+        self.assertEqual(f.config.get('MAX_FIELD_SIZE'), 1234)
 
     def test_form_parser_octet_stream(self):
         files = []
@@ -747,8 +876,8 @@ class TestRequestBodyMixin(BaseTestCase):
         f.write(b'foobar')
         f.finalize()
 
-        self.assert_equal(len(files), 1)
-        self.assert_equal(files[0].file_name, b'foo.txt')
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].file_name, b'foo.txt')
 
     def test_form_parser_multipart(self):
         # TODO: test more!
@@ -764,26 +893,26 @@ class TestRequestBodyMixin(BaseTestCase):
         self.m.input_stream = BytesIO(test_data)
         self.m.parse_body()
 
-        self.assert_equal(len(self.m.fields), 1)
-        self.assert_true(b'field' in self.m.fields)
-        self.assert_equal(self.m.fields[b'field'].value, b'test1')
+        self.assertEqual(len(self.m.fields), 1)
+        self.assertTrue(b'field' in self.m.fields)
+        self.assertEqual(self.m.fields[b'field'].value, b'test1')
 
-        self.assert_equal(len(self.m.files), 1)
-        self.assert_true(b'file' in self.m.files)
+        self.assertEqual(len(self.m.files), 1)
+        self.assertTrue(b'file' in self.m.files)
         file_class = self.m.files[b'file']
-        self.assert_equal(file_class.file_name, b'file.txt')
+        self.assertEqual(file_class.file_name, b'file.txt')
 
         o = file_class.file_object
         o.seek(0)
         file_data = o.read()
-        self.assert_equal(file_data, b'test2')
+        self.assertEqual(file_data, b'test2')
 
     def test_default_fields_files(self):
-        self.assert_equal(self.m.fields, [])
-        self.assert_equal(self.m.files, [])
+        self.assertEqual(self.m.fields, [])
+        self.assertEqual(self.m.files, [])
 
     def test_errors_with_no_content_type(self):
-        with self.assert_raises(ValueError):
+        with self.assertRaises(ValueError):
             f = self.m.form_parser(None, None)
 
 
@@ -791,12 +920,14 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestFile))
     suite.addTest(unittest.makeSuite(TestParseOptionsHeader))
+    suite.addTest(unittest.makeSuite(TestBaseParser))
     suite.addTest(unittest.makeSuite(TestQuerystringParser))
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))
     suite.addTest(unittest.makeSuite(TestBase64Decoder))
     suite.addTest(unittest.makeSuite(TestQuotedPrintableDecoder))
-    suite.addTest(unittest.makeSuite(TestFormParser))
+    # suite.addTest(unittest.makeSuite(TestFormParser))
     suite.addTest(unittest.makeSuite(TestRequestBodyMixin))
 
     return suite
 
+# TODO: test stuff where we set flags to FLAG_LAST_BOUNDARY, but don't finish it, and then back to PART_BOUNDARY.  Also the reverse
