@@ -94,9 +94,16 @@ class FormParserError(ValueError):
     pass
 
 
-class FileError(IOError, OSError):
-    """Exception class for problems with the File class."""
-    pass
+# On Python 3.3, IOError is the same as OSError, so we don't want to inherit
+# from both of them.  We handle this case below.
+if IOError is not OSError:      # pragma: no cover
+    class FileError(IOError, OSError):
+        """Exception class for problems with the File class."""
+        pass
+else:                           # pragma: no cover
+    class FileError(OSError):
+        """Exception class for problems with the File class."""
+        pass
 
 
 def parse_options_header(value):

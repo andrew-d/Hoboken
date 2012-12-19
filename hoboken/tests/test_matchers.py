@@ -40,7 +40,7 @@ class TestRegexMatcher(unittest.TestCase):
             test_re = "test_string"
             r = RegexMatcher(test_re, [], [])
 
-            self.assertIsInstance(r, RegexMatcher)
+            self.assertTrue(isinstance(r, RegexMatcher))
             mock_obj.assert_called_with(test_re)
 
     def test_raises_on_invalid(self):

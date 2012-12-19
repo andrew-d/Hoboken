@@ -68,7 +68,7 @@ class TestCacheObject(unittest.TestCase):
     def test_parse(self):
         http_obj = object()
         o = CacheObject.parse(http_obj, b"no-cache, no-store, max-age=123")
-        self.assertIsInstance(o, CacheObject)
+        self.assertTrue(isinstance(o, CacheObject))
 
     def test_serialize_cache_control(self):
         m = CacheObject(None, initial_properties={
