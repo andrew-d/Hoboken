@@ -380,11 +380,11 @@ class BaseParser(object):
             if start is not None and start == end:
                 return
 
-            print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
-                     end, data[start:end]))
+            # print("Calling %s with data[%d:%d] = %r" % ('on_' + name, start,
+            #          end, data[start:end]))
             func(data, start, end)
         else:
-            print("Calling %s with no data" % ('on_' + name,))
+            # print("Calling %s with no data" % ('on_' + name,))
             func()
 
     def set_callback(self, name, new_func):
