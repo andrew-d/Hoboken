@@ -28,6 +28,8 @@ setup(name='Hoboken',
         'Shift==0.0.4'
       ],
       tests_require=[
+          'pytest',
+          'pytest-cov',
           'Mock',
           'PyYAML'
       ],
@@ -43,7 +45,9 @@ setup(name='Hoboken',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.1',
         'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
       ],
