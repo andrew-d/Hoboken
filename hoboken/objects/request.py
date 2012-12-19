@@ -57,10 +57,10 @@ class WSGIBaseRequest(BaseRequest):
 
     @method.setter
     def method(self, val):
-        if PY3:
+        if PY3:                 # pragma: no cover
             if isinstance(val, bytes):
                 val = val.decode('latin-1')
-        else:
+        else:                   # pragma: no cover
             if isinstance(val, unicode):
                 val = val.encode('latin-1')
 

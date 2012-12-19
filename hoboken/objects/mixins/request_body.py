@@ -75,7 +75,7 @@ if PY3:                         # pragma: no cover
     lower_char = lambda c: c | 0x20
     ord_char = lambda c: c
     join_bytes = lambda b: bytes(list(b))
-else:
+else:                           # pragma: no cover
     lower_char = lambda c: c.lower()
     ord_char = lambda c: ord(c)
     join_bytes = lambda b: b''.join(list(b))
