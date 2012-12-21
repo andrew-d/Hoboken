@@ -31,6 +31,7 @@ def get_func_attr(func, attr, default=None, delete=False):
     else:
         return func.__dict__.get(attr, default)
 
+
 def set_func_attr(func, attr, value):
     func.__dict__[attr] = value
 
@@ -134,7 +135,6 @@ class Route(object):
             return False, None
 
         return True, ret
-
 
 
 class HobokenMetaclass(type):
