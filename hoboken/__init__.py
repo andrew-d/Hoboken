@@ -23,3 +23,9 @@ from hoboken.helpers import *
 # Build our actual application.
 class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin, HobokenRenderMixin):
     pass
+
+# Create our extension module.
+# This will first try and import a module from 'hoboken.builtin_ext.whatever',
+# and, if that isn't found, from 'hoboken_whatever'.
+from hoboken.exthook import ImportRedirector
+ext = ImportRedirector('hoboken.ext', 'hoboken_%s', builtins='hoboken.builtin_ext').module
