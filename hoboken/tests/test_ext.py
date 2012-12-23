@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ..ext import HobokenJsonApplication
+from hoboken.ext.json import HobokenJsonApplication
 
 import pytest
 from hoboken.tests.compat import unittest
