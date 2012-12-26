@@ -1,5 +1,4 @@
 from . import HobokenTestCase
-import pytest
 from hoboken.tests.compat import unittest
 
 class TestFilters(HobokenTestCase):

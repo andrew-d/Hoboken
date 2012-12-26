@@ -2,7 +2,6 @@
 
 from ..ext import HobokenJsonApplication
 
-import pytest
 from hoboken.tests.compat import unittest
 from mock import patch, MagicMock
 

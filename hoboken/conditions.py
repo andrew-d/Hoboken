@@ -60,18 +60,15 @@ def user_agent(match_re=None, **kwargs):
             if v is not None:
                 check = getattr(ua, k, None)
                 if check is not None and check != v:
-                    print("UA: %r != %r" % (check, v))
                     return False
 
         for k, v in os_conditions.items():
             if v is not None:
                 check = getattr(ua.os, k, None)
                 if check is not None and check != v:
-                    print("OS: %r != %r" % (check, v))
                     return False
 
         if device is not None and device != ua.device:
-            print("Device: %r != %r" % (device, ua.device))
             return False
 
         return True

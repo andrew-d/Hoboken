@@ -3,9 +3,8 @@
 import os
 import sys
 import yaml
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import slow_test, unittest
 
-import pytest
 from mock import Mock
 
 from hoboken.objects.mixins.user_agent import *
@@ -24,7 +23,7 @@ def _e(val):
         raise ValueError("Unknown type for encoding (%r)!" % (val,))
 
 
-@pytest.mark.slowtest
+@slow_test
 class TestParsers(unittest.TestCase):
     def setUp(self):
         self.d = os.path.join(

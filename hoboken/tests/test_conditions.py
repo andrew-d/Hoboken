@@ -5,7 +5,6 @@ from hoboken.conditions import *
 
 from hoboken.tests.compat import unittest
 from mock import Mock
-import pytest
 
 
 class TestUserAgentCondition(HobokenTestCase):

@@ -7,7 +7,6 @@ import time
 from hoboken.tests.compat import unittest
 import datetime
 
-import pytest
 from mock import patch, MagicMock
 
 from hoboken.application import Request

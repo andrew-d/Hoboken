@@ -6,10 +6,9 @@ import glob
 import yaml
 import base64
 import tempfile
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import parametrize, parametrize_class, unittest
 from io import BytesIO
 
-import pytest
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.request_body import *
@@ -586,7 +585,8 @@ def split_all(val):
         yield (val[:i], val[i:])
 
 
-class TestFormParser(object):
+@parametrize_class
+class TestFormParser(unittest.TestCase):
     def make(self, boundary):
         self.ended = False
         self.files = []
@@ -647,7 +647,7 @@ class TestFormParser(object):
         # Remove it for future iterations.
         self.fields.remove(found)
 
-    @pytest.mark.parametrize('param', http_tests)
+    @parametrize('param', http_tests)
     def test_http(self, param):
         # Firstly, create our parser with the given boundary.
         boundary = param['result']['boundary']

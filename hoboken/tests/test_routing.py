@@ -1,9 +1,7 @@
 from . import HobokenTestCase, hoboken
 import os
 import yaml
-from hoboken.tests.compat import unittest
-
-import pytest
+from hoboken.tests.compat import parametrize, parametrize_class, unittest
 
 from hoboken.application import Request
 from hoboken.six import iteritems, text_type
@@ -54,8 +52,9 @@ with open(test_file, 'rb') as f:
 test_cases = list(yaml.load_all(file_data))
 
 
-class TestRouting(object):
-    @pytest.mark.parametrize('param', test_cases)
+@parametrize_class
+class TestRouting(unittest.TestCase):
+    @parametrize('param', test_cases)
     def test_route(self, param):
         if 'skip' in param:
             if hasattr(unittest, 'SkipTest'):
@@ -97,7 +96,7 @@ def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestMethods))
     suite.addTest(unittest.makeSuite(TestHeadFallback))
-    # suite.addTest(unittest.makeSuite(TestRouting))
+    suite.addTest(unittest.makeSuite(TestRouting))
 
     return suite
 

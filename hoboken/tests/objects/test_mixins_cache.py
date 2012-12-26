@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import parametrize, parametrize_class, unittest
 
-import pytest
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.cache import *
@@ -109,11 +108,11 @@ class TestCacheObject(unittest.TestCase):
         self.assertEqual(c.get_property(b'max-age'), b'12a3')
 
 
-class TestWSGIRequestCacheMixin(object):
+@parametrize_class
+class TestWSGIRequestCacheMixin(unittest.TestCase):
     BOOLEAN_PROPS = ['no_cache', 'no_store', 'no_transform', 'only_if_cached']
     VALUE_PROPS = ['max_age', 'max_stale', 'min_fresh']
 
-    @pytest.fixture(autouse=True)
     def setUp(self):
         self.r = WSGIRequestCacheMixin()
         self.r.headers = {}
@@ -121,44 +120,44 @@ class TestWSGIRequestCacheMixin(object):
     def test_cache_control(self):
         assert isinstance(self.r.cache_control, RequestCacheObject)
 
-    @pytest.mark.parametrize('param_name', BOOLEAN_PROPS)
+    @parametrize('param_name', BOOLEAN_PROPS)
     def test_get_boolean_properties(self, param_name):
         assert not getattr(self.r.cache_control, param_name)
 
-    @pytest.mark.parametrize('param_name', BOOLEAN_PROPS)
+    @parametrize('param_name', BOOLEAN_PROPS)
     def test_set_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
         assert getattr(self.r.cache_control, param_name)
 
-    @pytest.mark.parametrize('param_name', BOOLEAN_PROPS)
+    @parametrize('param_name', BOOLEAN_PROPS)
     def test_del_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
         delattr(self.r.cache_control, param_name)
         assert not getattr(self.r.cache_control, param_name)
 
-    @pytest.mark.parametrize('param_name', VALUE_PROPS)
+    @parametrize('param_name', VALUE_PROPS)
     def test_get_value_properties(self, param_name):
         assert getattr(self.r.cache_control, param_name) is None
 
-    @pytest.mark.parametrize('param_name', VALUE_PROPS)
+    @parametrize('param_name', VALUE_PROPS)
     def test_set_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
         assert getattr(self.r.cache_control, param_name) == b'some_value'
 
-    @pytest.mark.parametrize('param_name', VALUE_PROPS)
+    @parametrize('param_name', VALUE_PROPS)
     def test_del_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
         delattr(self.r.cache_control, param_name)
         assert getattr(self.r.cache_control, param_name) is None
 
 
-class TestWSGIResponseCacheMixin(object):
+@parametrize_class
+class TestWSGIResponseCacheMixin(unittest.TestCase):
     BOOLEAN_PROPS = ['public', 'no_store', 'no_transform',
                      'must_revalidate', 'proxy_revalidate']
     VALUE_PROPS = ['no_cache', 'private', 'max_age', 's_max_age',
                    's_maxage']
 
-    @pytest.fixture(autouse=True)
     def setUp(self):
         self.r = WSGIResponseCacheMixin()
         self.r.headers = {}
@@ -166,31 +165,31 @@ class TestWSGIResponseCacheMixin(object):
     def test_cache_control(self):
         assert isinstance(self.r.cache_control, ResponseCacheObject)
 
-    @pytest.mark.parametrize('param_name', BOOLEAN_PROPS)
+    @parametrize('param_name', BOOLEAN_PROPS)
     def test_get_boolean_properties(self, param_name):
         assert not getattr(self.r.cache_control, param_name)
 
-    @pytest.mark.parametrize('param_name', BOOLEAN_PROPS)
+    @parametrize('param_name', BOOLEAN_PROPS)
     def test_set_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
         assert getattr(self.r.cache_control, param_name)
 
-    @pytest.mark.parametrize('param_name', BOOLEAN_PROPS)
+    @parametrize('param_name', BOOLEAN_PROPS)
     def test_del_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
         delattr(self.r.cache_control, param_name)
         assert not getattr(self.r.cache_control, param_name)
 
-    @pytest.mark.parametrize('param_name', VALUE_PROPS)
+    @parametrize('param_name', VALUE_PROPS)
     def test_get_value_properties(self, param_name):
         assert getattr(self.r.cache_control, param_name) is None
 
-    @pytest.mark.parametrize('param_name', VALUE_PROPS)
+    @parametrize('param_name', VALUE_PROPS)
     def test_set_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
         assert getattr(self.r.cache_control, param_name) == b'some_value'
 
-    @pytest.mark.parametrize('param_name', VALUE_PROPS)
+    @parametrize('param_name', VALUE_PROPS)
     def test_del_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
         delattr(self.r.cache_control, param_name)
@@ -267,8 +266,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TestBooleanProperty))
     suite.addTest(unittest.makeSuite(TestValueProperty))
     suite.addTest(unittest.makeSuite(TestCacheObject))
-    # suite.addTest(unittest.makeSuite(TestWSGIRequestCacheMixin))
-    # suite.addTest(unittest.makeSuite(TestWSGIResponseCacheMixin))
+    suite.addTest(unittest.makeSuite(TestWSGIRequestCacheMixin))
+    suite.addTest(unittest.makeSuite(TestWSGIResponseCacheMixin))
     suite.addTest(unittest.makeSuite(TestWSGIResponseOtherCachesMixin))
     suite.addTest(unittest.makeSuite(TestPragmaNoCacheMixin))
 
