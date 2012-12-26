@@ -36,18 +36,18 @@ class TestLastModified(HobokenTestCase):
     def test_has_last_modified(self):
         r = Request.build("/resource")
         resp = r.get_response(self.app)
-        self.assertTrue(resp.last_modified is not None)
+        self.assertIsNotNone(resp.last_modified)
 
     def test_no_last_modified(self):
         r = Request.build("/bad")
         resp = r.get_response(self.app)
-        self.assertTrue(resp.last_modified is None)
+        self.assertIsNone(resp.last_modified)
 
     def test_no_last_modified_if_etag(self):
         r = Request.build("/resource")
         r.headers['If-None-Match'] = 'foobar'
         resp = r.get_response(self.app)
-        self.assertTrue(resp.last_modified is not None)
+        self.assertIsNotNone(resp.last_modified)
 
     def test_will_return_304_for_get(self):
         r = Request.build("/resource")
@@ -258,12 +258,12 @@ class TestShift(HobokenTestCase):
         path = os.path.join(dir_name, "test_shift.bare")
         output = self.app.render(path)
 
-        self.assertTrue(output is not None)
+        self.assertIsNotNone(output)
         self.assertEqual(output.strip(), "This is a bare file.")
 
     def test_shift_will_fail_on_unknown(self):
         output = self.app.render("not_existing.badext")
-        self.assertTrue(output is None)
+        self.assertIsNone(output)
 
 
 

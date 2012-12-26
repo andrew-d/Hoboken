@@ -12,7 +12,7 @@ class TestHobokenJsonApplication(unittest.TestCase):
         self.app = HobokenJsonApplication('')
 
     def test_will_set_default_indent_config(self):
-        self.assertTrue('json_indent' in self.app.config)
+        self.assertIn('json_indent', self.app.config)
 
     def test_will_set_default_escape_config(self):
         self.assertEqual(self.app.config.json_escape, True)

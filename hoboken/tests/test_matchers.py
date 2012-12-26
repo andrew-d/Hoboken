@@ -39,7 +39,7 @@ class TestRegexMatcher(unittest.TestCase):
             test_re = "test_string"
             r = RegexMatcher(test_re, [], [])
 
-            self.assertTrue(isinstance(r, RegexMatcher))
+            self.assertIsInstance(r, RegexMatcher)
             mock_obj.assert_called_with(test_re)
 
     def test_raises_on_invalid(self):
@@ -101,7 +101,7 @@ class TestHobokenRouteMatcher(unittest.TestCase):
         m = HobokenRouteMatcher(path)
         out = m.reverse(args, kwargs)
 
-        assert out == param['reverse']
+        self.assertEqual(out, param['reverse'])
 
     @unittest.skipIf(sys.version_info >= (3,0), "Errors on Python 3")
     def test_reversing(self):
@@ -110,7 +110,7 @@ class TestHobokenRouteMatcher(unittest.TestCase):
         m = HobokenRouteMatcher(unicode_str)
         request = MagicMock(path_info="/f%C3%B8%C3%B8")
         matches, _, _ = m.match(request)
-        assert matches is True
+        self.assertTrue(matches)
 
 
 def suite():

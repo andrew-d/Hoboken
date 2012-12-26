@@ -35,7 +35,7 @@ class TestDateHeader(unittest.TestCase):
         self.set_mock.assert_called_once_with(b'foo')
 
         self.c.p = None
-        self.assertTrue('Date' not in self.c.headers)
+        self.assertNotIn('Date', self.c.headers)
 
     def test_readonly_fails(self):
         with self.assertRaises(AttributeError):
@@ -45,7 +45,7 @@ class TestDateHeader(unittest.TestCase):
         self.c.headers['Date'] = b'foobar'
         del self.c.p
 
-        self.assertTrue('Date' not in self.c.headers)
+        self.assertNotIn('Date', self.c.headers)
 
 
 class TestWSGIDateMixin(unittest.TestCase):
@@ -76,7 +76,7 @@ class TestWSGIDateMixin(unittest.TestCase):
             self.d.date = []
 
     def test_invalid_parse(self):
-        self.assertTrue(self.d._parse_date(b'bad-date') is None)
+        self.assertIsNone(self.d._parse_date(b'bad-date'))
 
     def test_without_timezone(self):
         v = 'Mon, 03 Dec 2012 00:00:00'

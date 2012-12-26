@@ -31,12 +31,12 @@ class TestWSGIHeaders(unittest.TestCase):
 
     def test_delete_item(self):
         del self.h['header']
-        self.assertTrue('HTTP_HEADER' not in self.environ)
+        self.assertNotIn('HTTP_HEADER', self.environ)
 
     def test_contains(self):
         self.h['Foo'] = 'bar'
-        self.assertTrue('Foo' in self.h)
-        self.assertFalse('Bad' in self.h)
+        self.assertIn('Foo', self.h)
+        self.assertNotIn('Bad', self.h)
 
     def test_misc(self):
         self.assertEqual(len(self.h), 2)

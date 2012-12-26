@@ -154,7 +154,7 @@ class TestCachedProperty(unittest.TestCase):
         self.assertEqual(self.cls.cache, 456)
 
     def test_get_from_class(self):
-        self.assertTrue(isinstance(self.TestClass.cache, cached_property))
+        self.assertIsInstance(self.TestClass.cache, cached_property)
 
 
 class TestImmutableList(unittest.TestCase):

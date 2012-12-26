@@ -40,7 +40,7 @@ class TestBuildMethod(unittest.TestCase):
     def assert_headers(self, *header_list):
         for x in header_list:
             c = call(*x)
-            self.assertTrue(c in self.req.headers.__setitem__.call_args_list)
+            self.assertIn(c, self.req.headers.__setitem__.call_args_list)
 
     def test_default(self):
         self.build('/')
@@ -176,7 +176,7 @@ class TestCallApplication(unittest.TestCase):
         self.req.ResponseClass = MagicMock
         resp = self.req.get_response(self.app)
 
-        self.assertTrue(isinstance(resp, MagicMock))
+        self.assertIsInstance(resp, MagicMock)
         self.assertEqual(resp.status, self.return_val)
         self.assertEqual(resp.headers, self.return_headers)
         self.assertEqual(resp.response_iter, self.return_iter)

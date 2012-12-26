@@ -16,7 +16,7 @@ from hoboken.application import Request
 class TestHasHTTPMethods(HobokenTestCase):
     def test_has_all_methods(self):
         for x in self.app.SUPPORTED_METHODS:
-            assert hasattr(self.app, x.lower())
+            self.assertTrue(hasattr(self.app, x.lower()))
 
 
 class TestWorksWithConditions(HobokenTestCase):
@@ -245,7 +245,7 @@ class TestMatcherTypes(HobokenTestCase):
             return b'body'
 
         route = self.app.find_route(regex_get)
-        self.assertTrue(isinstance(route.matcher, RegexMatcher))
+        self.assertIsInstance(route.matcher, RegexMatcher)
 
     def test_will_handle_regex_named_captures(self):
         r = re.compile(b"/(.*?)foo(?P<name>.*?)bar")
@@ -335,14 +335,14 @@ class TestMiscellaneousMethods(HobokenTestCase):
             pass
 
         res = self.app.find_route(not_exist)
-        self.assertTrue(res is None)
+        self.assertIsNone(res)
 
     def test_url_for_will_return_none_on_failure(self):
         def not_a_route():
             pass
 
         url = self.app.url_for(not_a_route)
-        self.assertTrue(url is None)
+        self.assertIsNone(url)
 
     def test_only_one_route_per_function(self):
         with self.assertRaises(RouteExistsException):
@@ -380,7 +380,7 @@ class TestConfig(HobokenTestCase):
         self.app.config.foo = 'bar'
         del self.app.config.foo
 
-        self.assertTrue('foo' not in self.app.config)
+        self.assertNotIn('foo', self.app.config)
 
     def test_will_fill_missing_views_dir(self):
         app = HobokenApplication('', root_directory='foo')
@@ -396,12 +396,12 @@ class TestConfig(HobokenTestCase):
 
         @app.get("/two")
         def two():
-            self.assertTrue('foo' not in app.g)
+            self.assertNotIn('foo', app.g)
 
         r = Request.build("/one")
         resp = r.get_response(app)
 
-        self.assertTrue('foo' not in app.g)
+        self.assertNotIn('foo', app.g)
 
         r = Request.build("/two")
         resp = r.get_response(app)
@@ -423,8 +423,8 @@ class TestInheritance(HobokenTestCase):
 
         cls = Inherited("foobar")
 
-        self.assertTrue("inherited" in calls)
-        self.assertTrue("mixin" in calls)
+        self.assertIn("inherited", calls)
+        self.assertIn("mixin", calls)
 
 
 def suite():

@@ -67,7 +67,7 @@ class TestCacheObject(unittest.TestCase):
     def test_parse(self):
         http_obj = object()
         o = CacheObject.parse(http_obj, b"no-cache, no-store, max-age=123")
-        self.assertTrue(isinstance(o, CacheObject))
+        self.assertIsInstance(o, CacheObject)
 
     def test_serialize_cache_control(self):
         m = CacheObject(None, initial_properties={
@@ -96,12 +96,12 @@ class TestCacheObject(unittest.TestCase):
         t = tmp()
         c = CacheObject.parse(t, b'no-cache')
         self.assertEqual(c.get_property(b'no-cache'), True)
-        self.assertTrue(c.get_property(b'no-store') is None)
+        self.assertIsNone(c.get_property(b'no-store'))
 
         t.headers['Cache-Control'] = b'no-store'
         c.reparse()
         self.assertEqual(c.get_property(b'no-store'), True)
-        self.assertTrue(c.get_property(b'no-cache') is None)
+        self.assertIsNone(c.get_property(b'no-cache'))
 
     def test_parse_invalid(self):
         c = CacheObject.parse({}, b'max-age=12a3, no-store')
@@ -118,37 +118,37 @@ class TestWSGIRequestCacheMixin(unittest.TestCase):
         self.r.headers = {}
 
     def test_cache_control(self):
-        assert isinstance(self.r.cache_control, RequestCacheObject)
+        self.assertIsInstance(self.r.cache_control, RequestCacheObject)
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_get_boolean_properties(self, param_name):
-        assert not getattr(self.r.cache_control, param_name)
+        self.assertFalse(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_set_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
-        assert getattr(self.r.cache_control, param_name)
+        self.assertIsNotNone(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_del_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
         delattr(self.r.cache_control, param_name)
-        assert not getattr(self.r.cache_control, param_name)
+        self.assertFalse(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', VALUE_PROPS)
     def test_get_value_properties(self, param_name):
-        assert getattr(self.r.cache_control, param_name) is None
+        self.assertIsNone(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', VALUE_PROPS)
     def test_set_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
-        assert getattr(self.r.cache_control, param_name) == b'some_value'
+        self.assertEqual(getattr(self.r.cache_control, param_name), b'some_value')
 
     @parametrize('param_name', VALUE_PROPS)
     def test_del_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
         delattr(self.r.cache_control, param_name)
-        assert getattr(self.r.cache_control, param_name) is None
+        self.assertIsNone(getattr(self.r.cache_control, param_name))
 
 
 @parametrize_class
@@ -163,44 +163,44 @@ class TestWSGIResponseCacheMixin(unittest.TestCase):
         self.r.headers = {}
 
     def test_cache_control(self):
-        assert isinstance(self.r.cache_control, ResponseCacheObject)
+        self.assertIsInstance(self.r.cache_control, ResponseCacheObject)
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_get_boolean_properties(self, param_name):
-        assert not getattr(self.r.cache_control, param_name)
+        self.assertFalse(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_set_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
-        assert getattr(self.r.cache_control, param_name)
+        self.assertIsNotNone(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_del_boolean_properties(self, param_name):
         setattr(self.r.cache_control, param_name, True)
         delattr(self.r.cache_control, param_name)
-        assert not getattr(self.r.cache_control, param_name)
+        self.assertFalse(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', VALUE_PROPS)
     def test_get_value_properties(self, param_name):
-        assert getattr(self.r.cache_control, param_name) is None
+        self.assertIsNone(getattr(self.r.cache_control, param_name))
 
     @parametrize('param_name', VALUE_PROPS)
     def test_set_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
-        assert getattr(self.r.cache_control, param_name) == b'some_value'
+        self.assertEqual(getattr(self.r.cache_control, param_name), b'some_value')
 
     @parametrize('param_name', VALUE_PROPS)
     def test_del_value_properties(self, param_name):
         setattr(self.r.cache_control, param_name, b'some_value')
         delattr(self.r.cache_control, param_name)
-        assert getattr(self.r.cache_control, param_name) is None
+        self.assertIsNone(getattr(self.r.cache_control, param_name))
 
     def test_s_maxage_variants(self):
         self.r.cache_control.s_max_age = True
-        assert self.r.cache_control.s_maxage
+        self.assertTrue(self.r.cache_control.s_maxage)
 
         self.r.cache_control.s_maxage = False
-        assert not self.r.cache_control.s_max_age
+        self.assertFalse(self.r.cache_control.s_max_age)
 
 
 class TestWSGIResponseOtherCachesMixin(unittest.TestCase):
@@ -219,7 +219,7 @@ class TestWSGIResponseOtherCachesMixin(unittest.TestCase):
 
     def test_age_with_invalid(self):
         self.r.headers['Age'] = b'bad data'
-        self.assertTrue(self.r.age is None)
+        self.assertIsNone(self.r.age)
 
 
 class TestPragmaNoCacheMixin(unittest.TestCase):
@@ -257,7 +257,7 @@ class TestPragmaNoCacheMixin(unittest.TestCase):
 
     def test_will_ignore_invalid(self):
         self.h.headers['Pragma'] = b'some-other-val'
-        self.assertTrue(self.c.no_cache is None)
+        self.assertIsNone(self.c.no_cache)
         self.assertEqual(self.calls, 1)
 
 

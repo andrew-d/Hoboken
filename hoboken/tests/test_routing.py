@@ -63,7 +63,7 @@ class TestRouting(unittest.TestCase):
 
         matcher = Matcher(param['path'])
         regex = param['regex'].encode('latin-1')
-        assert matcher.match_re.pattern == regex
+        self.assertEqual(matcher.match_re.pattern, regex)
 
         class FakeRequest(object):
             path_info = None
@@ -80,16 +80,16 @@ class TestRouting(unittest.TestCase):
                 if isinstance(v, text_type):
                     v = v.encode('latin-1')
                 expected_kwargs[k] = v
-            assert matched is True
-            assert args == expected_args
-            assert kwargs == expected_kwargs
+            self.assertTrue(matched)
+            self.assertEqual(args, expected_args)
+            self.assertEqual(kwargs, expected_kwargs)
 
         for fail in param.get('failures', []):
             r = FakeRequest()
             r.path = fail
             matched, _, _ = matcher.match(r)
 
-            assert matched is False
+            self.assertFalse(matched)
 
 
 def suite():
