@@ -245,7 +245,7 @@ class TestMatcherTypes(HobokenTestCase):
             return b'body'
 
         route = self.app.find_route(regex_get)
-        self.assertIsInstance(route.matcher, RegexMatcher)
+        self.assertTrue(isinstance(route.matcher, RegexMatcher))
 
     def test_will_handle_regex_named_captures(self):
         r = re.compile(b"/(.*?)foo(?P<name>.*?)bar")

@@ -737,7 +737,7 @@ class TestFormParser(unittest.TestCase):
         on_end = Mock()
 
         f = FormParser(b'application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
-        self.assertIsInstance(f.parser, OctetStreamParser)
+        self.assertTrue(isinstance(f.parser, OctetStreamParser))
 
         f.write(b'test')
         f.write(b'1234')
@@ -775,11 +775,11 @@ class TestFormParser(unittest.TestCase):
             self.assertTrue(on_end.called)
 
         f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
-        self.assertIsInstance(f.parser, QuerystringParser)
+        self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
         f = FormParser(b'application/x-url-encoded', on_field, on_file, on_end=on_end)
-        self.assertIsInstance(f.parser, QuerystringParser)
+        self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
     def test_close_methods(self):
@@ -860,8 +860,8 @@ class TestRequestBodyMixin(unittest.TestCase):
         self.m.config['MAX_FIELD_SIZE'] = 1234
 
         f = self.m.form_parser(None, None)
-        self.assertIsInstance(f, FormParser)
-        self.assertIsInstance(f.parser, OctetStreamParser)
+        self.assertTrue(isinstance(f, FormParser))
+        self.assertTrue(isinstance(f.parser, OctetStreamParser))
         self.assertEqual(f.config.get('MAX_FIELD_SIZE'), 1234)
 
     def test_form_parser_octet_stream(self):

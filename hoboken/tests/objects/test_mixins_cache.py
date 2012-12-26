@@ -67,7 +67,7 @@ class TestCacheObject(unittest.TestCase):
     def test_parse(self):
         http_obj = object()
         o = CacheObject.parse(http_obj, b"no-cache, no-store, max-age=123")
-        self.assertIsInstance(o, CacheObject)
+        self.assertTrue(isinstance(o, CacheObject))
 
     def test_serialize_cache_control(self):
         m = CacheObject(None, initial_properties={
@@ -118,7 +118,7 @@ class TestWSGIRequestCacheMixin(unittest.TestCase):
         self.r.headers = {}
 
     def test_cache_control(self):
-        self.assertIsInstance(self.r.cache_control, RequestCacheObject)
+        self.assertTrue(isinstance(self.r.cache_control, RequestCacheObject))
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_get_boolean_properties(self, param_name):
@@ -163,7 +163,7 @@ class TestWSGIResponseCacheMixin(unittest.TestCase):
         self.r.headers = {}
 
     def test_cache_control(self):
-        self.assertIsInstance(self.r.cache_control, ResponseCacheObject)
+        self.assertTrue(isinstance(self.r.cache_control, ResponseCacheObject))
 
     @parametrize('param_name', BOOLEAN_PROPS)
     def test_get_boolean_properties(self, param_name):

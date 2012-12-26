@@ -176,7 +176,7 @@ class TestCallApplication(unittest.TestCase):
         self.req.ResponseClass = MagicMock
         resp = self.req.get_response(self.app)
 
-        self.assertIsInstance(resp, MagicMock)
+        self.assertTrue(isinstance(resp, MagicMock))
         self.assertEqual(resp.status, self.return_val)
         self.assertEqual(resp.headers, self.return_headers)
         self.assertEqual(resp.response_iter, self.return_iter)
