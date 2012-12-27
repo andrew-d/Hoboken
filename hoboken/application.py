@@ -24,6 +24,10 @@ from hoboken.six import (with_metaclass, text_type, binary_type, string_types,
                          callable, iteritems)
 
 
+# Get a logger.
+logger = logging.getLogger(__name__)
+
+
 def get_func_attr(func, attr, default=None, delete=False):
     if delete:
         return func.__dict__.pop(attr, default)
@@ -228,19 +232,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # Create logger.
         self.logger = logging.getLogger("hoboken.applications." + self.name)
 
-        # Configure logger.
-        formatter = logging.Formatter('[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s')
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
-
-        if self.config.debug:
-            self.logger.setLevel(logging.DEBUG)
-            handler.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.WARN)
-            handler.setLevel(logging.WARN)
-
         # Set up threadlocal storage.  We use this so we can process multiple
         # requests at the same time from one app.
         self._locals = threading.local()
@@ -250,6 +241,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
+
+        # Done initialization.
+        self.logger.info("Application initialized")
 
     @property
     def request(self):
@@ -487,12 +481,12 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # Since these are thread-locals, we grab them as locals.
         request = self.request
         response = self.response
-        self.logger.debug("%s %s", request.method, request.url)
+        self.logger.debug("Handling: %s %s", request.method, request.url)
 
         # Check for valid method.
         # TODO: Should this call our after filters?
         if request.method not in self.SUPPORTED_METHODS:
-            self.logger.warn("Called with invalid method: %r", request.method)
+            self.logger.warn("Called with invalid method: %s", request.method)
 
             # TODO: hook.
 
