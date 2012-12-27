@@ -29,8 +29,8 @@ exclude_lines =
     if __name__ == .__main__.:
 
     # Exclude stuff for debugging
+    if self\.config\['DEBUG'\]:
     if self\.debug:
-    if self\.config\.debug:
 
     # Ignore import exceptions
     except ImportError:

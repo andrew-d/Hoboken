@@ -10,7 +10,7 @@ import re
 import sys
 from hoboken.tests.compat import unittest
 import mock
-from hoboken.application import Request
+from hoboken.application import Request, ConfigProperty
 
 
 class TestHasHTTPMethods(HobokenTestCase):
@@ -382,9 +382,24 @@ class TestConfig(HobokenTestCase):
         self.assertNotIn('FOO', self.app.config)
 
     def test_will_fill_missing_views_dir(self):
-        app = HobokenApplication('', root_directory='foo')
+        app = HobokenApplication('', config={'ROOT_DIRECTORY': 'foo'})
         expected_views = os.path.join('foo', 'views')
         self.assertEqual(app.config['VIEWS_DIRECTORY'], expected_views)
+
+    def test_property_will_return_obj(self):
+        self.assertIsInstance(HobokenApplication.debug, ConfigProperty)
+
+    def test_configproperty_converter(self):
+        m = mock.MagicMock()
+
+        class TestClass(object):
+            config = {}
+            prop = ConfigProperty('FOO', converter=m)
+
+        t = TestClass()
+        t.config['FOO'] = 'BAR'
+        t.prop
+        m.assert_called_with('BAR')
 
     def test_g(self):
         app = HobokenApplication('')
@@ -400,7 +415,7 @@ class TestConfig(HobokenTestCase):
         r = Request.build("/one")
         resp = r.get_response(app)
 
-        self.assertNotIn('foo', app.g)
+        self.assertNotIn('foo', app.g.__dict__)
 
         r = Request.build("/two")
         resp = r.get_response(app)

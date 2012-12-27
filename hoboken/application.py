@@ -202,22 +202,20 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
                          "HEAD")
+
     DEFAULT_CONFIG = {
         'DEBUG': False,
         'ROOT_DIRECTORY': None,
-        'VIEWS_DIRECTORY': None,
     }
-
 
     # The application's debug setting.
     debug = ConfigProperty('DEBUG')
 
-
-    def __init__(self, name, sub_app=None, **kwargs):
+    def __init__(self, name, sub_app=None, config={}):
         self.name = name
         self.sub_app = sub_app
         self.config = dict(self.DEFAULT_CONFIG)
-        self.config.update(kwargs)
+        self.config.update(config)
 
         # If we're missing config values, we try and determine them here.
         if self.config['ROOT_DIRECTORY'] is None:
