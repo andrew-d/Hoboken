@@ -387,7 +387,7 @@ class TestConfig(HobokenTestCase):
         self.assertEqual(app.config['VIEWS_DIRECTORY'], expected_views)
 
     def test_property_will_return_obj(self):
-        self.assertIsInstance(HobokenApplication.debug, ConfigProperty)
+        self.assertTrue(isinstance(HobokenApplication.debug, ConfigProperty))
 
     def test_configproperty_converter(self):
         m = mock.MagicMock()
