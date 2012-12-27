@@ -56,3 +56,6 @@ $RECYCLE.BIN/
 
 # Linux ignores
 *~
+
+# OS X ignores
+.DS_Store
