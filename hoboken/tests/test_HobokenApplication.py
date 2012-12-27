@@ -130,7 +130,7 @@ class TestHaltHelper(HobokenTestCase):
             halt(code=self.halt_code, body=self.halt_body)
             return 'bad'
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def assert_halts_with(self, code, body, path):
         """Helper function to set the halt value and assert"""
@@ -172,7 +172,7 @@ class TestPassHelper(HobokenTestCase):
         def pass_before_route(splat):
             self.app.response.body += b'foo'
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def test_pass_route(self):
         self.assert_body_is('good', path='/aroute/')
@@ -201,7 +201,7 @@ class TestRedirectHelper(HobokenTestCase):
         def redirect_func():
             self.app.redirect('/foo', code=self.redirect_code)
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def test_redirect(self):
         req = Request.build("/upload", method='POST')
@@ -372,20 +372,19 @@ class TestMiscellaneousMethods(HobokenTestCase):
 
 class TestConfig(HobokenTestCase):
     def test_can_get_set_values(self):
-        self.app.config.foo = 'asdf'
-        self.assertEqual(self.app.config.foo, 'asdf')
-        self.assertEqual(self.app.config['foo'], 'asdf')
+        self.app.config['FOO'] = 'asdf'
+        self.assertEqual(self.app.config['FOO'], 'asdf')
 
     def test_can_delete_values(self):
-        self.app.config.foo = 'bar'
-        del self.app.config.foo
+        self.app.config['FOO'] = 'bar'
+        del self.app.config['FOO']
 
-        self.assertNotIn('foo', self.app.config)
+        self.assertNotIn('FOO', self.app.config)
 
     def test_will_fill_missing_views_dir(self):
         app = HobokenApplication('', root_directory='foo')
         expected_views = os.path.join('foo', 'views')
-        self.assertEqual(app.config.views_directory, expected_views)
+        self.assertEqual(app.config['VIEWS_DIRECTORY'], expected_views)
 
     def test_g(self):
         app = HobokenApplication('')

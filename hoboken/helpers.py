@@ -131,7 +131,7 @@ class HobokenRedirectMixin(object):
 class HobokenRenderMixin(object):
     def __init__(self, *args, **kwargs):
         import shift
-        template_root = self.config.views_directory or 'views'
+        template_root = self.config['VIEWS_DIRECTORY'] or 'views'
         self._shift = shift.Shift(template_root=template_root)
         super(HobokenRenderMixin, self).__init__(*args, **kwargs)
 

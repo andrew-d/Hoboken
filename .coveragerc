@@ -8,6 +8,7 @@ omit =
     *six.py
     hoboken/tests/*
     hoboken/objects/oproperty/*
+    hoboken/packages/*
 
 [report]
 # Regexes for lines to exclude from consideration

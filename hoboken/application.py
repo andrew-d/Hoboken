@@ -18,6 +18,7 @@ from hoboken.exceptions import *
 from hoboken.matchers import *
 from hoboken.objects import WSGIFullRequest as Request
 from hoboken.objects import WSGIFullResponse as Response
+from hoboken.log import create_logger
 
 # Compatibility.
 from hoboken.six import (with_metaclass, text_type, binary_type, string_types,
@@ -167,15 +168,33 @@ def is_route(func):
     return get_func_attr(func, 'hoboken.route', default=False)
 
 
-class objdict(dict):
-    def __setattr__(self, key, val):
-        self[key] = val
+class _EmptyClass(object):
+    """
+    This is a basic, empty object.
+    """
+    pass
 
-    def __getattr__(self, key):
-        return self[key]
 
-    def __delattr__(self, key):
-        del self[key]
+class ConfigProperty(object):
+    """
+    This class will proxy an attribute to the object's config dict.
+    """
+    def __init__(self, name, converter=None):
+        self.name = name
+        self.converter = converter
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+
+        ret = obj.config[self.name]
+        if self.converter is not None:
+            ret = self.converter(ret)
+
+        return ret
+
+    def __set__(self, obj, value):
+        obj.config[self.name] = value
 
 
 class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
@@ -184,38 +203,41 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
                          "HEAD")
     DEFAULT_CONFIG = {
-        'debug': False,
-        'root_directory': None,
-        'views_directory': None,
+        'DEBUG': False,
+        'ROOT_DIRECTORY': None,
+        'VIEWS_DIRECTORY': None,
     }
+
+
+    # The application's debug setting.
+    debug = ConfigProperty('DEBUG')
+
 
     def __init__(self, name, sub_app=None, **kwargs):
         self.name = name
         self.sub_app = sub_app
-        self.config = objdict(self.DEFAULT_CONFIG)
+        self.config = dict(self.DEFAULT_CONFIG)
         self.config.update(kwargs)
 
         # If we're missing config values, we try and determine them here.
-        if self.config.root_directory is None:
+        if self.config['ROOT_DIRECTORY'] is None:
             import __main__
 
             # Get the file name if it exists.  It won't in, for example, the
             # interactive console.
             if hasattr(__main__, "__file__"):
-                self.config.root_directory = os.path.dirname(
+                self.config['ROOT_DIRECTORY'] = os.path.dirname(
                     os.path.abspath(__main__.__file__)
                 )
             else:               # pragma: no cover
-                self.config.root_directory = os.path.dirname(
+                self.config['ROOT_DIRECTORY'] = os.path.dirname(
                     os.path.abspath(".")
                 )
 
-
-        if self.config.views_directory is None:
-            self.config.views_directory = os.path.join(
-                self.config.root_directory,
-                "views"
-            )
+        self.config.setdefault('VIEWS_DIRECTORY', os.path.join(
+            self.config['ROOT_DIRECTORY'],
+            "views"
+        ))
 
         # Routes array. We split this by method, both for speed and simplicity.
         self.routes = {}
@@ -230,14 +252,14 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self.after_filters = []
 
         # Create logger.
-        self.logger = logging.getLogger("hoboken.applications." + self.name)
+        self.logger = create_logger(self, "hoboken.applications." + self.name)
 
         # Set up threadlocal storage.  We use this so we can process multiple
         # requests at the same time from one app.
         self._locals = threading.local()
         self._locals.request = None
         self._locals.response = None
-        self._locals.vars = objdict()
+        self._locals.vars = _EmptyClass()
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
@@ -276,7 +298,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     @g.deleter
     def g(self):
         del self._locals.vars
-        self._locals.vars = objdict()
+        self._locals.vars = _EmptyClass()
 
     def set_subapp(self, subapp):
         self.sub_app = subapp
@@ -559,7 +581,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     def on_exception(self, exception):
         self.response.status_int = 500
-        if self.config.debug:
+        if self.config['DEBUG']:
             # Format the current traceback
             tb = traceback.format_exc()
 
@@ -593,7 +615,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         body = []
         body.append("Application {0} (Debug: {1})".format(
             self.name,
-            self.config.debug
+            self.config['DEBUG']
         ))
         body.append("")
 
@@ -640,6 +662,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def __repr__(self):
         return "HobokenApplication(name={!r}, debug={!r})".format(
             self.name,
-            self.config.debug
+            self.config['DEBUG']
         )
 

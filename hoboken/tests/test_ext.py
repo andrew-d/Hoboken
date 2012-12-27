@@ -15,7 +15,7 @@ class TestHobokenJsonApplication(unittest.TestCase):
         self.assertIn('json_indent', self.app.config)
 
     def test_will_set_default_escape_config(self):
-        self.assertEqual(self.app.config.json_escape, True)
+        self.assertEqual(self.app.config['JSON_ESCAPE'], True)
 
     def test_will_escape_string(self):
         val = b'escape </> me'.decode('latin-1')
@@ -28,7 +28,7 @@ class TestHobokenJsonApplication(unittest.TestCase):
         self.assertEqual(self.app.escape_string(val), output)
 
     def test_will_not_escape_if_requested(self):
-        self.app.config.json_escape = False
+        self.app.config['JSON_ESCAPE'] = False
         request_mock = MagicMock()
         response_mock = MagicMock()
         val = {'foo': 'dont escape </> me'}
@@ -36,7 +36,7 @@ class TestHobokenJsonApplication(unittest.TestCase):
         with patch('json.dumps', return_value='') as json_mock:
             self.app.on_returned_body(request_mock, response_mock, val)
 
-        json_mock.assert_called_with(val, indent=self.app.config.json_indent)
+        json_mock.assert_called_with(val, indent=self.app.config['JSON_INDENT'])
 
     def test_will_encapsulate_value(self):
         request_mock = MagicMock()
@@ -46,10 +46,10 @@ class TestHobokenJsonApplication(unittest.TestCase):
         with patch('json.dumps', return_value='') as json_mock:
             self.app.on_returned_body(request_mock, response_mock, value)
 
-        json_mock.assert_called_with({'value': value}, indent=self.app.config.json_indent)
+        json_mock.assert_called_with({'value': value}, indent=self.app.config['JSON_INDENT'])
 
     def test_will_not_encapsulate_if_requested(self):
-        self.app.config.json_wrap = False
+        self.app.config['JSON_WRAP'] = False
 
         request_mock = MagicMock()
         response_mock = MagicMock()

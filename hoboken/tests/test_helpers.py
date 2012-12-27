@@ -16,7 +16,7 @@ import hoboken.helpers
 class TestLastModified(HobokenTestCase):
     def after_setup(self):
         self.time = datetime.datetime(year=2012, month=7, day=15)
-        self.app.config.debug = True
+        self.app.debug = True
 
         @self.app.get("/resource")
         def resource():
@@ -83,7 +83,7 @@ class TestLastModified(HobokenTestCase):
 class TestETag(HobokenTestCase):
     def after_setup(self):
         self.etag = b'some etag'
-        self.app.config.debug = True
+        self.app.debug = True
 
         @self.app.get("/resource")
         def resource():
@@ -210,7 +210,7 @@ class TestExpires(HobokenTestCase):
 
 class TestRedirection(HobokenTestCase):
     def after_setup(self):
-        self.app.config.debug = True
+        self.app.debug = True
 
         @self.app.get("/redirect_back")
         def redirect():

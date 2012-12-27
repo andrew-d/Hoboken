@@ -87,7 +87,7 @@ class TestFilterParams(HobokenTestCase):
         def catchall(splat):
             pass
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def test_before_params(self):
         self.call_app(path='/before/one/two/params')
