@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ..ext import HobokenJsonApplication
+from hoboken.ext.json_app import HobokenJsonApplication
 
 from hoboken.tests.compat import unittest
 from mock import patch, MagicMock
