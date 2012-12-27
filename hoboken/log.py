@@ -5,40 +5,47 @@ import logging.config
 import logging.handlers
 
 
-if hasattr(logging, 'NullHandler'):
+if hasattr(logging, 'NullHandler'):             # pragma: no cover
     NullHandler = logging.NullHandler
-else:
+else:                                           # pragma: no cover
     from hoboken.packages.logutils import NullHandler
 
 
-if hasattr(logging.config, 'dictConfig'):
+if hasattr(logging.config, 'dictConfig'):       # pragma: no cover
     dictConfig = logging.config.dictConfig
-else:
+else:                                           # pragma: no cover
     from hoboken.packages.logutils.dictconfig import dictConfig
 
 
-if hasattr(logging.handlers, 'QueueHandler'):
+if hasattr(logging.handlers, 'QueueHandler'):   # pragma: no cover
     QueueHandler = logging.handlers.QueueHandler
-else:
+else:                                           # pragma: no cover
     from hoboken.packages.logutils.queue import QueueHandler
 
 
-def create_logger(app, name):
-    """
-    This function creates a logger class for an application.  The created
-    class will change the effective logging level based on the application's
-    debug setting.
-    """
-    Logger = logging.getLoggerClass()
+Logger = logging.getLoggerClass()
 
-    class DebugLogger(Logger):
-        def getEffectiveLevel(self):
-            if self.level == logging.NOTSET and app.debug:
-                return logging.DEBUG
-            return Logger.getEffectiveLevel(self)
+class DebugLogger(Logger):
+    app = None
 
-    log = logging.getLogger(name)
-    log.__class__ = DebugLogger
+    def getEffectiveLevel(self):
+        if self.level == logging.NOTSET and self.app and self.app.debug:
+            return logging.DEBUG
+        return Logger.getEffectiveLevel(self)
 
-    return log
+
+class InjectingFilter(logging.Filter):
+    def __init__(self, app):
+        self.app = app
+
+    def filter(self, record):
+        record.app_name = self.app.name
+
+        request = self.app.request
+        if request:
+            record.request = request
+            record.method = request.method
+            # TODO: set more here?
+
+        return True
 

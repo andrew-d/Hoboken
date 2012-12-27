@@ -18,7 +18,8 @@ from hoboken.exceptions import *
 from hoboken.matchers import *
 from hoboken.objects import WSGIFullRequest as Request
 from hoboken.objects import WSGIFullResponse as Response
-from hoboken.log import create_logger
+from hoboken.config import ConfigProperty, ConfigDict
+from hoboken.log import DebugLogger, InjectingFilter
 
 # Compatibility.
 from hoboken.six import (with_metaclass, text_type, binary_type, string_types,
@@ -175,28 +176,6 @@ class _EmptyClass(object):
     pass
 
 
-class ConfigProperty(object):
-    """
-    This class will proxy an attribute to the object's config dict.
-    """
-    def __init__(self, name, converter=None):
-        self.name = name
-        self.converter = converter
-
-    def __get__(self, obj, type=None):
-        if obj is None:
-            return self
-
-        ret = obj.config[self.name]
-        if self.converter is not None:
-            ret = self.converter(ret)
-
-        return ret
-
-    def __set__(self, obj, value):
-        obj.config[self.name] = value
-
-
 class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     # These are the supported HTTP methods.  They can be overridden in
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
@@ -214,24 +193,27 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def __init__(self, name, sub_app=None, config={}):
         self.name = name
         self.sub_app = sub_app
-        self.config = dict(self.DEFAULT_CONFIG)
-        self.config.update(config)
 
-        # If we're missing config values, we try and determine them here.
-        if self.config['ROOT_DIRECTORY'] is None:
+        # If we're missing the root dir, we try and determine them here.
+        root_dir = config.get('ROOT_DIRECTORY')
+        if root_dir is None:
             import __main__
 
             # Get the file name if it exists.  It won't in, for example, the
             # interactive console.
             if hasattr(__main__, "__file__"):
-                self.config['ROOT_DIRECTORY'] = os.path.dirname(
+                root_dir = os.path.dirname(
                     os.path.abspath(__main__.__file__)
                 )
             else:               # pragma: no cover
-                self.config['ROOT_DIRECTORY'] = os.path.dirname(
+                root_dir = os.path.dirname(
                     os.path.abspath(".")
                 )
 
+        self.config = ConfigDict(root_dir, defaults=self.DEFAULT_CONFIG)
+        self.config.update(config)
+
+        self.config['ROOT_DIRECTORY'] = root_dir
         self.config.setdefault('VIEWS_DIRECTORY', os.path.join(
             self.config['ROOT_DIRECTORY'],
             "views"
@@ -250,7 +232,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self.after_filters = []
 
         # Create logger.
-        self.logger = create_logger(self, "hoboken.applications." + self.name)
+        self.logger = self.create_logger()
 
         # Set up threadlocal storage.  We use this so we can process multiple
         # requests at the same time from one app.
@@ -264,6 +246,20 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
         # Done initialization.
         self.logger.info("Application initialized")
+
+    def create_logger(self):
+        logger = logging.getLogger('hoboken.applications.' + self.name)
+
+        # Override the __class__ of the logger so we can deal with the debug
+        # setting.
+        logger.app = self
+        logger.__class__ = DebugLogger
+
+        # Add a filter that will store the request object
+        # on each log record.
+        logger.addFilter(InjectingFilter(self))
+
+        return logger
 
     @property
     def request(self):
@@ -395,7 +391,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             def add_condition(condition_func):
                 route = self.find_route(func)
                 route.add_condition(condition_func)
-                self.logger.debug( "Added condition '%s' for func %s/%s",
+                self.logger.debug("Added condition '%s' for func %s/%s",
                                   condition_func.__name__,
                                   str(method),
                                   func.__name__)
