@@ -7,7 +7,6 @@ import time
 from hoboken.tests.compat import unittest
 import datetime
 
-import pytest
 from mock import patch, MagicMock
 
 from hoboken.application import Request
@@ -17,7 +16,7 @@ import hoboken.helpers
 class TestLastModified(HobokenTestCase):
     def after_setup(self):
         self.time = datetime.datetime(year=2012, month=7, day=15)
-        self.app.config.debug = True
+        self.app.debug = True
 
         @self.app.get("/resource")
         def resource():
@@ -37,18 +36,18 @@ class TestLastModified(HobokenTestCase):
     def test_has_last_modified(self):
         r = Request.build("/resource")
         resp = r.get_response(self.app)
-        self.assertTrue(resp.last_modified is not None)
+        self.assertIsNotNone(resp.last_modified)
 
     def test_no_last_modified(self):
         r = Request.build("/bad")
         resp = r.get_response(self.app)
-        self.assertTrue(resp.last_modified is None)
+        self.assertIsNone(resp.last_modified)
 
     def test_no_last_modified_if_etag(self):
         r = Request.build("/resource")
         r.headers['If-None-Match'] = 'foobar'
         resp = r.get_response(self.app)
-        self.assertTrue(resp.last_modified is not None)
+        self.assertIsNotNone(resp.last_modified)
 
     def test_will_return_304_for_get(self):
         r = Request.build("/resource")
@@ -84,7 +83,7 @@ class TestLastModified(HobokenTestCase):
 class TestETag(HobokenTestCase):
     def after_setup(self):
         self.etag = b'some etag'
-        self.app.config.debug = True
+        self.app.debug = True
 
         @self.app.get("/resource")
         def resource():
@@ -211,7 +210,7 @@ class TestExpires(HobokenTestCase):
 
 class TestRedirection(HobokenTestCase):
     def after_setup(self):
-        self.app.config.debug = True
+        self.app.debug = True
 
         @self.app.get("/redirect_back")
         def redirect():
@@ -259,12 +258,12 @@ class TestShift(HobokenTestCase):
         path = os.path.join(dir_name, "test_shift.bare")
         output = self.app.render(path)
 
-        self.assertTrue(output is not None)
+        self.assertIsNotNone(output)
         self.assertEqual(output.strip(), "This is a bare file.")
 
     def test_shift_will_fail_on_unknown(self):
         output = self.app.render("not_existing.badext")
-        self.assertTrue(output is None)
+        self.assertIsNone(output)
 
 
 

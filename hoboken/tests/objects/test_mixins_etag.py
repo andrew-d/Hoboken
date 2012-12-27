@@ -11,7 +11,7 @@ class TestMatchAnyEtag(unittest.TestCase):
         self.e = MatchAnyEtag
 
     def test_will_match_anything(self):
-        self.assertTrue('foobar' in self.e)
+        self.assertIn('foobar', self.e)
 
     def test_converts_to_str(self):
         self.assertEqual(str(self.e), '*')
@@ -25,7 +25,7 @@ class TestMatchNoneEtag(unittest.TestCase):
         self.e = MatchNoneEtag
 
     def test_will_match_nothing(self):
-        self.assertFalse('foobar' in self.e)
+        self.assertNotIn('foobar', self.e)
 
     def test_converts_to_str(self):
         self.assertEqual(str(self.e), '')

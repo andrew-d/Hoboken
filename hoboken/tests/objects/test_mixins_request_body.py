@@ -6,10 +6,9 @@ import glob
 import yaml
 import base64
 import tempfile
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import parametrize, parametrize_class, unittest
 from io import BytesIO
 
-import pytest
 from mock import MagicMock, Mock, patch
 
 from hoboken.objects.mixins.request_body import *
@@ -121,7 +120,7 @@ class TestFile(unittest.TestCase):
         self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assertTrue(self.f.actual_file_name is not None)
+        self.assertIsNotNone(self.f.actual_file_name)
         self.assert_exists()
 
     def test_file_full_name(self):
@@ -586,7 +585,8 @@ def split_all(val):
         yield (val[:i], val[i:])
 
 
-class TestFormParser(object):
+@parametrize_class
+class TestFormParser(unittest.TestCase):
     def make(self, boundary):
         self.ended = False
         self.files = []
@@ -608,7 +608,7 @@ class TestFormParser(object):
         o = f.file_object
         o.seek(0)
         file_data = o.read()
-        assert file_data == data
+        self.assertEqual(file_data, data)
 
     def assert_file(self, field_name, file_name, data):
         # Find this file.
@@ -619,12 +619,12 @@ class TestFormParser(object):
                 break
 
         # Assert that we found it.
-        assert found is not None
+        self.assertIsNotNone(found)
 
         try:
             # Assert about this file.
             self.assert_file_data(found, data)
-            assert found.file_name == file_name
+            self.assertEqual(found.file_name, file_name)
 
             # Remove it from our list.
             self.files.remove(found)
@@ -641,13 +641,13 @@ class TestFormParser(object):
                 break
 
         # Assert that it exists and matches.
-        assert found is not None
-        assert value == found.value
+        self.assertIsNotNone(found)
+        self.assertEqual(value, found.value)
 
         # Remove it for future iterations.
         self.fields.remove(found)
 
-    @pytest.mark.parametrize('param', http_tests)
+    @parametrize('param', http_tests)
     def test_http(self, param):
         # Firstly, create our parser with the given boundary.
         boundary = param['result']['boundary']
@@ -666,11 +666,11 @@ class TestFormParser(object):
 
         # Do we expect an error?
         if 'error' in param['result']['expected']:
-            assert param['result']['expected']['error'] == processed
+            self.assertEqual(param['result']['expected']['error'], processed)
             return
 
         # No error!
-        assert processed == len(param['test'])
+        self.assertEqual(processed, len(param['test']))
 
         # Assert that the parser gave us the appropriate fields/files.
         for e in param['result']['expected']:
@@ -712,7 +712,7 @@ class TestFormParser(object):
             self.f.finalize()
 
             # Assert we processed everything.
-            assert i == len(test_data)
+            self.assertEqual(i, len(test_data))
 
             # Assert that our file and field are here.
             self.assert_field(b'field', b'test1')
@@ -722,12 +722,12 @@ class TestFormParser(object):
         self.make(b'boundary')
         data = b'--boundary\rfoobar'
         i = self.f.write(data)
-        assert i != len(data)
+        self.assertNotEqual(i, len(data))
 
         self.make(b'boundary')
         data = b'--boundaryfoobar'
         i = self.f.write(data)
-        assert i != len(data)
+        self.assertNotEqual(i, len(data))
 
     def test_octet_stream(self):
         files = []
@@ -737,16 +737,16 @@ class TestFormParser(object):
         on_end = Mock()
 
         f = FormParser(b'application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
-        assert isinstance(f.parser, OctetStreamParser)
+        self.assertTrue(isinstance(f.parser, OctetStreamParser))
 
         f.write(b'test')
         f.write(b'1234')
         f.finalize()
 
-        assert not on_field.called
-        assert len(files) == 1
+        self.assertFalse(on_field.called)
+        self.assertEqual(len(files), 1)
         self.assert_file_data(files[0], b'test1234')
-        assert on_end.called
+        self.assertTrue(on_end.called)
 
     def test_querystring(self):
         fields = []
@@ -763,23 +763,23 @@ class TestFormParser(object):
             f.write(b'&test=asdf')
             f.finalize()
 
-            assert not on_file.called
-            assert len(fields) == 2
+            self.assertFalse(on_file.called)
+            self.assertEqual(len(fields), 2)
 
-            assert fields[0].field_name == b'foo'
-            assert fields[0].value == b'bar'
+            self.assertEqual(fields[0].field_name, b'foo')
+            self.assertEqual(fields[0].value, b'bar')
 
-            assert fields[1].field_name == b'test'
-            assert fields[1].value == b'asdf'
+            self.assertEqual(fields[1].field_name, b'test')
+            self.assertEqual(fields[1].value, b'asdf')
 
-            assert on_end.called
+            self.assertTrue(on_end.called)
 
         f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
-        assert isinstance(f.parser, QuerystringParser)
+        self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
         f = FormParser(b'application/x-url-encoded', on_field, on_file, on_end=on_end)
-        assert isinstance(f.parser, QuerystringParser)
+        self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
     def test_close_methods(self):
@@ -894,11 +894,11 @@ class TestRequestBodyMixin(unittest.TestCase):
         self.m.parse_body()
 
         self.assertEqual(len(self.m.fields), 1)
-        self.assertTrue(b'field' in self.m.fields)
+        self.assertIn(b'field', self.m.fields)
         self.assertEqual(self.m.fields[b'field'].value, b'test1')
 
         self.assertEqual(len(self.m.files), 1)
-        self.assertTrue(b'file' in self.m.files)
+        self.assertIn(b'file', self.m.files)
         file_class = self.m.files[b'file']
         self.assertEqual(file_class.file_name, b'file.txt')
 

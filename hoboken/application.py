@@ -12,17 +12,21 @@ try:
     import threading
 except:                     # pragma: no cover
     import dummy_threading as threading
-#from functools import wraps
 
 # In-package dependencies
 from hoboken.exceptions import *
 from hoboken.matchers import *
 from hoboken.objects import WSGIFullRequest as Request
 from hoboken.objects import WSGIFullResponse as Response
+from hoboken.log import create_logger
 
 # Compatibility.
 from hoboken.six import (with_metaclass, text_type, binary_type, string_types,
                          callable, iteritems)
+
+
+# Get a logger.
+logger = logging.getLogger(__name__)
 
 
 def get_func_attr(func, attr, default=None, delete=False):
@@ -149,7 +153,8 @@ class HobokenMetaclass(type):
         def lambda_factory(method):
             return lambda self, match: self._decorate_and_route(method, match)
 
-        # Grab the SUPPORTED_METHODS constant and use this to dynamically add methods.
+        # Grab the SUPPORTED_METHODS constant and use this to dynamically add
+        # methods.
         for method in attrs.get('SUPPORTED_METHODS', []):
             new_func = lambda_factory(method)
             new_func.__name__ = method.lower()
@@ -163,46 +168,76 @@ def is_route(func):
     return get_func_attr(func, 'hoboken.route', default=False)
 
 
-class objdict(dict):
-    def __setattr__(self, key, val):
-        self[key] = val
+class _EmptyClass(object):
+    """
+    This is a basic, empty object.
+    """
+    pass
 
-    def __getattr__(self, key):
-        return self[key]
 
-    def __delattr__(self, key):
-        del self[key]
+class ConfigProperty(object):
+    """
+    This class will proxy an attribute to the object's config dict.
+    """
+    def __init__(self, name, converter=None):
+        self.name = name
+        self.converter = converter
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+
+        ret = obj.config[self.name]
+        if self.converter is not None:
+            ret = self.converter(ret)
+
+        return ret
+
+    def __set__(self, obj, value):
+        obj.config[self.name] = value
 
 
 class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     # These are the supported HTTP methods.  They can be overridden in
     # subclasses to add additional methods (e.g. "TRACE", "CONNECT", etc.)
-    SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
+    SUPPORTED_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+                         "HEAD")
     DEFAULT_CONFIG = {
-        'debug': False,
-        'root_directory': None,
-        'views_directory': None,
+        'DEBUG': False,
+        'ROOT_DIRECTORY': None,
+        'VIEWS_DIRECTORY': None,
     }
+
+
+    # The application's debug setting.
+    debug = ConfigProperty('DEBUG')
+
 
     def __init__(self, name, sub_app=None, **kwargs):
         self.name = name
         self.sub_app = sub_app
-        self.config = objdict(self.DEFAULT_CONFIG)
+        self.config = dict(self.DEFAULT_CONFIG)
         self.config.update(kwargs)
 
         # If we're missing config values, we try and determine them here.
-        if self.config.root_directory is None:
+        if self.config['ROOT_DIRECTORY'] is None:
             import __main__
 
-            # Get the file name if it exists.  It won't in, for example, the interactive console.
+            # Get the file name if it exists.  It won't in, for example, the
+            # interactive console.
             if hasattr(__main__, "__file__"):
-                self.config.root_directory = os.path.dirname(os.path.abspath(__main__.__file__))
+                self.config['ROOT_DIRECTORY'] = os.path.dirname(
+                    os.path.abspath(__main__.__file__)
+                )
             else:               # pragma: no cover
-                self.config.root_directory = os.path.dirname(os.path.abspath("."))
+                self.config['ROOT_DIRECTORY'] = os.path.dirname(
+                    os.path.abspath(".")
+                )
 
-
-        if self.config.views_directory is None:
-            self.config.views_directory = os.path.join(self.config.root_directory, "views")
+        self.config.setdefault('VIEWS_DIRECTORY', os.path.join(
+            self.config['ROOT_DIRECTORY'],
+            "views"
+        ))
 
         # Routes array. We split this by method, both for speed and simplicity.
         self.routes = {}
@@ -217,30 +252,20 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self.after_filters = []
 
         # Create logger.
-        self.logger = logging.getLogger("hoboken.applications." + self.name)
-
-        # Configure logger.
-        formatter = logging.Formatter('[%(levelname)1.1s %(asctime)s %(module)s:%(lineno)d] %(message)s')
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
-
-        if self.config.debug:
-            self.logger.setLevel(logging.DEBUG)
-            handler.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.WARN)
-            handler.setLevel(logging.WARN)
+        self.logger = create_logger(self, "hoboken.applications." + self.name)
 
         # Set up threadlocal storage.  We use this so we can process multiple
         # requests at the same time from one app.
         self._locals = threading.local()
         self._locals.request = None
         self._locals.response = None
-        self._locals.vars = objdict()
+        self._locals.vars = _EmptyClass()
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
+
+        # Done initialization.
+        self.logger.info("Application initialized")
 
     @property
     def request(self):
@@ -273,7 +298,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     @g.deleter
     def g(self):
         del self._locals.vars
-        self._locals.vars = objdict()
+        self._locals.vars = _EmptyClass()
 
     def set_subapp(self, subapp):
         self.sub_app = subapp
@@ -345,8 +370,10 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
         # If a code is specified, we take that.
         if code is None:
-            # If no code, we send a 303 if it's supported and we aren't already using GET.
-            if self.request.http_version == b'HTTP/1.1' and self.request.method != 'GET':
+            # If no code, we send a 303 if it's supported and we aren't already
+            # using GET.
+            if (self.request.http_version == b'HTTP/1.1' and
+                self.request.method != 'GET'):
                 code = 303
             else:
                 code = 302
@@ -370,14 +397,17 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             def add_condition(condition_func):
                 route = self.find_route(func)
                 route.add_condition(condition_func)
-                self.logger.debug("Added condition '{0}' for func {1}/{2}:".format(
-                    condition_func.__name__, str(method), func.__name__))
+                self.logger.debug( "Added condition '%s' for func %s/%s",
+                                  condition_func.__name__,
+                                  str(method),
+                                  func.__name__)
 
             # Add the route.
             self.add_route(method, match, func)
 
             # Add each of the existing conditions.
-            conditions = get_func_attr(func, 'hoboken.conditions', default=[], delete=True)
+            conditions = get_func_attr(func, 'hoboken.conditions', default=[],
+                                       delete=True)
             for c in conditions:
                 add_condition(c)
 
@@ -388,6 +418,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # of conditions being added doesn't matter.
             set_func_attr(func, 'hoboken.add_condition', add_condition)
             return func
+
         return internal_decorator
 
     def add_before_filter(self, match, func):
@@ -424,7 +455,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         route function into the request body.  Override this in a subclass
         to customize how values are returned.
         """
-        # print('value is: {0!r}, {1}'.format(value, type(value)))
         if isinstance(value, text_type):
             resp.text = value
         elif isinstance(value, binary_type):
@@ -473,12 +503,12 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # Since these are thread-locals, we grab them as locals.
         request = self.request
         response = self.response
-        self.logger.debug("%s %s", request.method, request.url)
+        self.logger.debug("Handling: %s %s", request.method, request.url)
 
         # Check for valid method.
         # TODO: Should this call our after filters?
         if request.method not in self.SUPPORTED_METHODS:
-            self.logger.warn("Called with invalid method: %r", request.method)
+            self.logger.warn("Called with invalid method: %s", request.method)
 
             # TODO: hook.
 
@@ -551,7 +581,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     def on_exception(self, exception):
         self.response.status_int = 500
-        if self.config.debug:
+        if self.config['DEBUG']:
             # Format the current traceback
             tb = traceback.format_exc()
 
@@ -578,12 +608,15 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     def __str__(self):
         """
-        Some help for debugging: repr(app) will get a summary of the app and
+        Some help for debugging: str(app) will get a summary of the app and
         it's defined before/after/routes.
         """
 
         body = []
-        body.append("Application {0} (Debug: {1})".format(self.name, self.config.debug))
+        body.append("Application {0} (Debug: {1})".format(
+            self.name,
+            self.config['DEBUG']
+        ))
         body.append("")
 
         def dump_filter_array(arr):
@@ -592,16 +625,25 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             body.append("-" * 79)
             for filter in arr:
                 conds = ", ".join([f.__name__ for f in filter.conditions])
-                body.append("{0:<15} {1:<25} {2:<35}".format(filter.func.__name__, str(filter.match), conds))
+                body.append("{0:<15} {1:<25} {2:<35}".format(
+                    filter.func.__name__, str(filter.match), conds
+                ))
 
         def dump_route_array(arr):
             body.append("=" * 79)
-            body.append("Method  Function        Match                     Conditions")
+            body.append(
+                "Method  Function        Match                     Conditions"
+            )
             body.append("-" * 79)
             for method in self.routes:
                 for route in self.routes[method]:
                     conds = ", ".join([f.__name__ for f in route.conditions])
-                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(method, route.func.__name__, str(route.matcher), conds))
+                    body.append("{0:<7} {1:<15} {2:<25} {3:<28}".format(
+                        method,
+                        route.func.__name__,
+                        str(route.matcher),
+                        conds
+                    ))
 
         body.append("BEFORE FILTERS")
         dump_filter_array(self.before_filters)
@@ -618,5 +660,8 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         return '\n'.join(body)
 
     def __repr__(self):
-        return "HobokenApplication(name={!r}, debug={!r})".format(self.name, self.config.debug)
+        return "HobokenApplication(name={!r}, debug={!r})".format(
+            self.name,
+            self.config['DEBUG']
+        )
 

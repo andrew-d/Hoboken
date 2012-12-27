@@ -16,7 +16,7 @@ from hoboken.application import Request
 class TestHasHTTPMethods(HobokenTestCase):
     def test_has_all_methods(self):
         for x in self.app.SUPPORTED_METHODS:
-            assert hasattr(self.app, x.lower())
+            self.assertTrue(hasattr(self.app, x.lower()))
 
 
 class TestWorksWithConditions(HobokenTestCase):
@@ -130,7 +130,7 @@ class TestHaltHelper(HobokenTestCase):
             halt(code=self.halt_code, body=self.halt_body)
             return 'bad'
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def assert_halts_with(self, code, body, path):
         """Helper function to set the halt value and assert"""
@@ -172,7 +172,7 @@ class TestPassHelper(HobokenTestCase):
         def pass_before_route(splat):
             self.app.response.body += b'foo'
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def test_pass_route(self):
         self.assert_body_is('good', path='/aroute/')
@@ -201,7 +201,7 @@ class TestRedirectHelper(HobokenTestCase):
         def redirect_func():
             self.app.redirect('/foo', code=self.redirect_code)
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def test_redirect(self):
         req = Request.build("/upload", method='POST')
@@ -335,14 +335,14 @@ class TestMiscellaneousMethods(HobokenTestCase):
             pass
 
         res = self.app.find_route(not_exist)
-        self.assertTrue(res is None)
+        self.assertIsNone(res)
 
     def test_url_for_will_return_none_on_failure(self):
         def not_a_route():
             pass
 
         url = self.app.url_for(not_a_route)
-        self.assertTrue(url is None)
+        self.assertIsNone(url)
 
     def test_only_one_route_per_function(self):
         with self.assertRaises(RouteExistsException):
@@ -372,20 +372,19 @@ class TestMiscellaneousMethods(HobokenTestCase):
 
 class TestConfig(HobokenTestCase):
     def test_can_get_set_values(self):
-        self.app.config.foo = 'asdf'
-        self.assertEqual(self.app.config.foo, 'asdf')
-        self.assertEqual(self.app.config['foo'], 'asdf')
+        self.app.config['FOO'] = 'asdf'
+        self.assertEqual(self.app.config['FOO'], 'asdf')
 
     def test_can_delete_values(self):
-        self.app.config.foo = 'bar'
-        del self.app.config.foo
+        self.app.config['FOO'] = 'bar'
+        del self.app.config['FOO']
 
-        self.assertTrue('foo' not in self.app.config)
+        self.assertNotIn('FOO', self.app.config)
 
     def test_will_fill_missing_views_dir(self):
         app = HobokenApplication('', root_directory='foo')
         expected_views = os.path.join('foo', 'views')
-        self.assertEqual(app.config.views_directory, expected_views)
+        self.assertEqual(app.config['VIEWS_DIRECTORY'], expected_views)
 
     def test_g(self):
         app = HobokenApplication('')
@@ -396,12 +395,12 @@ class TestConfig(HobokenTestCase):
 
         @app.get("/two")
         def two():
-            self.assertTrue('foo' not in app.g)
+            self.assertNotIn('foo', app.g)
 
         r = Request.build("/one")
         resp = r.get_response(app)
 
-        self.assertTrue('foo' not in app.g)
+        self.assertNotIn('foo', app.g)
 
         r = Request.build("/two")
         resp = r.get_response(app)
@@ -423,8 +422,8 @@ class TestInheritance(HobokenTestCase):
 
         cls = Inherited("foobar")
 
-        self.assertTrue("inherited" in calls)
-        self.assertTrue("mixin" in calls)
+        self.assertIn("inherited", calls)
+        self.assertIn("mixin", calls)
 
 
 def suite():

@@ -67,7 +67,7 @@ class TestAcceptList(unittest.TestCase):
 
     def test_invalid_parse(self):
         l = AcceptList.parse(None)
-        self.assertTrue(l is None)
+        self.assertIsNone(l)
 
 
 class TestMIMEAccept(unittest.TestCase):

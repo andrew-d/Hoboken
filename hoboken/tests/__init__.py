@@ -11,7 +11,7 @@ from hoboken.application import Request
 
 class HobokenTestCase(unittest.TestCase):
     """
-    This is a testcase for Hoboken that contains helpful functions specifically for Hoboken
+    This is a testcase that contains helpful functions specifically for Hoboken
     """
     def setUp(self):
         # We create an application for each test.

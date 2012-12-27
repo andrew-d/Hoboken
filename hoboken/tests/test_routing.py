@@ -1,9 +1,7 @@
 from . import HobokenTestCase, hoboken
 import os
 import yaml
-from hoboken.tests.compat import unittest
-
-import pytest
+from hoboken.tests.compat import parametrize, parametrize_class, unittest
 
 from hoboken.application import Request
 from hoboken.six import iteritems, text_type
@@ -54,8 +52,9 @@ with open(test_file, 'rb') as f:
 test_cases = list(yaml.load_all(file_data))
 
 
-class TestRouting(object):
-    @pytest.mark.parametrize('param', test_cases)
+@parametrize_class
+class TestRouting(unittest.TestCase):
+    @parametrize('param', test_cases)
     def test_route(self, param):
         if 'skip' in param:
             if hasattr(unittest, 'SkipTest'):
@@ -64,7 +63,7 @@ class TestRouting(object):
 
         matcher = Matcher(param['path'])
         regex = param['regex'].encode('latin-1')
-        assert matcher.match_re.pattern == regex
+        self.assertEqual(matcher.match_re.pattern, regex)
 
         class FakeRequest(object):
             path_info = None
@@ -81,23 +80,23 @@ class TestRouting(object):
                 if isinstance(v, text_type):
                     v = v.encode('latin-1')
                 expected_kwargs[k] = v
-            assert matched is True
-            assert args == expected_args
-            assert kwargs == expected_kwargs
+            self.assertTrue(matched)
+            self.assertEqual(args, expected_args)
+            self.assertEqual(kwargs, expected_kwargs)
 
         for fail in param.get('failures', []):
             r = FakeRequest()
             r.path = fail
             matched, _, _ = matcher.match(r)
 
-            assert matched is False
+            self.assertFalse(matched)
 
 
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestMethods))
     suite.addTest(unittest.makeSuite(TestHeadFallback))
-    # suite.addTest(unittest.makeSuite(TestRouting))
+    suite.addTest(unittest.makeSuite(TestRouting))
 
     return suite
 

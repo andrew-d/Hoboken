@@ -24,7 +24,7 @@ class TestAuthorization(unittest.TestCase):
 
     def test_invalid_parse(self):
         o = parse_auth(None)
-        self.assertTrue(o is None)
+        self.assertIsNone(o)
 
     def test_serialize_basic(self):
         self.assert_serialize(

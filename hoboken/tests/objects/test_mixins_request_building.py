@@ -40,7 +40,7 @@ class TestBuildMethod(unittest.TestCase):
     def assert_headers(self, *header_list):
         for x in header_list:
             c = call(*x)
-            self.assertTrue(c in self.req.headers.__setitem__.call_args_list)
+            self.assertIn(c, self.req.headers.__setitem__.call_args_list)
 
     def test_default(self):
         self.build('/')

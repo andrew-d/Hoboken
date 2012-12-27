@@ -5,7 +5,6 @@ from hoboken.conditions import *
 
 from hoboken.tests.compat import unittest
 from mock import Mock
-import pytest
 
 
 class TestUserAgentCondition(HobokenTestCase):
@@ -143,7 +142,7 @@ class TestHostCondition(HobokenTestCase):
 
 class TestAcceptsCondition(HobokenTestCase):
     def after_setup(self):
-        self.app.config.debug = True
+        self.app.debug = True
 
         @condition(accepts(b"text/html"))
         @self.app.get('/')
@@ -165,7 +164,7 @@ class TestAcceptsCondition(HobokenTestCase):
         def accepts_two():
             return 'two'
 
-        self.app.config.debug = True
+        self.app.debug = True
 
     def test_plain_accept(self):
         self.assert_body_is("html", accepts="text/html")

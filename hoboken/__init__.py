@@ -6,8 +6,16 @@ __author__  = 'Andrew Dunham'
 __license__ = 'Apache'
 __copyright__ = "Copyright (c) 2012, Andrew Dunham"
 
-# We get the version from a sub-file that can be automatically generated,
+# We get the version from a sub-file that can be automatically generated.
 from ._version import __version__
+
+# Set up logging here.
+import logging
+from .log import NullHandler
+logging.getLogger(__name__).addHandler(NullHandler())
+
+# Cleanup namespace
+del NullHandler, logging
 
 # Imports we import into the namespace.
 from hoboken.application import HobokenBaseApplication, condition, halt, \
@@ -21,7 +29,8 @@ from . import exceptions
 from hoboken.helpers import *
 
 # Build our actual application.
-class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin, HobokenRenderMixin):
+class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin,
+                         HobokenRedirectMixin, HobokenRenderMixin):
     pass
 
 # Create our extension module.

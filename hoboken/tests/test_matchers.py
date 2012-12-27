@@ -6,9 +6,8 @@ import re
 import os
 import sys
 import yaml
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import parametrize, parametrize_class, unittest
 
-import pytest
 from mock import patch, MagicMock
 
 
@@ -91,8 +90,9 @@ with open(test_file, 'rb') as f:
 test_cases = list(yaml.load_all(file_data))
 
 
-class TestHobokenRouteMatcher(object):
-    @pytest.mark.parametrize('param', test_cases)
+@parametrize_class
+class TestHobokenRouteMatcher(unittest.TestCase):
+    @parametrize('param', test_cases)
     def test_handles_unicode(self, param):
         path = param['path']
         args = param.get('args', [])
@@ -101,16 +101,16 @@ class TestHobokenRouteMatcher(object):
         m = HobokenRouteMatcher(path)
         out = m.reverse(args, kwargs)
 
-        assert out == param['reverse']
+        self.assertEqual(out, param['reverse'])
 
-    @pytest.mark.skipif("sys.version_info >= (3,0)")
+    @unittest.skipIf(sys.version_info >= (3,0), "Errors on Python 3")
     def test_reversing(self):
         unicode_str = b'/f\xc3\xb8\xc3\xb8'.decode('utf-8')
 
         m = HobokenRouteMatcher(unicode_str)
         request = MagicMock(path_info="/f%C3%B8%C3%B8")
         matches, _, _ = m.match(request)
-        assert matches is True
+        self.assertTrue(matches)
 
 
 def suite():
@@ -118,7 +118,7 @@ def suite():
 
     suite.addTest(unittest.makeSuite(TestBasicMatcher))
     suite.addTest(unittest.makeSuite(TestRegexMatcher))
-    # suite.addTest(unittest.makeSuite(TestHobokenRouteMatcher))
+    suite.addTest(unittest.makeSuite(TestHobokenRouteMatcher))
 
     return suite
 
