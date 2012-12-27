@@ -17,18 +17,13 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
     def __init__(self, *args, **kwargs):
         super(HobokenJsonApplication, self).__init__(*args, **kwargs)
 
-        if 'json_indent' not in self.config:
-            self.config.json_indent = 4
-
-        if 'json_escape' not in self.config:
-            self.config.json_escape = True
-
-        if 'json_wrap' not in self.config:
-            self.config.json_wrap = True
+        self.config.setdefault('JSON_INDENT', 4)
+        self.config.setdefault('JSON_ESCAPE', True)
+        self.config.setdefault('JSON_WRAP', True)
 
     def on_returned_body(self, request, resp, value):
         if not isinstance(value, dict):
-            if self.config.json_wrap:
+            if self.config['JSON_WRAP']:
                 value = {"value": value}
             else:
                 # If we haven't been told to, we don't wrap the returned value,
@@ -38,10 +33,10 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
                 return
 
         # Dump the value.
-        dumped_value = json.dumps(value, indent=self.config.json_indent) + "\n"
+        dumped_value = json.dumps(value, indent=self.config['JSON_INDENT']) + "\n"
 
         # Escape if specified.
-        if self.config.json_escape:
+        if self.config['JSON_ESCAPE']:
             # The escape here is fairly hacky, since Python doesn't let us
             # override the encoding of built-in objects.
             dumped_value = self.escape_string(dumped_value)
