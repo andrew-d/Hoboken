@@ -47,5 +47,9 @@ class InjectingFilter(logging.Filter):
             record.method = request.method
             # TODO: set more here?
 
+        response = self.app.response
+        if response:
+            record.response = response
+
         return True
 

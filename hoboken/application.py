@@ -166,6 +166,10 @@ class HobokenMetaclass(type):
 
 
 def is_route(func):
+    """
+    This function will return a boolean specifying whether a given function is
+    a Hoboken route.
+    """
     return get_func_attr(func, 'hoboken.route', default=False)
 
 
@@ -255,8 +259,8 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         logger.app = self
         logger.__class__ = DebugLogger
 
-        # Add a filter that will store the request object
-        # on each log record.
+        # Add a filter that will store the request and response object on each
+        # log record.
         logger.addFilter(InjectingFilter(self))
 
         return logger
