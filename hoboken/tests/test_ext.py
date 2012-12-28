@@ -22,6 +22,19 @@ class TestHobokenJsonApplication(unittest.TestCase):
         output = b'escape \\u003C/\\u003E me'.decode('latin-1')
         self.assertEqual(self.app.escape_string(val), output)
 
+    def test_will_escape_unicode_seperators(self):
+        # Value is u"escape \u2028 me"
+        val = b'escape \xE2\x80\xA8 me'.decode('utf-8')
+        output = b'escape \\u2028 me'.decode('latin-1')
+
+        self.assertEqual(self.app.escape_string(val), output)
+
+        # Value is u"escape \u2029 me"
+        val = b'escape \xE2\x80\xA9 me'.decode('utf-8')
+        output = b'escape \\u2029 me'.decode('latin-1')
+
+        self.assertEqual(self.app.escape_string(val), output)
+
     def test_will_escape_bytes(self):
         val = b'escape </> me'
         output = b'escape \\u003C/\\u003E me'
