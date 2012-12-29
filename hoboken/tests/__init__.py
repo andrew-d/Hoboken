@@ -71,10 +71,11 @@ def suite():
     from .test_matchers import suite as suite_2
     from .test_beforeafter import suite as suite_3
     from .test_conditions import suite as suite_4
-    from .test_helpers import suite as suite_5
-    from .test_routing import suite as suite_6
-    from .test_request_response import suite as suite_7
-    from .test_ext import suite as suite_8
+    from .test_config import suite as suite_5
+    from .test_helpers import suite as suite_6
+    from .test_routing import suite as suite_7
+    from .test_request_response import suite as suite_8
+    from .test_ext import suite as suite_9
 
     from .objects import suite as suite_objects
 
@@ -87,6 +88,7 @@ def suite():
     suite.addTest(suite_6())
     suite.addTest(suite_7())
     suite.addTest(suite_8())
+    suite.addTest(suite_9())
 
     suite.addTest(suite_objects())
 

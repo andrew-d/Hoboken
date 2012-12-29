@@ -396,18 +396,6 @@ class TestConfig(HobokenTestCase):
     def test_property_will_return_obj(self):
         self.assertTrue(isinstance(HobokenApplication.debug, ConfigProperty))
 
-    def test_configproperty_converter(self):
-        m = mock.MagicMock()
-
-        class TestClass(object):
-            config = {}
-            prop = ConfigProperty('FOO', converter=m)
-
-        t = TestClass()
-        t.config['FOO'] = 'BAR'
-        t.prop
-        m.assert_called_with('BAR')
-
     def test_g(self):
         app = HobokenApplication('')
 

@@ -8,7 +8,7 @@ try:
 except ImportError:
     yaml = None
 
-from hoboken.six import iteritems
+from hoboken.six import exec_, iteritems
 
 
 class ConfigProperty(object):
@@ -72,7 +72,7 @@ class ConfigDict(dict):
 
         # Load and read the file.
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, 'r') as f:
                 d = json.load(f, **kwargs)
         except ValueError:
             # JSON decoding error.  Ignore if silent.
@@ -87,7 +87,7 @@ class ConfigDict(dict):
                 return False
 
             # Set a more descriptive message on our error.
-            e.strerror = 'Unable to load JSON configuration' \
+            e.strerror = 'Unable to load JSON configuration ' \
                          'file (%s)' % e.strerror
 
             raise
@@ -109,7 +109,7 @@ class ConfigDict(dict):
             # Load and read the file.
             try:
                 with open(file_path, 'rb') as f:
-                    d = json.load(f, **kwargs)
+                    d = yaml.load(f, **kwargs)
             except yaml.YAMLError:
                 # JSON decoding error.  Ignore if silent.
                 if silent:
@@ -124,7 +124,7 @@ class ConfigDict(dict):
                     return False
 
                 # Set a more descriptive message on our error.
-                e.strerror = 'Unable to load YAML configuration' \
+                e.strerror = 'Unable to load YAML configuration ' \
                              'file (%s)' % e.strerror
 
                 raise
@@ -139,13 +139,15 @@ class ConfigDict(dict):
         from_object function called on the imported Python file.
         """
         file_path = os.path.join(self.root_dir, file)
+        print(file_path)
 
         # We create a temporary module to load into.
         m = imp.new_module('config')
         m.__file__ = file
 
         try:
-            execfile(file_path, m.__dict__)
+            with open(file_path, 'r') as f:
+                exec_(f.read() + "\n", m.__dict__, m.__dict__)
         except IOError as e:
             if silent and e.errno in (errno.ENOENT, errno.EISDIR):
                 return False
