@@ -298,8 +298,21 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         del self._locals.vars
         self._locals.vars = _EmptyClass()
 
-    def set_subapp(self, subapp):
-        self.sub_app = subapp
+    def delegate(self, app, catch_exceptions=False):
+        """
+        Delegates processing of the current request to another WSGI
+        application.  Will set the current response to the response that was
+        recieved from the other application.
+        """
+        if self.request is None:
+            return False
+
+        # Make the request on the subapp.
+        resp = self.request.get_response(app, catch_exc_info=catch_exceptions)
+
+        # Set our response.
+        self.response = resp
+        return True
 
     def _make_route(self, match, func):
         if isinstance(match, string_types):
@@ -570,12 +583,8 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         This function is called when a route to handle a request is not found.
         Override this function to provide custom not-found logic.
         """
-        # If we have a sub_app, return what it has.
-        if self.sub_app:
-            self.response = self.request.get_response(self.sub_app)
-        else:
-            # By default, return a 404 request.
-            self.response.status_int = 404
+        # By default, return a 404 request.
+        self.response.status_int = 404
 
     def on_exception(self, exception):
         self.response.status_int = 500

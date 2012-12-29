@@ -63,7 +63,6 @@ class TestConditionCanAbortRequest(HobokenTestCase):
 class TestSubapps(HobokenTestCase):
     def after_setup(self):
         subapp = HobokenApplication("subapp")
-        self.app.set_subapp(subapp)
 
         @subapp.get("/subapp")
         def subapp_func():
@@ -73,6 +72,11 @@ class TestSubapps(HobokenTestCase):
         def app_func():
             return "app"
 
+        # NOTE: order matters!
+        @self.app.get("/*")
+        def final_func(path):
+            self.app.delegate(subapp)
+
     def test_app_call_works(self):
         self.assert_body_is("app", path='/app')
 
@@ -81,6 +85,9 @@ class TestSubapps(HobokenTestCase):
 
     def test_neither(self):
         self.assert_not_found(path='/neither')
+
+    def test_delegate_will_handle_none(self):
+        self.assertFalse(self.app.delegate(None))
 
 
 class TestHandlesExceptions(HobokenTestCase):
