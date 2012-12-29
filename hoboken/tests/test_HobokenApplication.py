@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
 from . import HobokenTestCase
 from .. import HobokenApplication, condition
 from ..application import HobokenBaseApplication, Route, halt, pass_route
@@ -8,9 +9,11 @@ from ..exceptions import *
 import os
 import re
 import sys
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import slow_test, unittest
+import threading
 import mock
 from hoboken.application import Request, ConfigProperty
+from hoboken.six import PY3
 
 
 class TestHasHTTPMethods(HobokenTestCase):
@@ -434,6 +437,63 @@ class TestInheritance(HobokenTestCase):
 
         self.assertIn("inherited", calls)
         self.assertIn("mixin", calls)
+
+
+class TestConsistency(unittest.TestCase):
+    def setUp(self):
+        self.ctr = 0
+        self.lock = threading.Lock()
+
+    def increment(self):
+        with self.lock:
+            val = self.ctr
+            self.ctr += 1
+            return val
+
+    @slow_test
+    def test_threading(self):
+        app = HobokenApplication(__name__)
+
+        @app.get("/num")
+        def get_num():
+            val = self.increment()
+            return str(val)
+
+        # Thread parameters and values.
+        num_requests = 1000
+        num_threads = 10
+
+        # Thread variables.
+        responses = []
+
+        # Thread target.
+        def requestor_func():
+            for i in range(0, num_requests // num_threads):
+                resp = Request.build("/num").get_response(app)
+                responses.append(resp.body)
+
+        # Start all threads
+        threads = [threading.Thread(target=requestor_func) for i in range(num_threads)]
+        for t in threads:
+            t.start()
+
+        # Wait on threads.
+        for t in threads:
+            t.join()
+
+        # Assert length.
+        self.assertEqual(len(responses), num_requests)
+
+        # Helper function that converts for us.
+        if PY3:
+            convertor = lambda s: int(s.decode('latin-1'))
+        else:
+            convertor = lambda s: int(s)
+
+        # Convert responses to integers, and then assert that we have the right values.
+        sorted_list = sorted(convertor(s) for s in responses)
+        for i, val in enumerate(sorted_list):
+            self.assertEqual(val, i)
 
 
 def suite():
