@@ -481,6 +481,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # Create an empty response.
             self.response = Response()
 
+            # Create our variables object.
+            self._locals.vars = _EmptyClass()
+
             # Actually handle this request.
             self._handle_request()
 
