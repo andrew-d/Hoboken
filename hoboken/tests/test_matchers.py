@@ -103,12 +103,11 @@ class TestHobokenRouteMatcher(unittest.TestCase):
 
         self.assertEqual(out, param['reverse'])
 
-    @unittest.skipIf(sys.version_info >= (3,0), "Errors on Python 3")
     def test_reversing(self):
         unicode_str = b'/f\xc3\xb8\xc3\xb8'.decode('utf-8')
 
         m = HobokenRouteMatcher(unicode_str)
-        request = MagicMock(path_info="/f%C3%B8%C3%B8")
+        request = MagicMock(path_info=b"/f%C3%B8%C3%B8")
         matches, _, _ = m.match(request)
         self.assertTrue(matches)
 
