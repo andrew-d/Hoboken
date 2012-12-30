@@ -106,7 +106,8 @@ class ImmutableListMixin(object):
     def __delitem__(self, key):
         is_immutable(self)
 
-    def __delslice__(self, i, j):
+    # Marked as 'no cover' since it's not used on Py3, apparently.
+    def __delslice__(self, i, j):           # pragma: no cover
         is_immutable(self)
 
     def __iadd__(self, other):
@@ -116,7 +117,8 @@ class ImmutableListMixin(object):
     def __setitem__(self, key, value):
         is_immutable(self)
 
-    def __setslice__(self, i, j, value):
+    # Marked as 'no cover' since it's not used on Py3, apparently.
+    def __setslice__(self, i, j, value):    # pragma: no cover
         is_immutable(self)
 
     def append(self, item):

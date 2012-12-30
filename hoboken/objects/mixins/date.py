@@ -61,7 +61,9 @@ class WSGIDateMixin(object):
             return None
 
         # If no timezone is given, we assume UTC time.
-        if tup[-1] is None:
+        # NOTE: This is marked as 'no cover' since it doesn't seem to occur on
+        # Python 3.3, even with invalid input.
+        if tup[-1] is None:     # pragma: no cover
             tup = tup[:9] + (0,)
 
         timestamp = mktime_tz(tup)
