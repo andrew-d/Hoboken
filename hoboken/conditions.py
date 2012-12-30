@@ -43,7 +43,7 @@ def user_agent(match_re=None, **kwargs):
     # Device condition.
     device = kwargs.pop('device', None)
     if isinstance(device, binary_type):
-        device = device.encode('latin-1')
+        device = device.decode('latin-1')
 
     # If we have more arguments, we error.
     if len(kwargs) > 0:

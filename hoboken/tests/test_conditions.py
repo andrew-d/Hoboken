@@ -1,4 +1,6 @@
 from . import HobokenTestCase
+import sys
+
 from hoboken import condition
 from hoboken.six import u
 from hoboken.conditions import *
@@ -119,6 +121,43 @@ class TestUserAgentCondition(HobokenTestCase):
     def test_with_extra_kwargs(self):
         with self.assertRaises(TypeError):
             user_agent(foo='bar')
+
+    @unittest.skipIf(sys.version_info < (3, 0), "Not needed on Python 2")
+    def test_ua_binary_python3(self):
+        ua_vals = {
+            'family': 'a',
+            'major':  'b',
+            'minor':  'c',
+            'patch':  'd',
+        }
+        kwargs = ua_vals.copy()
+        kwargs['family'] = b'a'
+
+        self.assertTrue(self.call_ua_condition(kwargs, ua_vals=ua_vals))
+
+    @unittest.skipIf(sys.version_info < (3, 0), "Not needed on Python 2")
+    def test_os_binary_python3(self):
+        os_vals = {
+            'family': 'a',
+            'major':  'b',
+            'minor':  'c',
+            'patch':  'd',
+        }
+        kwargs = {
+            'os_family': b'a',
+            'os_major':  'b',
+            'os_minor':  'c',
+            'os_patch':  'd',
+        }
+
+        self.assertTrue(self.call_ua_condition(kwargs, os_vals=os_vals))
+
+    @unittest.skipIf(sys.version_info < (3, 0), "Not needed on Python 2")
+    def test_device_binary_python3(self):
+        self.assertTrue(self.call_ua_condition(
+            {'device': b'aDevice'},
+           device='aDevice')
+        )
 
 
 class TestHostCondition(HobokenTestCase):
