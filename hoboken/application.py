@@ -173,11 +173,19 @@ def is_route(func):
     return get_func_attr(func, 'hoboken.route', default=False)
 
 
-class _EmptyClass(object):
+class SimpleNamespace(object):
     """
-    This is a basic, empty object.
+    This is a basic, empty object with a usable __repr__.
+
+    NOTE: taken from the example code for types.SimpleNamespace in Python 3.3.
     """
-    pass
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def __repr__(self):
+        keys = sorted(self.__dict__)
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
 
 
 class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
@@ -243,7 +251,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self._locals = threading.local()
         self._locals.request = None
         self._locals.response = None
-        self._locals.vars = _EmptyClass()
+        self._locals.vars = SimpleNamespace()
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
@@ -296,7 +304,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     @g.deleter
     def g(self):
         del self._locals.vars
-        self._locals.vars = _EmptyClass()
+        self._locals.vars = SimpleNamespace()
 
     def delegate(self, app, catch_exceptions=False):
         """
@@ -482,7 +490,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             self.response = Response()
 
             # Create our variables object.
-            self._locals.vars = _EmptyClass()
+            self._locals.vars = SimpleNamespace()
 
             # Actually handle this request.
             self._handle_request()
