@@ -104,19 +104,9 @@ class HobokenRedirectMixin(object):
         """
         This is a helper function to redirect 'back' - i.e. to whichever page
         referred to this one.
-        TODO: maybe emit HTML to redirect back if no referrer?
         """
         if self.request.headers.get('Referer'):
             self.redirect(location=self.request.headers['Referer'], *args, **kwargs)
-        # TODO: do we want to do this?
-        # elif 'text/html' in self.request.accept:
-        #     body_text = """
-        #     <html><body onload="history.go(-1);">
-        #     Please go back one page
-        #     </body></html>
-        #     """
-
-        #     halt(code=200, body=body_value)
         else:
             return False
 

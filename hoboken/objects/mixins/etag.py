@@ -8,7 +8,7 @@ from hoboken.six import binary_type
 logger = logging.getLogger(__name__)
 
 
-# TODO: support unquoted values here.
+# TODO: support unquoted values here?
 ETAG_RE = re.compile(br'(?:^|\s)([Ww]/)?"((?:\\"|.)*?)"')
 
 
