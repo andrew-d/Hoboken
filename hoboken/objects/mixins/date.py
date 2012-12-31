@@ -21,7 +21,7 @@ from hoboken.six import binary_type, text_type
 logger = logging.getLogger(__name__)
 
 
-def date_header_property(header, read_only=False):
+def date_header_property(header, read_only=False, doc=''):
     def getter(self):
         return self._parse_date(self.headers.get(header))
     def setter(self, value):
@@ -34,9 +34,9 @@ def date_header_property(header, read_only=False):
 
     # TODO: Set the docstring properly
     if read_only:
-        return property(getter, doc='')
+        return property(getter, doc=doc)
     else:
-        return property(getter, setter, deleter, doc='')
+        return property(getter, setter, deleter, doc=doc)
 
 
 class WSGIDateMixin(object):

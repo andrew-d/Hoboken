@@ -18,7 +18,7 @@ class MissingObject(object):
 missing = MissingObject()
 
 
-def _environ_prop(key, default=missing):
+def _environ_prop(key, default=missing, doc=''):
     if default is missing:
         def getter(self):
             return self._from_wsgi_str(self.environ[key])
@@ -38,7 +38,7 @@ def _environ_prop(key, default=missing):
             del self.environ[key]
 
     # TODO: set the docstring properly.
-    return property(getter, setter, deleter, doc='')
+    return property(getter, setter, deleter, doc=doc)
 
 
 def _environ_converter(prop, parser, serializer):
