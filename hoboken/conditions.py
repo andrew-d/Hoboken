@@ -91,7 +91,7 @@ def host(match_re):
 def accepts(mimetypes):
     # Note that we can't simply check for an iterable here, since
     # strings are also iterables.
-    if isinstance(mimetypes, list):
+    if isinstance(mimetypes, (tuple, list)):
         will_accept_raw = mimetypes
     else:
         will_accept_raw = [mimetypes]
