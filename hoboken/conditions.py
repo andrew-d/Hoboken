@@ -1,8 +1,13 @@
 from __future__ import print_function
 import re
+import logging
 from collections import Iterable
 
 from hoboken.six import binary_type, text_type
+
+
+logger = logging.getLogger(__name__)
+
 
 def user_agent(match_re=None, **kwargs):
     # We have two cases.  If we're given a string, we assume that it is a
