@@ -1,5 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 
+import logging
 from functools import wraps
 from itertools import repeat
 from hoboken.six import iteritems, PY3
@@ -12,7 +13,11 @@ from hoboken.objects.util import missing
 # directory as this file.
 
 
+logger = logging.getLogger(__name__)
+
+
 def is_immutable(self):
+    logger.error("Attempted to mutate an immutable structure: %r", self)
     raise TypeError(
         '{0!r} objects are immutable'.format(self.__class__.__name__)
     )

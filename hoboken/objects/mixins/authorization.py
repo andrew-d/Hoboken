@@ -2,9 +2,13 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 import base64
+import logging
 import binascii
 
 from hoboken.six import binary_type, iteritems
+
+
+logger = logging.getLogger(__name__)
 
 
 # Note: some of below code inspired by the code from WebOb.  Thanks guys!
@@ -42,6 +46,7 @@ def serialize_auth(val):
         if isinstance(params, dict):
             params = b', '.join([k + b'="' + v + b'"' for k, v in iteritems(params)])
         if not isinstance(params, binary_type):
+            logger.warn("Invalid type for 'params': %s" % (params.__class__.__name__))
             raise ValueError("Invalid type for 'params': %s" % (params.__class__.__name__))
 
         return authtype + b' ' + params

@@ -410,6 +410,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         def internal_decorator(func):
             # We only allow one route for each function.
             if is_route(func):
+                logger.error("Function %s is already a route", func.__name__)
                 raise RouteExistsException()
 
             # This allows us to add conditions!
@@ -479,6 +480,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         elif isinstance(value, binary_type):
             resp.body = value
         else:
+            logger.error("Unknown return type: %r", type(value))
             raise ValueError("Unknown return type: {0!r}".format(type(value)))
 
     def wsgi_entrypoint(self, environ, start_response):

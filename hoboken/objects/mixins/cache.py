@@ -1,10 +1,14 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
+import logging
 from numbers import Number
 from hoboken.six import text_type
 from hoboken.objects.util import cached_property
 from hoboken.objects.oproperty import property_overriding, oproperty
+
+
+logger = logging.getLogger(__name__)
 
 
 class _boolean_property(object):
@@ -19,6 +23,7 @@ class _boolean_property(object):
 
     def __set__(self, obj, val):
         if not isinstance(val, bool):
+            logger.error("Tried to set boolean property to: %r", val)
             raise ValueError("Must set boolean property {0} to True or" \
                              " False".format(self.name))
         obj.set_property(self.name, val)

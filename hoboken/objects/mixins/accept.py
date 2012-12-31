@@ -74,10 +74,12 @@ class MIMEAccept(AcceptList):
             return x.split(b'/', 1)
 
         if b'/' not in value:
+            logger.info("Invalid mimetype (no slash): %r", value)
             raise ValueError('Invalid mimetype {0!r}'.format(value))
         value_type, value_subtype = _normalize(value)
 
         if value_type == b'*' and value_subtype != b'*':
+            logger.info("Invalid mimetype (wildcard): %r", value)
             raise ValueError('Invalid mimetype {0!r}'.format(value))
 
         if b'/' not in item:

@@ -4,12 +4,17 @@ from __future__ import with_statement, absolute_import
 # Stdlib dependencies
 import re
 import sys
+import logging
 
 # In-package dependencies
 from hoboken.exceptions import *
 
 # Compatibility.
 from hoboken.six import string_types, text_type, PY3
+
+
+logger = logging.getLogger(__name__)
+
 
 RegexType = type(re.compile(""))
 RegexMatchType = type(re.compile(".*").match("asdf"))
@@ -27,6 +32,7 @@ class AbstractMatcher(object):
         function.  If the request does not match, then this function must
         return (False, _, _), where the underscores are any value.
         """
+        logger.error("match() was called on AbstractMatcher")
         raise NotImplementedError("match() is not implemented in the base class")
 
     def reverse(self, args, kwargs):
@@ -37,7 +43,11 @@ class AbstractMatcher(object):
         (either because there's no support for reversal, or because the passed
         parameters were invalid).
         """
+        logger.error("reverse() was called on AbstractMatcher")
         raise NotImplementedError("reverse() is not implemented in the base class")
+
+    def __repr__(self):
+        return "AbstractMatcher()"
 
 
 class BasicMatcher(AbstractMatcher):
@@ -81,8 +91,11 @@ class RegexMatcher(AbstractMatcher):
             try:
                 self.re = re.compile(regex)
             except re.error:
+                logger.exception("Provided regex is invalid: %r")
                 raise TypeError("Parameter 'regex' is not a valid regex")
         else:                                       # pragma: no cover
+            logger.error("Provided regex is of unknown type: %s",
+                         regex.__class__.__name__)
             raise TypeError("Parameter 'regex' is not a valid regex")
 
         # Save keys.
@@ -119,7 +132,8 @@ class RegexMatcher(AbstractMatcher):
         return self.re.pattern
 
     def __repr__(self):
-        return "RegexMatcher(regex={0!r}, key_types={1!r}, key_names={2!r})".format(self.re.pattern, self.key_types, self.key_names)
+        return "RegexMatcher(regex={0!r}, key_types={1!r}, " \
+               "key_names={2!r})".format(self.re.pattern, self.key_types, self.key_names)
 
 
 class HobokenRouteMatcher(AbstractMatcher):
@@ -138,6 +152,7 @@ class HobokenRouteMatcher(AbstractMatcher):
     def __init__(self, route):
         match_regex = self._convert_path(route)
         self.match_re = re.compile(match_regex)
+        self.original_route = route
 
     def _save_fragments(self, match):
         """
@@ -298,4 +313,7 @@ class HobokenRouteMatcher(AbstractMatcher):
                 final_route += value
 
         return final_route + self.fragments[-1]
+
+    def __repr__(self):
+        return "%s(route=%r)" % (self.__class__.__name__, self.original_route)
 
