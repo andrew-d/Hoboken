@@ -333,10 +333,13 @@ class TestMultiDict(unittest.TestCase):
         else:
             assert_func = assert_list
 
-        assert_func(self.e.items())
-        assert_func(self.e.values())
-        assert_func(self.e.lists())
-        assert_func(self.e.listvalues())
+        for f in ['items', 'values', 'lists', 'listvalues']:
+            # Assert that the bare function matches this Python version's dict
+            # behavior
+            assert_func(getattr(self.e, f)())
+
+            # Assert that the "iter" + name version is always an iterator.
+            assert_iterator(getattr(self.e, "iter" + f)())
 
 
 
