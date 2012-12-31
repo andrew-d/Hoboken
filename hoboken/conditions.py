@@ -47,8 +47,9 @@ def user_agent(match_re=None, **kwargs):
 
     # If we have more arguments, we error.
     if len(kwargs) > 0:
-        raise TypeError("Unknown condition(s) passed to"
-                        "user_agent(): %r" % kwargs)
+        msg = "Unknown condition(s) passed to user_agent(): %r" % kwargs
+        logger.error(msg)
+        raise TypeError(msg)
 
     # This is the function that does the matching.
     def user_agent_func(req):
