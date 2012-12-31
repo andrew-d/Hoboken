@@ -10,18 +10,19 @@ import hoboken
 
 def suite():
     # Import test suites here.
-    from .test_util import suite as suite_1
-    from .test_request import suite as suite_2
-    from .test_response import suite as suite_3
-    from .test_headers import suite as suite_4
-    from .test_mixins_accept import suite as suite_5
-    from .test_mixins_authorization import suite as suite_6
-    from .test_mixins_cache import suite as suite_7
-    from .test_mixins_etag import suite as suite_8
-    from .test_mixins_request_body import suite as suite_9
-    from .test_mixins_request_building import suite as suite_10
-    from .test_mixins_response_body import suite as suite_11
-    from .test_mixins_user_agent import suite as suite_12
+    from .test_datastructures import suite as suite_1
+    from .test_util import suite as suite_2
+    from .test_request import suite as suite_3
+    from .test_response import suite as suite_4
+    from .test_headers import suite as suite_5
+    from .test_mixins_accept import suite as suite_6
+    from .test_mixins_authorization import suite as suite_7
+    from .test_mixins_cache import suite as suite_8
+    from .test_mixins_etag import suite as suite_9
+    from .test_mixins_request_body import suite as suite_10
+    from .test_mixins_request_building import suite as suite_11
+    from .test_mixins_response_body import suite as suite_12
+    from .test_mixins_user_agent import suite as suite_13
 
     suite = unittest.TestSuite()
     suite.addTest(suite_1())
@@ -36,6 +37,7 @@ def suite():
     suite.addTest(suite_10())
     suite.addTest(suite_11())
     suite.addTest(suite_12())
+    suite.addTest(suite_13())
 
     return suite
 

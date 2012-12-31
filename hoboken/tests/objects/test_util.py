@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import pickle
 from hoboken.tests.compat import unittest
-from io import BytesIO
 from mock import Mock
 
 from hoboken.objects.util import *
@@ -157,73 +155,6 @@ class TestCachedProperty(unittest.TestCase):
         self.assertTrue(isinstance(self.TestClass.cache, cached_property))
 
 
-class TestImmutableList(unittest.TestCase):
-    def setUp(self):
-        self.l = ImmutableList(range(10))
-
-    def test_delete_item(self):
-        with self.assertRaises(TypeError):
-            del self.l[0]
-
-        with self.assertRaises(TypeError):
-            del self.l[0:2]
-
-    def test_set_item(self):
-        with self.assertRaises(TypeError):
-            self.l[0] = 1
-
-        with self.assertRaises(TypeError):
-            self.l[0:2] = [1, 2]
-
-    def test_operators(self):
-        with self.assertRaises(TypeError):
-            self.l += [10, 11, 12]
-
-        with self.assertRaises(TypeError):
-            self.l *= 2
-
-    def test_insertion_functions(self):
-        with self.assertRaises(TypeError):
-            self.l.append(1)
-
-        with self.assertRaises(TypeError):
-            self.l.insert(0, 1)
-
-        with self.assertRaises(TypeError):
-            self.l.extend([10, 11, 12])
-
-    def test_removal_functions(self):
-        with self.assertRaises(TypeError):
-            self.l.remove(1)
-
-        with self.assertRaises(TypeError):
-            self.l.pop()
-
-    def test_misc_functions(self):
-        with self.assertRaises(TypeError):
-            self.l.reverse()
-
-        with self.assertRaises(TypeError):
-            self.l.sort()
-
-    def test_is_hashable(self):
-        h = hash(self.l)
-        self.assertIsNotNone(h)
-        self.assertEqual(hash(self.l), h)
-
-    def test_is_picklable(self):
-        dst = BytesIO()
-        p = pickle.Pickler(dst)
-        p.dump(self.l)
-
-        data = dst.getvalue()
-        src = BytesIO(data)
-        u = pickle.Unpickler(src)
-        j = u.load()
-
-        self.assertEqual(self.l, j)
-
-
 class TestBytesIteratorFile(unittest.TestCase):
     def setUp(self):
         self.f = BytesIteratorFile([b'foo', b'bar', b'baz'])
@@ -265,7 +196,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestEnvironPropWithoutDefault))
     suite.addTest(unittest.makeSuite(TestEnvironConverter))
     suite.addTest(unittest.makeSuite(TestCachedProperty))
-    suite.addTest(unittest.makeSuite(TestImmutableList))
     suite.addTest(unittest.makeSuite(TestBytesIteratorFile))
     suite.addTest(unittest.makeSuite(TestOther))
 

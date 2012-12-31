@@ -2,7 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 import re
 import codecs
 
-from hoboken.objects.util import ImmutableList
+from hoboken.objects.datastructures import ImmutableList
 from hoboken.six import text_type, binary_type, PY3
 
 class AcceptList(ImmutableList):
