@@ -5,9 +5,11 @@ from itertools import repeat
 from hoboken.six import iteritems, PY3
 from hoboken.objects.util import missing
 
-# Note: much of the code in this module is inspired by code from other code
-# from Werkzeug (https://github.com/mitsuhiko/werkzeug/) or Brownie
-# (https://github.com/DasIch/brownie).
+# Note: much of the code in this module is inspired by code from Werkzeug
+# (https://github.com/mitsuhiko/werkzeug/) or Brownie
+# (https://github.com/DasIch/brownie).  Their associated license files can be
+# found in the LICENSE_werkzeug.txt and LICENSE_brownie.rst files in the same
+# directory as this file.
 
 
 def is_immutable(self):

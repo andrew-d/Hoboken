@@ -1,0 +1,1 @@
+<html><body>You are being <a href="https://raw.github.com/DasIch/brownie/master/LICENSE.rst">redirected</a>.</body></html>
