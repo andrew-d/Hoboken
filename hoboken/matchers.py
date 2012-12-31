@@ -24,7 +24,7 @@ class AbstractMatcher(object):
     """
     This class is the abstract class for all matchers that are used by Hoboken.
     """
-    def match(self, request):
+    def match(self, request):               # pragma: no cover
         """
         This function performs matching against a given Request.  If the
         request matches, then this function will return (True, args, kwargs),
@@ -35,7 +35,7 @@ class AbstractMatcher(object):
         logger.error("match() was called on AbstractMatcher")
         raise NotImplementedError("match() is not implemented in the base class")
 
-    def reverse(self, args, kwargs):
+    def reverse(self, args, kwargs):        # pragma: no cover
         """
         This function provides support for reversing - i.e. given arguments,
         return the associate path.  This function must either return a string

@@ -2,6 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 
 import re
 import time
+import logging
 import calendar
 from datetime import (
     date,
@@ -15,6 +16,9 @@ from email.utils import (
 )
 from numbers import Number
 from hoboken.six import binary_type, text_type
+
+
+logger = logging.getLogger(__name__)
 
 
 def date_header_property(header, read_only=False):
@@ -93,6 +97,7 @@ class WSGIDateMixin(object):
 
         # Finally, assert that we actually have an number by this point.
         if not isinstance(value, Number):
+            logger.error("Unknown value to serialize: %r", value)
             raise ValueError("Unknown value to serialize: {0!r}".format(value))
 
         # Note: The 'usegmt' argument will put 'GMT' after the date, instead of

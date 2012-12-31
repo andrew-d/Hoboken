@@ -1,9 +1,14 @@
 from __future__ import with_statement, absolute_import, print_function
 import re
 import codecs
+import logging
 
 from hoboken.objects.datastructures import ImmutableList
 from hoboken.six import text_type, binary_type, PY3
+
+
+logger = logging.getLogger(__name__)
+
 
 class AcceptList(ImmutableList):
     _accept_re = re.compile(br'([^\s;,]+)(?:[^,]*?;\s*q=(\d*(?:\.\d+)?))?')

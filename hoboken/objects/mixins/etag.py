@@ -1,7 +1,11 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
+import logging
 from hoboken.six import binary_type
+
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: support unquoted values here.
@@ -131,6 +135,7 @@ class WSGIResponseEtagMixin(object):
             # Just setting an etag.
             strong = True
         else:
+            logger.error("Unknown type for ETag: %r", val)
             raise ValueError("You can only set an ETag to a binary value, or a"
                              "tuple in the form (etag, bool)")
 

@@ -1,8 +1,13 @@
 from __future__ import with_statement, absolute_import, print_function
 
+import logging
+
 from hoboken.objects.util import cached_property, iter_close
 from hoboken.objects.oproperty import oproperty, property_overriding
 from hoboken.six import advance_iterator, binary_type, text_type, callable, u
+
+
+logger = logging.getLogger(__name__)
 
 
 class IteratorFile(object):
@@ -94,6 +99,7 @@ class ResponseBodyMixin(object):
     @body.setter
     def body(self, val):
         if not isinstance(val, binary_type):
+            logger.error("Response body must be set to a bytestring")
             raise ValueError("Response body must be set to a bytestring")
 
         self.response_iter = [val]
@@ -111,11 +117,11 @@ class ResponseBodyMixin(object):
     @text.setter
     def text(self, val):
         if not isinstance(val, text_type):
-            raise ValueError(
-                "Response text must be set to a '{0}' value".format(
-                    text_type.__name__
-                )
+            msg = "Response text must be set to a '%r' value".format(
+                text_type.__name__
             )
+            logger.error(msg)
+            raise ValueError(msg)
 
         self.response_iter = [val.encode(self.charset)]
 
