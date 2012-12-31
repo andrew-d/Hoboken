@@ -100,7 +100,7 @@ class TestImmutableDict(unittest.TestCase):
 
     def test_popitem(self):
         with self.assertRaises(TypeError):
-            self.d.popitem('b')
+            self.d.popitem()
 
     def test_clear(self):
         with self.assertRaises(TypeError):
