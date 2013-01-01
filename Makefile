@@ -1,16 +1,32 @@
 
 # Testing
 # --------------------------------------------------------------------------------
-$(phony test):
+
+test:
 	py.test -m "not slow_test" hoboken/tests
 
-$(phony test_all):
+test_all:
 	py.test hoboken/tests
 
-$(phony test_cov):
+test_cov:
 	py.test --cov-report term-missing --cov-config .coveragerc --cov hoboken hoboken/tests
 
-$(phony test_tox):
+test_tox:
 	tox
 
+test_deps:
+	pip install -r requirements.txt
 
+get_version:
+	git tag | tail -n 1
+
+upload:
+	python setup.py sdist upload
+
+
+# Dependencies.
+
+
+user_agent:
+	rm hoboken/objects/mixins/ua_regexes.yaml
+	curl -o hoboken/objects/mixins/ua_regexes.yaml https://raw.github.com/tobie/ua-parser/master/regexes.yaml
