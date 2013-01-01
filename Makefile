@@ -25,7 +25,8 @@ upload:
 
 
 # Dependencies.
-
+deps: user_agent
+	echo 'Dependencies updated!'
 
 user_agent:
 	rm hoboken/objects/mixins/ua_regexes.yaml
