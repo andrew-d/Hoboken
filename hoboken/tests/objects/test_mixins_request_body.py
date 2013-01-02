@@ -795,22 +795,14 @@ class TestFormParser(unittest.TestCase):
 
     def test_bad_content_type(self):
         # We should raise a ValueError for a bad Content-Type
-        try:
+        with self.assertRaises(ValueError):
             f = FormParser(b'application/bad', None, None)
-        except ValueError:
-            pass
-        else:
-            assert False
 
     def test_no_boundary_given(self):
         # We should raise a FormParserError when parsing a multipart message
         # without a boundary.
-        try:
+        with self.assertRaises(FormParserError):
             f = FormParser(b'multipart/form-data', None, None)
-        except FormParserError:
-            pass
-        else:
-            assert False
 
     def test_bad_content_transfer_encoding(self):
         # The data blob below is the following:
@@ -835,13 +827,9 @@ class TestFormParser(unittest.TestCase):
         f = FormParser(b'multipart/form-data', on_field, on_file,
                        on_end=on_end, boundary=b'--boundary')
 
-        try:
+        with self.assertRaises(FormParserError):
             f.write(dec)
             f.finalize()
-        except FormParserError:
-            pass
-        else:
-            assert False
 
 
 class TestRequestBodyMixin(unittest.TestCase):
@@ -925,9 +913,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TestOctetStreamParser))
     suite.addTest(unittest.makeSuite(TestBase64Decoder))
     suite.addTest(unittest.makeSuite(TestQuotedPrintableDecoder))
-    # suite.addTest(unittest.makeSuite(TestFormParser))
+    suite.addTest(unittest.makeSuite(TestFormParser))
     suite.addTest(unittest.makeSuite(TestRequestBodyMixin))
 
     return suite
 
-# TODO: test stuff where we set flags to FLAG_LAST_BOUNDARY, but don't finish it, and then back to PART_BOUNDARY.  Also the reverse

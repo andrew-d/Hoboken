@@ -139,7 +139,6 @@ class ConfigDict(dict):
         from_object function called on the imported Python file.
         """
         file_path = os.path.join(self.root_dir, file)
-        print(file_path)
 
         # We create a temporary module to load into.
         m = imp.new_module('config')
