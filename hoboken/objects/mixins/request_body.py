@@ -11,6 +11,7 @@ from hoboken.six import (
     advance_iterator,
     PY3,
 )
+from hoboken.objects.datastructures import MultiDict
 
 try:
     from urlparse import parse_qs
@@ -1340,8 +1341,8 @@ class RequestBodyMixin(object):
         super(RequestBodyMixin, self).__init__(*args, **kwargs)
 
         # Our fields and files default to nothing.
-        self.__fields = []
-        self.__files = []
+        self.__fields = MultiDict()
+        self.__files = MultiDict()
 
     # Things we might need:
     #   - Upload directory (for temp files)
@@ -1447,14 +1448,14 @@ class RequestBodyMixin(object):
         return form_parser
 
     def parse_body(self):
-        fields = {}
-        files = {}
+        fields = MultiDict()
+        files = MultiDict()
 
         def on_field(field):
-            fields[field.field_name] = field
+            fields.add(field.field_name, field)
 
         def on_file(file):
-            files[file.field_name] = file
+            files.add(file.field_name, file)
 
         # Get blocksize.
         blocksize = 1 * 1024 * 1024

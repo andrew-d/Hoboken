@@ -896,8 +896,8 @@ class TestRequestBodyMixin(unittest.TestCase):
         self.assertEqual(file_data, b'test2')
 
     def test_default_fields_files(self):
-        self.assertEqual(self.m.fields, [])
-        self.assertEqual(self.m.files, [])
+        self.assertEqual(self.m.fields, {})
+        self.assertEqual(self.m.files, {})
 
     def test_errors_with_no_content_type(self):
         with self.assertRaises(ValueError):
