@@ -18,11 +18,18 @@ test_deps:
 get_version:
 	@git tag | tail -n 1
 
+VERSION_FILE := hoboken/_version.py
 set_version:
-	@echo __version__ = \'$(VER)\' > hoboken/_version.py
+	@[ -z '$(VER)' ] && echo "New version is not given, please give as \"VER\"" || true
+	[ ! -z '$(VER)' ] && echo "__version__ = '$(VER)'" > $(VERSION_FILE) || false
+	[ ! -z '$(VER)' ] && git add $(VERSION_FILE) || false
+	[ ! -z '$(VER)' ] && git commit -m "Set package version to $(VER)" || false
+	[ ! -z '$(VER)' ] && git tag $(VER) || false
 
 upload:
 	python setup.py sdist upload
+	git push
+	git push --tags
 
 
 # Dependencies.
