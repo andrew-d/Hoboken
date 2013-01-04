@@ -805,18 +805,7 @@ class TestFormParser(unittest.TestCase):
             f = FormParser(b'multipart/form-data', None, None)
 
     def test_bad_content_transfer_encoding(self):
-        # The data blob below is the following:
-        #
-        #       ----boundary
-        #       Content-Disposition: form-data; name="file"; filename="test.txt"
-        #       Content-Type: text/plain
-        #       Content-Transfer-Encoding: badstuff
-        #
-        #       Test
-        #       ----boundary
-
-        data = b"LS0tLWJvdW5kYXJ5DQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImZpbGUiOyBmaWxlbmFtZT0idGVzdC50eHQiDQpDb250ZW50LVR5cGU6IHRleHQvcGxhaW4NCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IGJhZHN0dWZmDQoNClRlc3QNCi0tLS1ib3VuZGFyeS0tDQo="
-        dec = base64.b64decode(data)
+        data = b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\nContent-Type: text/plain\r\nContent-Transfer-Encoding: badstuff\r\n\r\nTest\r\n----boundary--\r\n'
 
         files = []
         def on_file(f):
@@ -828,7 +817,7 @@ class TestFormParser(unittest.TestCase):
                        on_end=on_end, boundary=b'--boundary')
 
         with self.assertRaises(FormParserError):
-            f.write(dec)
+            f.write(data)
             f.finalize()
 
 
