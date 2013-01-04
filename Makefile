@@ -15,6 +15,12 @@ test_tox:
 test_deps:
 	pip install -r requirements.txt
 
+INTERPRETER=python
+bench:
+	@for f in hoboken/tests/benchmarks/*.py; do                      \
+		[ $$(basename "$$f") != 'bench.py' ] && $(INTERPRETER) $$f; \
+	done
+
 get_version:
 	@git tag | tail -n 1
 
