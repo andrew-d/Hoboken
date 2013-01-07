@@ -27,9 +27,6 @@ import logging
 import binascii
 import tempfile
 from io import BytesIO
-from functools import wraps
-from types import FunctionType
-from collections import namedtuple
 
 # Get logger for this module.
 logger = logging.getLogger(__name__)
@@ -623,7 +620,7 @@ class MultipartParser(BaseParser):
         self.boundary = b'\r\n--' + boundary
 
         # Get a set of characters that belong to our boundary.
-        self.boundary_chars = set(self.boundary)
+        self.boundary_chars = frozenset(self.boundary)
 
         # We also create a lookbehind list.
         # Note: the +8 is since we can have, at maximum, "\r\n--" + boundary +

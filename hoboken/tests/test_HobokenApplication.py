@@ -414,6 +414,7 @@ class TestConfig(HobokenTestCase):
 
     def test_will_find_app_file(self):
         self.assertIn('APPLICATION_FILE', self.app.config)
+        self.assertIsNotNone(self.app.config['APPLICATION_FILE'])
 
     def test_other_dirs_based_on_app_file(self):
         app_file = os.path.join('tmp', 'foo.py')

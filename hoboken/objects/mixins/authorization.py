@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 valid_authentication_schemes = [b'Basic', b'Digest', b'WSSE', b'HMACDigest',
                                 b'GoogleLogin', b'Cookie', b'OpenID', b'Bearer'
                                 ]
-_valid_schemes_set = set(valid_authentication_schemes)
+_valid_schemes_set = frozenset(valid_authentication_schemes)
 
 AUTH_PARAMS_REGEX = re.compile(br'([a-z]+)=(".*?"|[^,]*)(?:\Z|, *)')
 

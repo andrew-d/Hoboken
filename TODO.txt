@@ -3,7 +3,7 @@ New Todo
  - Configuration stuff:
     ! Lock to serialize all requests (in case app is not thread-safe)
     - Charset/encoding stuff
-    - Static / template directories.
+    ! Static / template directories.
  - Cookie support
     - In HTTP objects, cookie parsing
     - In Hoboken, use itsdangerous to do secure cookies
