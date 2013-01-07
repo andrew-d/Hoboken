@@ -202,9 +202,8 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     # The application's debug setting.
     debug = ConfigProperty('DEBUG')
 
-    def __init__(self, name, sub_app=None, config={}):
+    def __init__(self, name, config={}):
         self.name = name
-        self.sub_app = sub_app
 
         # If we're missing the root dir, we try and determine them here.
         root_dir = config.get('ROOT_DIRECTORY')
