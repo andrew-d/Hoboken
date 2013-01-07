@@ -412,10 +412,29 @@ class TestConfig(HobokenTestCase):
 
         self.assertNotIn('FOO', self.app.config)
 
-    def test_will_fill_missing_views_dir(self):
-        app = HobokenApplication('', config={'ROOT_DIRECTORY': 'foo'})
-        expected_views = os.path.join('foo', 'views')
-        self.assertEqual(app.config['VIEWS_DIRECTORY'], expected_views)
+    def test_will_find_app_file(self):
+        self.assertIn('APPLICATION_FILE', self.app.config)
+
+    def test_other_dirs_based_on_app_file(self):
+        app_file = os.path.join('tmp', 'foo.py')
+        a = HobokenApplication('', config={'APPLICATION_FILE': app_file})
+
+        root = os.path.dirname(app_file)
+        d1 = os.path.join(root, 'views')
+        d2 = os.path.join(root, 'static')
+
+        self.assertEqual(a.config['ROOT_DIRECTORY'], root)
+        self.assertEqual(a.config['VIEWS_DIRECTORY'], d1)
+        self.assertEqual(a.config['STATIC_DIRECTORY'], d2)
+
+    def test_will_not_overwrite_provided_dirs(self):
+        a = HobokenApplication('', config={
+            'VIEWS_DIRECTORY': 'foobar',
+            'STATIC_DIRECTORY': 'asdf',
+        })
+
+        self.assertEqual(a.config['VIEWS_DIRECTORY'], 'foobar')
+        self.assertEqual(a.config['STATIC_DIRECTORY'], 'asdf')
 
     def test_property_will_return_obj(self):
         self.assertTrue(isinstance(HobokenApplication.debug, ConfigProperty))

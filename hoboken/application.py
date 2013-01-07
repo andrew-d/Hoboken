@@ -197,7 +197,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     DEFAULT_CONFIG = {
         'DEBUG': False,
-        'ROOT_DIRECTORY': None,
+        'APPLICATION_FILE': None,
         'SERIALIZE_REQUESTS': False,
     }
 
@@ -208,28 +208,38 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self.name = name
 
         # If we're missing the root dir, we try and determine them here.
-        root_dir = config.get('ROOT_DIRECTORY')
-        if root_dir is None:
+        app_file = config.get('APPLICATION_FILE')
+        if app_file is None:
             import __main__
 
             # Get the file name if it exists.  It won't in, for example, the
             # interactive console.
             if hasattr(__main__, "__file__"):
-                root_dir = os.path.dirname(
-                    os.path.abspath(__main__.__file__)
-                )
+                app_file = os.path.abspath(__main__.__file__)
             else:               # pragma: no cover
-                root_dir = os.path.dirname(
-                    os.path.abspath(".")
-                )
+                app_file = os.path.abspath(".")
 
+        # Given the application file, get the root directory.
+        root_dir = config.get('ROOT_DIRECTORY')
+        if root_dir is None:
+            root_dir = os.path.dirname(app_file)
+
+        # Create our config, and set values in it.
         self.config = ConfigDict(root_dir, defaults=self.DEFAULT_CONFIG)
         self.config.update(config)
 
+        # Set our heuristically-determined things.
+        self.config['APPLICATION_FILE'] = app_file
         self.config['ROOT_DIRECTORY'] = root_dir
+
+        # Set other directory values.
         self.config.setdefault('VIEWS_DIRECTORY', os.path.join(
             self.config['ROOT_DIRECTORY'],
             "views"
+        ))
+        self.config.setdefault('STATIC_DIRECTORY', os.path.join(
+            self.config['ROOT_DIRECTORY'],
+            "static"
         ))
 
         # Routes array. We split this by method, both for speed and simplicity.
