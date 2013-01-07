@@ -718,6 +718,35 @@ class TestFormParser(unittest.TestCase):
             self.assert_field(b'field', b'test1')
             self.assert_file(b'file', b'file.txt', b'test2')
 
+    def test_feed_single_bytes(self):
+        """
+        This test parses a simple multipart body 1 byte at a time.
+        """
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        # Create form parser.
+        self.make(b'boundary')
+
+        # Write all bytes.
+        # NOTE: Can't simply do `for b in test_data`, since that gives
+        # an integer when iterating over a bytes object on Python 3.
+        i = 0
+        for x in range(len(test_data)):
+            b = test_data[x:x + 1]
+            i += self.f.write(b)
+
+        self.f.finalize()
+
+        # Assert we processed everything.
+        self.assertEqual(i, len(test_data))
+
+        # Assert that our file and field are here.
+        self.assert_field(b'field', b'test1')
+        self.assert_file(b'file', b'file.txt', b'test2')
+
     def test_bad_start_boundary(self):
         self.make(b'boundary')
         data = b'--boundary\rfoobar'
