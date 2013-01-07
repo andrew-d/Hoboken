@@ -743,6 +743,7 @@ class TestFormParser(unittest.TestCase):
         f.write(b'1234')
         f.finalize()
 
+        # Assert that we only recieved a single file, with the right data, and that we're done.
         self.assertFalse(on_field.called)
         self.assertEqual(len(files), 1)
         self.assert_file_data(files[0], b'test1234')
@@ -756,22 +757,28 @@ class TestFormParser(unittest.TestCase):
         on_end = Mock()
 
         def simple_test(f):
+            # Reset tracking.
             del fields[:]
+            on_file.reset_mock()
             on_end.reset_mock()
 
+            # Write test data.
             f.write(b'foo=bar')
             f.write(b'&test=asdf')
             f.finalize()
 
+            # Assert we only recieved 2 fields...
             self.assertFalse(on_file.called)
             self.assertEqual(len(fields), 2)
 
+            # ...assert that we have the correct data...
             self.assertEqual(fields[0].field_name, b'foo')
             self.assertEqual(fields[0].value, b'bar')
 
             self.assertEqual(fields[1].field_name, b'test')
             self.assertEqual(fields[1].value, b'asdf')
 
+            # ... and assert that we've finished.
             self.assertTrue(on_end.called)
 
         f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)

@@ -1365,8 +1365,8 @@ class RequestBodyMixin(object):
         form_config = {}
         if hasattr(self, 'config'):
             # For each option, see if it's set in our config.
-            # NOTE: We can't simply use '.update', since we have some non-form
-            # config values in the dictionary.
+            # NOTE: We can't simply use '.update', since we might have some
+            # non-form config values in the dictionary.
             for f in FormParser.DEFAULT_CONFIG.keys():
                 val = self.config.get(f)
                 if val is not None:
