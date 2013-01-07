@@ -6,6 +6,7 @@ from hoboken.six import PY3, text_type, binary_type
 UNSAFE_RE = re.compile(br"[^\\-_.!~*'();/?:@&=+$,\[\]a-zA-Z\d]")
 ESCAPED_RE = re.compile(br"%[a-fA-F\d]{2}")
 
+
 def quote(val, encoding='utf-8', unsafe=UNSAFE_RE):
     if isinstance(val, text_type):
         val = val.encode(encoding)
@@ -44,4 +45,3 @@ def unquote(val, encoding='utf-8'):
 
     unquoted = ESCAPED_RE.sub(_unquoter, val)
     return unquoted
-

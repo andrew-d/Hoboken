@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 # Note: some of below code inspired by the code from WebOb.  Thanks guys!
 valid_authentication_schemes = [b'Basic', b'Digest', b'WSSE', b'HMACDigest',
-                                b'GoogleLogin', b'Cookie', b'OpenID', b'Bearer']
+                                b'GoogleLogin', b'Cookie', b'OpenID', b'Bearer'
+                                ]
 _valid_schemes_set = set(valid_authentication_schemes)
 
 AUTH_PARAMS_REGEX = re.compile(br'([a-z]+)=(".*?"|[^,]*)(?:\Z|, *)')
@@ -44,10 +45,13 @@ def serialize_auth(val):
     if isinstance(val, (tuple, list)):
         authtype, params = val
         if isinstance(params, dict):
-            params = b', '.join([k + b'="' + v + b'"' for k, v in iteritems(params)])
+            params = b', '.join(
+                [k + b'="' + v + b'"' for k, v in iteritems(params)]
+            )
         if not isinstance(params, binary_type):
-            logger.warn("Invalid type for 'params': %s" % (params.__class__.__name__))
-            raise ValueError("Invalid type for 'params': %s" % (params.__class__.__name__))
+            msg = "Invalid type for 'params': %s" % (params.__class__.__name__)
+            logger.warn(msg)
+            raise ValueError(msg)
 
         return authtype + b' ' + params
 
@@ -78,4 +82,3 @@ class WSGIResponseAuthorizationMixin(object):
     @www_authenticate.setter
     def www_authenticate(self, val):
         self.headers[b'WWW-Authenticate'] = serialize_auth(val)
-

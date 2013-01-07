@@ -29,7 +29,7 @@ class HobokenCachingMixin(object):
         if date is None:
             return
 
-        # Python's time functions are stupid.  We do everything with unix times.
+        # Python's time functions are stupid. We do everything with unix times.
         timestamp = time.mktime(date.timetuple())
         self.response.last_modified = timestamp
 
@@ -38,14 +38,15 @@ class HobokenCachingMixin(object):
             return
 
         if (self.response.status_int == 200 and
-            self.request.if_modified_since is not None):
+                self.request.if_modified_since is not None):
             time_val = time.mktime(self.request.if_modified_since.timetuple())
             if time_val >= timestamp:
                 halt(code=304)
 
         if ((self.response.is_success or self.response.status_int == 412) and
-             self.request.if_unmodified_since is not None):
-            time_val = time.mktime(self.request.if_unmodified_since.timetuple())
+                self.request.if_unmodified_since is not None):
+            time_val = time.mktime(
+                self.request.if_unmodified_since.timetuple())
             if time_val < timestamp:
                 halt(code=412)
 
@@ -69,13 +70,13 @@ class HobokenCachingMixin(object):
 
         if self.response.is_success or self.response.status_int == 304:
             if (self.request.if_none_match is not MatchNoneEtag and
-                etag_matches(self.request.if_none_match)):
+                    etag_matches(self.request.if_none_match)):
                 if self.request.is_safe:
                     halt(code=304)
                 else:
                     halt(code=412)
             elif (self.request.if_match is not MatchAnyEtag and
-                  not etag_matches(self.request.if_match)):
+                    not etag_matches(self.request.if_match)):
                 halt(code=412)
 
     def set_cache_control(self, **kwargs):
@@ -86,7 +87,7 @@ class HobokenCachingMixin(object):
         if isinstance(amount, int):
             max_age = amount
             amount = (_now() +
-                        datetime.timedelta(seconds=amount))
+                      datetime.timedelta(seconds=amount))
         else:
             now = _now()
             if now >= amount:
@@ -106,7 +107,8 @@ class HobokenRedirectMixin(object):
         referred to this one.
         """
         if self.request.headers.get('Referer'):
-            self.redirect(location=self.request.headers['Referer'], *args, **kwargs)
+            self.redirect(location=self.request.headers['Referer'], *args,
+                          **kwargs)
         else:
             return False
 
@@ -134,4 +136,3 @@ class HobokenRenderMixin(object):
     def load_template(self, template_file):
         template = self._shift.new(template_file)
         return template
-

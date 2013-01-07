@@ -9,7 +9,6 @@ from hoboken.six import *
 from hoboken.objects.oproperty import oproperty, property_overriding
 
 
-
 class WSGIBaseRequest(BaseRequest):
     def __init__(self, environ, charset='utf-8'):
         super(WSGIBaseRequest, self).__init__()
@@ -82,6 +81,7 @@ class WSGIBaseRequest(BaseRequest):
     server_name = _environ_prop('SERVER_NAME')
 
     _headers = None
+
     def _headers_getter(self):
         if self._headers is None:
             self._headers = WSGIHeaders(self.environ)
@@ -122,10 +122,10 @@ class WSGIRequest(WSGIBaseRequest):
 
             if self.scheme == b'https':
                 if self.server_port != 443:
-                   host += b':' + str(self.server_port).encode('latin-1')
+                    host += b':' + str(self.server_port).encode('latin-1')
             else:
                 if self.server_port != 80:
-                   host += b':' + str(self.server_port).encode('latin-1')
+                    host += b':' + str(self.server_port).encode('latin-1')
 
         return host
 
@@ -205,6 +205,7 @@ from .mixins.date import WSGIRequestDateMixin
 from .mixins.etag import WSGIRequestEtagMixin
 from .mixins.request_building import WSGIRequestBuilderMixin
 from .mixins.user_agent import WSGIUserAgentMixin
+
 
 class WSGIFullRequest(WSGIAcceptMixin, WSGIRequestAuthorizationMixin,
                       WSGIRequestCacheMixin, RequestVarsMixin,

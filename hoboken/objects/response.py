@@ -69,8 +69,8 @@ class WSGIBaseResponse(BaseResponse):
         spl = val.split(" ")[0]
         self.status_int = int(spl)
 
-
     _headers = None
+
     def _headers_getter(self):
         if self._headers is None:
             self._headers = WSGIHeaders({})
@@ -118,8 +118,8 @@ from .mixins.date import WSGIResponseDateMixin
 from .mixins.etag import WSGIResponseEtagMixin
 from .mixins.response_body import ResponseBodyMixin
 
+
 class WSGIFullResponse(ResponseBodyMixin, WSGIResponseAuthorizationMixin,
                        WSGIResponseCacheMixin, WSGIResponseEtagMixin,
                        WSGIResponseDateMixin, WSGIBaseResponse):
     pass
-

@@ -81,7 +81,6 @@ class ImmutableList(ImmutableListMixin, list):
     pass
 
 
-
 class ImmutableDictMixin(object):
     """
     This mixin makes a dict immutable.

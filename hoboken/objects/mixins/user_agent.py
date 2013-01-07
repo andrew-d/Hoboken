@@ -258,4 +258,3 @@ class WSGIUserAgentMixin(object):
             return None
 
         return parser.parse_all(val)
-

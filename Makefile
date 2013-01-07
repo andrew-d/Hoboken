@@ -21,6 +21,9 @@ bench:
 		[ $$(basename "$$f") != 'bench.py' ] && $(INTERPRETER) $$f; \
 	done
 
+pep8:
+	pep8 --exclude packages,oproperty,six.py,tests --ignore E221 hoboken
+
 get_version:
 	@git tag | tail -n 1
 

@@ -16,6 +16,7 @@ class BaseRequest(with_metaclass(ABCMeta)):
     @abstractproperty
     def url(self):
         raise NotImplementedError()
+
     @abstractproperty
     def path(self):
         raise NotImplementedError()
@@ -30,14 +31,15 @@ class BaseRequest(with_metaclass(ABCMeta)):
     @abstractproperty
     def script_name(self):
         raise NotImplementedError()
+
     @abstractproperty
     def path_info(self):
         raise NotImplementedError()
 
-
     @abstractproperty
     def host(self):
         raise NotImplementedError()
+
     @abstractproperty
     def port(self):
         raise NotImplementedError()
@@ -57,7 +59,6 @@ class BaseRequest(with_metaclass(ABCMeta)):
     @abstractproperty
     def input_stream(self):
         raise NotImplementedError()
-
 
     # TODO: do these belong here?
     @property
@@ -80,7 +81,6 @@ class BaseRequest(with_metaclass(ABCMeta)):
     def is_secure(self):
         """Returns true if the request is made using HTTPS."""
         return self.scheme == b'https'
-
 
 
 class BaseResponse(with_metaclass(ABCMeta)):
@@ -137,5 +137,3 @@ class BaseResponse(with_metaclass(ABCMeta)):
     @property
     def is_not_found(self):
         return self.status_int == 404
-
-

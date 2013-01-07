@@ -99,8 +99,8 @@ class ConfigDict(dict):
         def from_yaml(self, file, silent=False, **kwargs):
             """
             Populates this dictionary with values from a JSON config file.  The
-            behavior of this function, with regards to loading keys, is identical
-            to the from_dict() function.
+            behavior of this function, with regards to loading keys, is
+            identical to the from_dict() function.
 
             All kwargs to this function are passed to json.load().
             """
@@ -180,4 +180,3 @@ class ConfigDict(dict):
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, dict.__repr__(self))
-

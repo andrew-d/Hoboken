@@ -1,6 +1,7 @@
 import imp
 import sys
 
+
 class ImportRedirector(object):
     def __init__(self, base_name, replace_pattern, builtins=None):
         self.base_name = base_name
@@ -11,7 +12,8 @@ class ImportRedirector(object):
         self.import_func = __import__
 
         # Create a module.
-        self.module = sys.modules.setdefault(base_name, imp.new_module(base_name))
+        self.module = sys.modules.setdefault(base_name,
+                                             imp.new_module(base_name))
         self.module.__dict__.update({
             '__file__': __file__,
             '__path__': [],
@@ -69,4 +71,3 @@ class ImportRedirector(object):
         setattr(self.module, modname, module)
         module.__loader__ = self
         return module
-

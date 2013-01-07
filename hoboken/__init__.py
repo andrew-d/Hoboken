@@ -2,8 +2,8 @@ from __future__ import absolute_import
 import sys
 
 # This is the canonical package information.
-__author__  = 'Andrew Dunham'
-__license__ = 'Apache'
+__author__    = 'Andrew Dunham'
+__license__   = 'Apache'
 __copyright__ = "Copyright (c) 2012, Andrew Dunham"
 
 # We get the version from a sub-file that can be automatically generated.
@@ -19,7 +19,7 @@ del NullHandler, logging
 
 # Imports we import into the namespace.
 from hoboken.application import HobokenBaseApplication, condition, halt, \
-        pass_route
+    pass_route
 
 # Submodules we pull in here.
 from . import matchers
@@ -27,6 +27,7 @@ from . import exceptions
 
 # Grab mixins.
 from hoboken.helpers import *
+
 
 # Build our actual application.
 class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin,
@@ -37,4 +38,5 @@ class HobokenApplication(HobokenBaseApplication, HobokenCachingMixin,
 # This will first try and import a module from 'hoboken.builtin_ext.whatever',
 # and, if that isn't found, from 'hoboken_whatever'.
 from hoboken.exthook import ImportRedirector
-ext = ImportRedirector('hoboken.ext', 'hoboken_%s', builtins='hoboken.builtin_ext').module
+ext = ImportRedirector('hoboken.ext', 'hoboken_%s',
+                       builtins='hoboken.builtin_ext').module

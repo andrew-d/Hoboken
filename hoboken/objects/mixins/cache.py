@@ -24,7 +24,7 @@ class _boolean_property(object):
     def __set__(self, obj, val):
         if not isinstance(val, bool):
             logger.error("Tried to set boolean property to: %r", val)
-            raise ValueError("Must set boolean property {0} to True or" \
+            raise ValueError("Must set boolean property {0} to True or"
                              " False".format(self.name))
         obj.set_property(self.name, val)
 
@@ -52,8 +52,8 @@ class CacheObject(object):
         br'([a-zA-Z][a-zA-Z_-]*)'   # The directive name
         br'\s*'                     # Any amount of whitespace
         br'(?:='                    # Equals sign
-            br'(?:"([^"]*)"|'       # Either a quoted string...
-            br'([^ \t",;]*))'       # ... or a non-quoted string.
+        br'(?:"([^"]*)"|'           # Either a quoted string...
+        br'([^ \t",;]*))'           # ... or a non-quoted string.
         br')?'                      # Value is optional
     )
 
@@ -225,6 +225,7 @@ class WSGIRequestCacheMixin(object):
         cache_object = FullRequestCacheObject.parse(self, header_val)
         return cache_object
 
+
 class WSGIResponseCacheMixin(object):
     def __init__(self, *args, **kwargs):
         super(WSGIResponseCacheMixin, self).__init__(*args, **kwargs)
@@ -259,4 +260,3 @@ class WSGIResponseOtherCachesMixin(object):
 
 # TODO:
 #   - The 'Vary' HTTP header
-

@@ -69,5 +69,3 @@ status_generic_reasons = {
     4: 'Unknown Client Error',
     5: 'Unknown Server Error',
 }
-
-

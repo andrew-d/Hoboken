@@ -2,6 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 from collections import MutableMapping
 from hoboken.six import PY3, iterkeys, iteritems
 
+
 class WSGIHeaders(MutableMapping):
     def __init__(self, environ):
         self.environ = environ
@@ -42,5 +43,3 @@ class WSGIHeaders(MutableMapping):
 
     def to_list(self):
         return list(iteritems(self))
-
-

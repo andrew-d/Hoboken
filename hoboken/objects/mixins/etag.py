@@ -69,11 +69,12 @@ class WSGIRequestEtagMixin(object):
         if matches:
             if strong_only:
                 return tuple(
-                    tag.replace(b'\\"', b'"') for weak, tag in matches \
+                    tag.replace(b'\\"', b'"') for weak, tag in matches
                     if not weak
                 )
             else:
-                return tuple(tag.replace(b'\\"', b'"') for weak, tag in matches)
+                return tuple(tag.replace(b'\\"', b'"') for weak, tag in
+                             matches)
 
         # No matches.  We just return the value, unmodified.
         return (value,)
@@ -150,4 +151,3 @@ class WSGIResponseEtagMixin(object):
                 new_val = b'W/"' + val.replace(b'"', b'\\"') + b'"'
 
         self.headers['Etag'] = new_val
-

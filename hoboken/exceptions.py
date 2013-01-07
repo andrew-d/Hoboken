@@ -18,7 +18,8 @@ class InvalidMatchTypeException(HobokenException):
 
 class RouteExistsException(HobokenException):
     """
-    Exception raised when trying to set multiple route decorators on a function.
+    Exception raised when trying to set multiple route decorators on a
+    function.
     """
     pass
 
@@ -47,4 +48,3 @@ class HaltRoutingException(HobokenUserException):
         self.body = body
         self.headers = headers
         super(HaltRoutingException, self).__init__()
-

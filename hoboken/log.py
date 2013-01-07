@@ -25,6 +25,7 @@ else:                                           # pragma: no cover
 
 Logger = logging.getLoggerClass()
 
+
 class DebugLogger(Logger):
     app = None
 
@@ -52,4 +53,3 @@ class InjectingFilter(logging.Filter):
             record.response = response
 
         return True
-

@@ -10,9 +10,11 @@ from hoboken.application import HobokenBaseApplication
 from hoboken.helpers import *
 
 
-class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, HobokenRedirectMixin):
+class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin,
+                             HobokenRedirectMixin):
     """
-    This application class will convert returned values into JSON, properly escaping them.
+    This application class will convert returned values into JSON, properly
+    escaping them.
     """
     def __init__(self, *args, **kwargs):
         super(HobokenJsonApplication, self).__init__(*args, **kwargs)
@@ -33,7 +35,8 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
                 return
 
         # Dump the value.
-        dumped_value = json.dumps(value, indent=self.config['JSON_INDENT']) + "\n"
+        dumped_value = json.dumps(value,
+                                  indent=self.config['JSON_INDENT']) + "\n"
 
         # Escape if specified.
         if self.config['JSON_ESCAPE']:
@@ -68,4 +71,3 @@ class HobokenJsonApplication(HobokenBaseApplication, HobokenCachingMixin, Hoboke
                 paragraph_sep, paragraph_sep_escape)
         else:
             return re.sub(br"[&<>]", encoder, string)
-

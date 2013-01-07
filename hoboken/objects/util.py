@@ -8,6 +8,7 @@ __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
            'BytesIteratorFile'
            ]
 
+
 class MissingObject(object):
     def __repr__(self):
         return "<missing>"
@@ -22,18 +23,22 @@ def _environ_prop(key, default=missing, doc=''):
     if default is missing:
         def getter(self):
             return self._from_wsgi_str(self.environ[key])
+
         def setter(self, value):
             self.environ[key] = self._to_wsgi_str(value)
+
         deleter = None
     else:
         def getter(self):
             val = self.environ.get(key, default)
             return self._from_wsgi_str(val)
+
         def setter(self, value):
             if value is None:
                 self.environ.pop(key, None)
             else:
                 self.environ[key] = self._to_wsgi_str(value)
+
         def deleter(self):
             del self.environ[key]
 
@@ -47,10 +52,12 @@ def _environ_converter(prop, parser, serializer):
 
     def getter(self):
         return parser(pgetter(self))
+
     def setter(self, value):
         if value is not None:
             value = serializer(value)
         psetter(self, value)
+
     return property(getter, setter, prop.fdel, prop.__doc__ or '')
 
 
@@ -125,4 +132,3 @@ class BytesIteratorFile(RawIOBase):
         # Reset cache, return value.
         self.__cache = cache
         return bstr
-

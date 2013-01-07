@@ -33,7 +33,8 @@ class AbstractMatcher(object):
         return (False, _, _), where the underscores are any value.
         """
         logger.error("match() was called on AbstractMatcher")
-        raise NotImplementedError("match() is not implemented in the base class")
+        raise NotImplementedError("The match() function is not implemented in "
+                                  "the AbstractMatcher base class")
 
     def reverse(self, args, kwargs):        # pragma: no cover
         """
@@ -44,7 +45,8 @@ class AbstractMatcher(object):
         parameters were invalid).
         """
         logger.error("reverse() was called on AbstractMatcher")
-        raise NotImplementedError("reverse() is not implemented in the base class")
+        raise NotImplementedError("The reverse() function is not implemented "
+                                  "in the AbstractMatcher base class")
 
     def __repr__(self):
         return "AbstractMatcher()"
@@ -75,7 +77,10 @@ class BasicMatcher(AbstractMatcher):
         return self.path
 
     def __repr__(self):
-        return "BasicMatcher(path={0!s}, case_sensitive={1}".format(self.path, self.case_sensitive)
+        return "BasicMatcher(path={0!s}, case_sensitive={1}".format(
+            self.path,
+            self.case_sensitive
+        )
 
 
 class RegexMatcher(AbstractMatcher):
@@ -113,7 +118,7 @@ class RegexMatcher(AbstractMatcher):
             # Merge in the captures.
             for t, k, v in zip(self.key_types, self.key_names, matches):
                 # Depending on the type, either add to urlargs or urlparams.
-                if t == True:
+                if t is True:
                     if k is not None:
                         kwargs[k] = v
                 else:
@@ -133,7 +138,8 @@ class RegexMatcher(AbstractMatcher):
 
     def __repr__(self):
         return "RegexMatcher(regex={0!r}, key_types={1!r}, " \
-               "key_names={2!r})".format(self.re.pattern, self.key_types, self.key_names)
+               "key_names={2!r})".format(self.re.pattern, self.key_types,
+                                         self.key_names)
 
 
 class HobokenRouteMatcher(AbstractMatcher):
@@ -218,7 +224,8 @@ class HobokenRouteMatcher(AbstractMatcher):
             ignore = b""
             num_groups = 0
 
-        # This function escapes a character with regex encoding and url-encoding.
+        # This function escapes a character with regex encoding and
+        # url-encoding.
         def escaped(c):
             return [re.escape(x) for x in [c, self._url_encode_char(c)]]
 
@@ -241,7 +248,8 @@ class HobokenRouteMatcher(AbstractMatcher):
 
             return char
 
-        # This function will convert a matched character into the proper encoding.
+        # This function will convert a matched character into the proper
+        # encoding.
         def encode_character(match):
             char = match.group(0)
             if char == b'.' or char == b'@':
@@ -262,7 +270,10 @@ class HobokenRouteMatcher(AbstractMatcher):
                 self.group_names[group_num] = None
                 return br"(.*?)"
             else:
-                self.group_names[group_num] = match.group(0)[1:].decode('ascii')
+                # Grab everything after the ':'
+                name = match.group(0)[1:]
+                self.group_names[group_num] = name.decode('ascii')
+
                 return br"([^" + Store.ignore + br"/?#]+)"
 
         # Before we do anything else, we ensure that the input route is a byte
@@ -316,4 +327,3 @@ class HobokenRouteMatcher(AbstractMatcher):
 
     def __repr__(self):
         return "%s(route=%r)" % (self.__class__.__name__, self.original_route)
-

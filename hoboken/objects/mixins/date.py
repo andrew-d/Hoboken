@@ -24,11 +24,13 @@ logger = logging.getLogger(__name__)
 def date_header_property(header, read_only=False, doc=''):
     def getter(self):
         return self._parse_date(self.headers.get(header))
+
     def setter(self, value):
         if value is None:
             self.headers.pop(header, None)
         else:
             self.headers[header] = self._serialize_date(value)
+
     def deleter(self):
         self.headers.pop(header, None)
 
@@ -122,4 +124,3 @@ class WSGIRequestDateMixin(WSGIDateMixin):
 
     if_modified_since = date_header_property('If-Modified-Since')
     if_unmodified_since = date_header_property('If-Unmodified-Since')
-

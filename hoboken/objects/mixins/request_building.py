@@ -125,4 +125,3 @@ class WSGIRequestBuilderMixin(object):
         resp.headers = list(headers)
         resp.response_iter = app_iter
         return resp
-

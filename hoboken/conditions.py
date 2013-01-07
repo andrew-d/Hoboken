@@ -117,4 +117,3 @@ def accepts(mimetypes):
         return False
 
     return accepts_func
-

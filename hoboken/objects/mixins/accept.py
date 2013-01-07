@@ -104,6 +104,7 @@ class MIMEAccept(AcceptList):
 
 class LanguageAccept(AcceptList):
     _locale_re = re.compile(br'[_-]')
+
     def _match(self, value, item):
         def _normalize(language):
             return self._locale_re.split(language.lower())
@@ -170,4 +171,3 @@ class WSGIAcceptMixin(object):
             b'text/html' in self.accept_mimetypes or
             self.accepts_xhtml
         )
-

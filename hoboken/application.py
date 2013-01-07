@@ -162,7 +162,8 @@ class HobokenMetaclass(type):
             attrs[method.lower()] = new_func
 
         # Call the base's __new__ now with our modified attributes.
-        return super(HobokenMetaclass, klass).__new__(klass, name, bases, attrs)
+        return super(HobokenMetaclass, klass).__new__(klass, name, bases,
+                                                      attrs)
 
 
 def is_route(func):
@@ -398,7 +399,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # If no code, we send a 303 if it's supported and we aren't already
             # using GET.
             if (self.request.http_version == b'HTTP/1.1' and
-                self.request.method != 'GET'):
+                    self.request.method != 'GET'):
                 code = 303
             else:
                 code = 302
@@ -406,7 +407,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # Ensure we have the 'headers' dict.
         headers = headers or {}
 
-        # Set the 'location' argument, which in turn sets the 'Location' header.
+        # Set the 'location' argument, which sets the 'Location' header.
         headers['Location'] = location
 
         # Halt routing with these parameters.
@@ -707,4 +708,3 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             self.name,
             self.config['DEBUG']
         )
-

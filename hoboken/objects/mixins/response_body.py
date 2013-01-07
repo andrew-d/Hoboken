@@ -62,7 +62,6 @@ class IteratorFile(object):
         return return_val
 
 
-
 @property_overriding
 class ResponseBodyMixin(object):
     def __init__(self, *args, **kwargs):
@@ -124,4 +123,3 @@ class ResponseBodyMixin(object):
             raise ValueError(msg)
 
         self.response_iter = [val.encode(self.charset)]
-

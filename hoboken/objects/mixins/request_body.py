@@ -90,7 +90,9 @@ else:                           # pragma: no cover
 SPECIAL_CHARS = re.escape(b'()<>@,;:\\"/[]?={} \t')
 QUOTED_STR = br'"(?:\\.|[^"])*"'
 VALUE_STR = br'(?:[^' + SPECIAL_CHARS + br']+|' + QUOTED_STR + br')'
-OPTION_RE_STR = br'(?:;|^)\s*([^' + SPECIAL_CHARS + br']+)\s*=\s*(' + VALUE_STR + br')'
+OPTION_RE_STR = (
+    br'(?:;|^)\s*([^' + SPECIAL_CHARS + br']+)\s*=\s*(' + VALUE_STR + br')'
+)
 OPTION_RE = re.compile(OPTION_RE_STR)
 
 
@@ -359,7 +361,8 @@ class File(object):
 
         # If the bytes written isn't the same as the length, just return.
         if bwritten != len(data):
-            logger.warn("bwritten != len(data) (%d != %d)", bwritten, len(data))
+            logger.warn("bwritten != len(data) (%d != %d)", bwritten,
+                        len(data))
             return bwritten
 
         # Keep track of how many bytes we've written.
@@ -367,8 +370,9 @@ class File(object):
 
         # If we're in-memory and are over our limit, we create a file.
         if (self._in_memory and
-            self._config.get('MAX_MEMORY_FILE_SIZE') is not None and
-            self._bytes_written > self._config.get('MAX_MEMORY_FILE_SIZE')):
+                self._config.get('MAX_MEMORY_FILE_SIZE') is not None and
+                (self._bytes_written >
+                 self._config.get('MAX_MEMORY_FILE_SIZE'))):
             logger.info("Flushing to disk")
             self.flush_to_disk()
 
@@ -505,7 +509,8 @@ class QuerystringParser(BaseParser):
                 # Skip leading seperators.
                 # TODO: skip multiple ampersand chunks? e.g. "foo=bar&&&a=b"?
                 if ch == AMPERSAND or ch == SEMICOLON:
-                    logger.debug("Skipping leading ampersand/semicolon at %d", i)
+                    logger.debug("Skipping leading ampersand/semicolon at %d",
+                                 i)
                     pass
                 else:
                     # Emit a field-start event, and go to that state.
@@ -557,7 +562,7 @@ class QuerystringParser(BaseParser):
                     self.callback('field_data', data, i, len(data))
                     i = len(data)
 
-            else:                   # pragma: no cover (since this is an error case)
+            else:                   # pragma: no cover (error case)
                 logger.warn("Reached an unknown state %d at %d", state, i)
                 return i
 
@@ -694,14 +699,16 @@ class MultipartParser(BaseParser):
                 if index == len(boundary) - 2:
                     if c != CR:
                         # Error!
-                        logger.warn("Did not find CR at end of boundary (%d)", i)
+                        logger.warn("Did not find CR at end of boundary (%d)",
+                                    i)
                         return i
 
                     index += 1
 
                 elif index == len(boundary) - 2 + 1:
                     if c != LF:
-                        logger.warn("Did not find LF at end of boundary (%d)", i)
+                        logger.warn("Did not find LF at end of boundary (%d)",
+                                    i)
                         return i
 
                     # The index is now used for indexing into our boundary.
@@ -718,7 +725,8 @@ class MultipartParser(BaseParser):
                     if c != boundary[index + 2]:
                         # print('start_boundary: expected %r, found %r' % (c,
                         #        boundary[index + 2]))
-                        logger.warn("Did not find boundary character %r at index %d", c, index + 2)
+                        logger.warn("Did not find boundary character %r at "
+                                    "index %d", c, index + 2)
                         return i
 
                     # Increment index into boundary and continue.
@@ -767,11 +775,12 @@ class MultipartParser(BaseParser):
                     state = STATE_HEADER_VALUE_START
 
                 else:
-                    # Lower-case this character, and ensure that it is in fact a
-                    # valid letter.  If not, it's an error.
+                    # Lower-case this character, and ensure that it is in fact
+                    # a valid letter.  If not, it's an error.
                     cl = lower_char(c)
                     if cl < LOWER_A or cl > LOWER_Z:
-                        logger.warn("Found non-alphanumeric character %r in header at %d", c, i)
+                        logger.warn("Found non-alphanumeric character %r in "
+                                    "header at %d", c, i)
                         return i
 
             elif state == STATE_HEADER_VALUE_START:
@@ -798,7 +807,8 @@ class MultipartParser(BaseParser):
             elif state == STATE_HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    logger.warn("Did not find LF character at end of header (found %r)", c)
+                    logger.warn("Did not find LF character at end of header "
+                                "(found %r)", c)
                     return i
 
                 # Move back to the start of another header.  Note that if that
@@ -811,7 +821,8 @@ class MultipartParser(BaseParser):
                 # a CR at the beginning of a header, so our next character
                 # should be a LF, or it's an error.
                 if c != LF:
-                    logger.warn("Did not find LF at end of headers (found %r)", c)
+                    logger.warn("Did not find LF at end of headers (found %r)",
+                                c)
                     return i
 
                 self.callback('headers_finished')
@@ -964,7 +975,7 @@ class MultipartParser(BaseParser):
                 logger.warn("Consuming a byte in the end state")
                 pass
 
-            else:                   # pragma: no cover (since this is an error case)
+            else:                   # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
                 logger.warn("Reached an unknown state %d at %d", state, i)
                 return i
@@ -1157,6 +1168,7 @@ class FormParser(object):
               content_type == b'application/x-url-encoded'):
 
             name_buffer = []
+
             class vars(object):
                 f = None
 
@@ -1193,9 +1205,9 @@ class FormParser(object):
 
             # Instantiate parser.
             parser = QuerystringParser(
-                        callbacks=callbacks,
-                        max_size=self.config['MAX_FIELD_SIZE']
-                     )
+                callbacks=callbacks,
+                max_size=self.config['MAX_FIELD_SIZE']
+            )
 
         elif content_type == b'multipart/form-data':
             if boundary is None:
@@ -1262,11 +1274,12 @@ class FormParser(object):
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b'Content-Transfer-Encoding', b'7bit')
+                transfer_encoding = headers.get(b'Content-Transfer-Encoding',
+                                                b'7bit')
 
                 if (transfer_encoding == b'binary' or
-                    transfer_encoding == b'8bit' or
-                    transfer_encoding == b'7bit'):
+                        transfer_encoding == b'8bit' or
+                        transfer_encoding == b'7bit'):
                     vars.writer = vars.f
 
                 elif transfer_encoding == b'base64':
@@ -1279,7 +1292,7 @@ class FormParser(object):
                     # TODO: do we really want to raise an exception here?  Or
                     # should we just continue parsing?
                     logger.warn("Unknown Content-Transfer-Encoding: %r",
-                                 transfer_encoding)
+                                transfer_encoding)
                     raise FormParserError(
                         'Unknown Content-Transfer-Encoding "{0}"'.format(
                             transfer_encoding
@@ -1423,4 +1436,3 @@ class RequestBodyMixin(object):
     @property
     def files(self):
         return self.__files
-
