@@ -1,267 +1,35 @@
-TODO list - a centralized list of stuff I'd like to do
-(in roughly priority order, *-marked means done)
+New Todo
 ===========================================================
-
- - Configuration support
-    - Do we do it with a standard python-style "lots of kwargs", or something else?
-    - I like the 'something else' option, since we can then do stuff like getting config from a Python file, a config file, or a user-provided dict() - which might just be dict(foo=bar) in the standard kwargs style.
-    - Should actually provide options for configuring from, at least, a config file (ini-style/other?) and from a dict.  From a python module/file is also handy.
-    - Config options:
-        * debug
-        * template directory
-    - Future config options:
-        - static directory - so we can serve statics
-        - default charset/encoding?
-        - lock to serialize all requests, if an app is non-thread-safe
-        - More?
- * Move helper functions to sub-module
-    * Move these to the application
-        * Mixins are a good choice here, I think.
-            * One for caching - CachingMixin
-            * One for redirection - RedirectionMixin
-            * etc.
-            * Means that we can unit-test each mixin seperately
-    * Add functions that check etag, last modified date, and then halt() with Not Modified if they match
-        * Tests for these!
-    * Helpers for other stuff?
-        * expires(some time value)
-        * cache_control(various params, e.g. public=True/False, max_age=60, must_revalidate=True/False)
-    * Look in to if-match and if-none-match headers to see how we handle them
-    * redirect_back helper that is a wrapper around redirect() and the referrer?
- * URL generation that properly handles different mountpoints
-    * As part of this, it might be worth making a Route() class that encapsulates the concept of a method, conditions, the route itself, and a matcher.  This could be helpful, because said Route() object could also handle reversing a route - i.e. getting a URL for a given route, given some parameters.
-    * Might be worth integrating this into the Matcher concept.  For example, we could have a matcher that has the concept of:
-        * path (i.e. the input path)
-        * match(test_path) should return True, args, kwargs if match, or False, None, None otherwise.  these args/kwargs are then passed to the underlying route function
-        * finally, the matcher can have a reverse(args, kwargs) function that will use those parameters to return a given path
-        * default matcher should be HobokenPathMatcher, which uses the standard splat (*)/param (:param) matching style.  move the logic out of the Hoboken class.
-    * TODO: tests for this
- * Integrate with Shift
- - Integrate with itsdangerous to provide secure cookie support
- - Session support - should allow hooking into this, so we can use e.g. beaker, or something like dogpile, just a cookie, etc
- * Test URL params/args in before()/after()/condition functions
- * Tests for the various helper functions and underlying exceptions
- * Allow arbitrary parameters to be passed to HaltRoutingException
- * Implement redirect() in a sensible manner
- - Testing support
-    - Use inspect() to verify function parameters, if we go with func(*args, **kwargs) for route functions
-    - Helpful web test cases
-        - Stuff like assert_has_header, assert_body_is, etc.
-        - Other stuff?
- - More logging
- * Automation (e.g. bump version, test, deploy, etc. - as a Fabfile?)
- - Upload to PyPI
-   - Fix author/author_email
-   * MANIFEST.in
-   * README.txt^H^H^H^H.md
- - sendfile() support of some kind (checkout wsgi.file_wrapper in PEP 333[3], also X-Sendfile)
+ - Configuration stuff:
+    - Lock to serialize all requests (in case app is not thread-safe)
+    - Charset/encoding stuff
+    - Static / template directories.
+ - Cookie support
+    - In HTTP objects, cookie parsing
+    - In Hoboken, use itsdangerous to do secure cookies
+ - Static file support
+ - Testing helpers:
+    - Should have useful things like:
+        - assert_has_header
+        - assert_body
+        - etc.
+    - Should work with no external dependencies.
+    - Maybe use inspect module to verify function signatures.
+ - sendfile() support
+ - Proxy objects
+    - Something like `from hoboken.proxies import request, response`, which are
+      then actually bound to the current application's request.  Needs to be
+      [green]thread-safe, should support nested applications.
+      Will be useful to save typing.
  - Examples
-   - Middleware examples (e.g. security, stuff like that?)
-   - File upload example
-   - Simple hello-world
-   - Larger app (todo list like everyone else?)
- - Integration examples
-   - Some sort of DB (SqlAlchemy?)
- - Plugin architecture
-   - Should have some sort of form validation, e.g. WTForms
- - Possibilities:
-   - WSGI adapters like Bottle, so we can call run(server='foo')
-   - Proxy objects that we can import, so we can "from hoboken.proxy import request", which will be transparently bound to "app.request" - will save on typing
-   - MAYBE standardize on a single template engine?  Shift is handy, but perhaps not worth the complexity
-   - Some sort of asset pipeline would be nice
+ - Documentation (inline, with Sphinx)
+ - Maybe:
+    - Session support, with pluggable session handlers
+        - Maybe make an extension
+        - Test with Beaker / Dogpile
+    - Asset pipeline
+    - WSGI adapters, similar to Bottle, so we can do `run(server='foo')`
+    - Look into handling range requests.  Maybe make it that one can return
+      an object that supports slicing `foo[10:20]`, and then a helper function
+      that will only send the correct range.
 
-Longer-Term TODOs
-===========================================================
-
- - File uploads are currently non-ideal
- - Look into switching to Werkzeug's request/response objects.
-   - Upsides:
-     - I like the immutability of the Request
-     - Seems more generally-exensible
-     - send_file support is handy
-     - File uploading is generally better
-   - Downsides / things that bother me:
-     - No Python3 support, pretty much a dealbreaker
-     - str(request) doesn't return the HTTP-ified version.  WebOb does this, which is really handy
- - Might be worth making my own request/response objects that wrap the underlying bits?
-   - I.e. make a req/resp object that provides the "basic" information as properties, and delegates to the underlying implementation to actually do the parsing, and so on.  This would make the actual request/response objects relatively framework-independent.
-   - Downside: will be slower due to the indirection, not convinced this is 100% the correct thing to do.
-
-Planning
-===========================================================
-The current method for request handlers involve passing around Request and Response objects manually, like this:
-
-@app.get("/path")
-def request_handler(request, response):
-    # Do stuff
-    pass
-
-There are some alternative options:
-
-1. Do something like Flask, with an import from the module that refers to the current request.
-    - This is probably not a good idea, since we can have multiple apps running in the same process, and this would collide.
-   This would look like this:
-
-from hoboken import request, response
-
-@app.get("/path")
-def request_handler():
-    # Do stuff with request and response.
-    pass
-
-2. We could assume that each application only processes one request at a time, and make the request and response object a property of the current application.
-    - Combine this with threadlocals so we can have multiple threads processing on the same applications.
-   This would look like this:
-
-@app.get("/path")
-def request_handler():
-    # Do stuff with app.request and app.response.
-    pass
-
-   I like this best.  Another reason it's nice: the various halt() / redirect() / whatever functions don't need to take an explicit `req` or `resp` parameter, but instead can be methods on the application.  i.e. instead of writing:
-
-@app.get("/")
-def idx(req, resp):
-    redirect(req, "/otherpath")
-
-   You can instead write something more like this:
-
-@app.get("/")
-def idx():
-    app.redirect("/otherpath")
-
-   And the redirect() method will grab the request object from the application object, and use that to redirect to the new location.  Similarly for stuff that, e.g. checks the etag, or cache-control, or anything else that works on both request and response (because check_etag(request, response, etag) is so much more ugly than app.check_etag(etag).
-
-
-Other Considerations
-====================
-We could allow the parameters to be passed to the functions themselves.  Splat parameters as *args, other params as **kwargs
-
-@app.get("/*/:param/*")
-def request_handler(first_splat, second_splat, param=None):
-    pass
-
-vs.
-
-@app.get("/*/:param/*")
-def request_handler():
-    splats = app.request.urlargs
-    param = app.request.urlvars['param']
-
-
-New Request / Response Ideas
-============================
-
- - BaseRequest class that defines the interface that all request objects must conform to
- - WSGIRequest subclass that will fill out the request given a WSGI environ
- - Mixins to add additional functionality
- - In the short term, maybe just have BaseRequest/mixins, and ignore the non-WSGI case for now?
-
-TODO:
- - Read-only, read-but-not-modify-underlying, or read-write request objects?
- - Should be able to modify request somehow
-    - Maybe make it such that the request object is read-only, but if you want to modify the request, you can just change the underlying environ?
-    - Advantages: makes the Request simple
-    - Disadvantages: makes changing harder than necessary (especially headers or anything that requires advanced parsing (e.g. changing the etag that's incoming)).
-    - I like this for now - can always make a read-write version later.
- - Place logic in WSGIRequest, or in BaseRequest class?  Both?
- - Compute everything in __init__, on demand, or Werkzeug-like "once but cache"?
- - What about properties that are dependent on other properties?
- - Some properties might be read-only?
- - We need to be able to turn a Request into an 'environ', so that when we're middleware, we can modify the request and pass the changes through.
-
-Another thought:
- - Base WSGI request that just exposes the various environ variables through properties, and then another layer ontop of that that exposes stuff like full URL, etc. via @properties.  In future, can even have it such that BaseWSGIRequest is NOT a subclass of BaseRequest (i.e. since it may not implement the full API), but the full WSGIRequest is (since the various properties on that will implement the corresponding API).
-
-Unicode Thoughts
-===========================================================
-As I do more with WSGI (including work on custom request objects), the more I think I need a comprehensive plan for handling Unicode data across Python 2/3.  Some thoughts:
-
- - Notes:
-   - Input environ entries are str on both Python 2 and Python 3 (according to my testing, anyway)
-   - Python3: environ entries should be strings that contain only latin-1 codepoints
-   - Python3: the body should be a sequence of bytes
-
- - Encoding ideas
-   - For routes, we encode text-types (unicde/str on Py2/3) as utf-8 first, and then run through the standard escaping process.
-   - Return values, if binary type, are set as the body.  If text-type, encoded using the app's default encoding (utf-8) and then set as the body.
-   - Headers:
-     - Python2
-       - Getting - return everything as 'str' instances
-       - Setting - only let the user set a string?  we could default-encode unicode instances...
-     - Python3
-       - Getting - headers seem to be passed in environ() as a str
-       - Setting - set as a 'str' instance (but verify?), or, if given bytes, set as bytes.decode('latin-1')
-   - Return headers the same as above
-   - Input and return bodies are both bytestrings.
-   - HTTP deals in bytes.  I'm tempted to make the internals of Hoboken all bytes, and then convert at the 'edges' - i.e., if we're given a 'str', automatically encode it as the app's internal representation
-     - Encode all the environment keys/values as bytes if they're not?
-     - Can do fun stuff with metaclasses to get a request object that returns objects in bytes, but encodes as strings
-     - Or just make explicit (i.e. instead of 'return bytes_val', 'return self.conf(bytes_val)' which will convert the bytes value to a string representation
-       - Downside: this is a lot of boilerplate
-     - Might be worth writing the API assuming 'bytes' and then writing some conversion layer on top?
-     - Other thoughts
-       - Metaclass that wraps each function
-       - Similarly, a class decorator
-       - Explicitly calling something like conv(value) a lot.
-       - ?
-   - To be pythonic, we should adhere to the 'only one, preferably obvious way to do things' rule.
-     - But it would be useful to be able to set bytes.
-
- - Some problems:
-   - Values in the environ are a binary type on Python2, but Unicode on Py3
-   - I *really* dislike how values in the environ are 'str' instance s on Py3
-   - Converting might break
-     - Could have a list of 'headers we're interested in'?
-   - Changing dynamically is irritating, since it's slower
-     - Also, if we end up creating a mixin/whatever that makes us return unicode strings, we end up doing the conversion backwards and then forwards: from the str environ --> bytes internally --> str on the user-facing side.  This is especially irritating.
-     - Maybe the mixin overrides a conversion function?
-==========
-- environ_prop calls self.text_converter to get back an arbitrary value
-- self.text_converter returns bytes by default
-- mixin can make it return string values
-- can save on property creation to avoid lookup
-- can do the same, self.text_encoder in reverse.
-- downside: the various helper functions (e.g. host, host_with_port, etc.) can't assume either bytes OR strings, and need to byte/string encode/decode all literals, which might get irritating.
-
-class FooRequest(object):
-    def _tenc(self, text):
-        if isinstance(text, text_type):
-            return text.encode(self.charset)
-        else:
-            return text
-
-    def _tdec(self, text):
-        if isinstance(text, binary_type):
-            return text.decode(self.charset)
-        else:
-            return text
-
-    ...
-
-    @property
-    def method(self):
-        return self._tenc(self.environ['REQUEST_METHOD'])
-
-    @method.setter
-    def method(self, value):
-        self.environ['REQUEST_METHOD'] = self._tdec(value)
-
-- Above is the idea (in reality, `method` would be generated by _environ_prop, or something like that) for the concept of a request/response object that handles different encodings.
-  - A mixin can override the _tenc/_tdec functions to return native `str`s instead of bytes.
-- The dictionary (environ) keys are always native `str`s, to match the WSGI spec.
-- I like Tornado's "to_wsgi_str" and "from_wsgi_str" functions, too.
-==========
-
-
-Current Plan
-============
-- All of the various properties will return values in bytes
-- Input values are set directly, if they're bytes, or converted according to self.charset and then set directly, if a string type.
-  - If on Python3, we then decode bytes as latin-1 and set.  Yes, this might lead to double-encoding if we pass a string in.
-- Headers, too, are indexed by strings, but always return values as bytes.  We support indexing headers as bytes - just decode them as latin-1 first.
-- We don't convert the strings in the original environ to bytes.
-
-
-class WSGIBaseRequest(BaseRequest):
-    pass

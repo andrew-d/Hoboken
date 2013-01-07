@@ -1344,69 +1344,6 @@ class RequestBodyMixin(object):
         self.__fields = MultiDict()
         self.__files = MultiDict()
 
-    # Things we might need:
-    #   - Upload directory (for temp files)
-    #   - Whether we should keep file extensions (default: False)
-    #   - Maximum field size (not for files, default: 2MB)
-    #   - Files:
-    #       - Maximum possible size
-    #       - Current received bytes for a file
-    #       - More???
-    #   - Tracking:
-    #       - Bytes currently received
-    #
-    # Parts:
-    #   - Mixin:
-    #       - Reads the content-length and boundary to give to the parser
-    #       - Has the option of feeding the body iterator to the parser
-    #       - Can encapsulate the parser to parse into 'form' and 'files'
-    #   - Form parser:
-    #       - Depending on the type of the underlying content-type, will pick
-    #         the correct parser (multipart, form-data, octet-stream, ???)
-    #   - Typed parser:
-    #       - Responsible for parsing a specific type of request body.
-    #   - Field:
-    #       - Container for field-name/field-value
-    #   - File:
-    #       - Container for field-name/file-name/file-data.
-    #       - File data can be stored in memory, or on disk
-    #       - Can have a size/memory limit.
-    #       - Should just be a file-like object + attributes
-    #
-    # Control flow:
-    #   - Mixin obtains content-type, content-length, and boundary, and
-    #     instantiates a form parser instance
-    #   - Form parser will, depending on the content-type, create the correct
-    #     underlying parser.
-    #   - Form parser waits for data, writes data into underlying parser.
-    #   - Underlying parser calls on_part, on_part_start, on_part_data,
-    #     on_part_end, etc. callbacks with appropriate values.
-    #   - Default callbacks are into the form parser, which will simply write
-    #     the data into our file, or save a field.
-    #   - Form parser has callbacks on_field and on_file, which are called when
-    #     we have a field/file that is finished.
-
-
-    # Total high-level:
-    #   - Form parser has callbacks for 'on_field' and 'on_file', which pass Field/File objects.
-    #   - Field/files are written to.  Can set callbacks on data, or by default we buffer a field and
-    #     write files to disk.
-    #   - Fields and files also have an on_end callback which will pass the final field or file.
-    #   - Summary:
-    #       - FormParser:
-    #           - on_field(field_object)
-    #           - on_file(file_object)
-    #           - on_end()
-    #       - Field:
-    #           - on_data(data)
-    #           - on_end()
-    #       - File:
-    #           - on_data(data)
-    #           - on_end()
-    #   - No callbacks for fields/files, but offer a parameter that lets us pass our own obj-type?
-    #
-    # Low-level: can instantiate the parser directly and consume output.
-
     # TODO: do we make this a property?
     def form_parser(self, on_field, on_file):
         # Before we do anything else, we need to parse our Content-Type and
