@@ -197,6 +197,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     DEFAULT_CONFIG = {
         'DEBUG': False,
         'ROOT_DIRECTORY': None,
+        'SERIALIZE_REQUESTS': False,
     }
 
     # The application's debug setting.
@@ -251,6 +252,12 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         self._locals.request = None
         self._locals.response = None
         self._locals.vars = SimpleNamespace()
+
+        # Create a lock which we might use to serialize requests.  Originally,
+        # this was only created if the appropriate config value was set, but
+        # this caused problems if the config value was then set after the
+        # application was created.
+        self.lock = threading.Lock()
 
         # Call other __init__ functions - this is needed for mixins to work.
         super(HobokenBaseApplication, self).__init__()
@@ -483,7 +490,18 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             raise ValueError("Unknown return type: {0!r}".format(type(value)))
 
     def wsgi_entrypoint(self, environ, start_response):
+        # Flag stating whether we've acquired our lock.  Defaults to False,
+        # since we (by default) do not serialize requests.
+        locked = False
+
         try:
+            if self.config['SERIALIZE_REQUESTS']:
+                # Acquire, then set our flag.  Note that order matters here,
+                # since we only want to set the 'locked' flag when it is safe
+                # to unlock (see below for more notes).
+                self.lock.acquire()
+                locked = True
+
             # Create our request object.
             self.request = Request(environ)
 
@@ -499,6 +517,12 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # Finally, given our response, we finish the WSGI request.
             return self.response(environ, start_response)
         finally:
+            # Note that we don't automatically release, since there might be
+            # an error with accessing self.config, above, and so we might not
+            # have acquired the lock.
+            if locked:
+                self.lock.release()
+
             # After each request, we remove the request and response objects.
             del self.request
             del self.response

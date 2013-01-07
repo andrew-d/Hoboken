@@ -9,8 +9,9 @@ from ..exceptions import *
 import os
 import re
 import sys
-from hoboken.tests.compat import slow_test, unittest
+import time
 import threading
+from hoboken.tests.compat import slow_test, unittest
 import mock
 from hoboken.application import Request, ConfigProperty
 from hoboken.six import PY3
@@ -380,6 +381,26 @@ class TestMiscellaneousMethods(HobokenTestCase):
         with self.assertRaises(ValueError):
             self.app.on_returned_body(req, resp, value)
 
+    def test_with_request_lock(self):
+        self.app.config['SERIALIZE_REQUESTS'] = True
+
+        @self.app.get('/')
+        def idx():
+            return b'foo'
+
+        @self.app.get('/errors')
+        def err():
+            raise RuntimeError('foobar')
+
+        r = Request.build('/')
+        e = r.get_response(self.app)
+        self.assertEqual(e.status_int, 200)
+
+        r = Request.build('/errors')
+        e = r.get_response(self.app)
+        self.assertEqual(e.status_int, 500)
+
+
 class TestConfig(HobokenTestCase):
     def test_can_get_set_values(self):
         self.app.config['FOO'] = 'asdf'
@@ -459,17 +480,35 @@ class TestConsistency(unittest.TestCase):
             val = self.increment()
             return str(val)
 
-        # Thread parameters and values.
-        num_requests = 1000
-        num_threads = 10
+        self._run_test(app)
 
+    @slow_test
+    def test_threading_with_request_lock(self):
+        app = HobokenApplication(__name__)
+        app.config['SERIALIZE_REQUESTS'] = True
+
+        @app.get("/num")
+        def get_num():
+            # This is deliberately not thread-safe.   The time.sleep here
+            # is to force a thread context-switch, which should result in
+            # a failed result, without synchronization.
+            val = self.ctr
+            time.sleep(0.01)
+            self.ctr += 1
+            return str(val)
+
+        # Note that this test is SLOW, due to the sleeping, context-switching,
+        # and locks, so we only test with 200 requests/5 threads.
+        self._run_test(app, num_requests=200, num_threads=5)
+
+    def _run_test(self, app, num_requests=1000, num_threads=10, path='/num'):
         # Thread variables.
         responses = []
 
         # Thread target.
         def requestor_func():
             for i in range(0, num_requests // num_threads):
-                resp = Request.build("/num").get_response(app)
+                resp = Request.build(path).get_response(app)
                 responses.append(resp.body)
 
         # Start all threads
