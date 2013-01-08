@@ -656,9 +656,15 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
               be used in production.
         """
 
+        self.logger.info("Starting test server on port %d", port)
+
         from wsgiref.simple_server import make_server
         httpd = make_server('localhost', port, self)
-        httpd.serve_forever()
+
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            self.logger.info("Stopped test server due to keyboard interrupt")
 
     def __str__(self):
         """
