@@ -319,6 +319,9 @@ class MultiDict(ConvertingDict):
             else:
                 yield key, values[0]
 
+    # NOTE: We keep this here even on PY3, since six's iteritems() wrapper
+    # won't pass through kwargs, so we can't call iteritems with the multi
+    # flag in a cross-Python way.
     iteritems = items
     items = py_iter_wrapper(items)
 
