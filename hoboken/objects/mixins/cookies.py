@@ -83,14 +83,14 @@ if PY3:
 # Renaming array.  This mapping converts from a lower-case representation to
 # the traditional mixed-case formatting.  Also from the standard library.
 _rename_mapping = {
-    'expires': 'expires',
-    'path': 'Path',
-    'comment': 'Comment',
-    'domain': 'Domain',
-    'max-age': 'Max-Age',
-    'secure': 'secure',
-    'httponly': 'HttpOnly',
-    'version': 'Version',
+    b'expires': b'expires',
+    b'path': b'Path',
+    b'comment': b'Comment',
+    b'domain': b'Domain',
+    b'max-age': b'Max-Age',
+    b'secure': b'secure',
+    b'httponly': b'HttpOnly',
+    b'version': b'Version',
 }
 
 # Reserved names are the names in our rename array.
@@ -111,6 +111,10 @@ class CookieError(Exception):
 
 
 def _needs_quoting(value):
+    # Since str objects don't have the second parameter to translate on
+    # Python 3, we assert here (since it'll just crash below anyway)
+    assert isinstance(value, bytes)
+
     # string.translate will replace all characters in the string with the
     # associated character in the first translation table, and remove all
     # characters in the second argument.  We use this to remove all 'safe'

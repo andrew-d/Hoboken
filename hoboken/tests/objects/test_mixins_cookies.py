@@ -39,8 +39,8 @@ class TestQuoting(unittest.TestCase):
         from hoboken.objects.mixins.cookies import _needs_quoting
 
         # Might want to test everything, but that seems rather pointless.
-        self.assertTrue(_needs_quoting("\xff"))
-        self.assertFalse(_needs_quoting("asdf"))
+        self.assertTrue(_needs_quoting(b"\xff"))
+        self.assertFalse(_needs_quoting(b"asdf"))
 
     def test_quote(self):
         from hoboken.objects.mixins.cookies import _quote
@@ -69,6 +69,9 @@ cookie_tests = yaml.load_all(test_data)
 class TestParsing(unittest.TestCase):
     @parametrize('param', cookie_tests)
     def test_cookie_parsing(self, param):
+        if param is None:
+            return
+
         input = _e(param['input'])
 
         morsels = parse_cookie(input)
