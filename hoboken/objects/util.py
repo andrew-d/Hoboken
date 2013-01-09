@@ -4,8 +4,8 @@ from io import RawIOBase
 from hoboken.six import advance_iterator, callable
 
 __all__ = ['missing', '_environ_prop', '_environ_converter', '_int_parser',
-           '_int_serializer', 'cached_property', 'iter_close',
-           'BytesIteratorFile'
+           '_int_serializer', 'cached_property', 'caching_property',
+           'iter_close', 'BytesIteratorFile'
            ]
 
 

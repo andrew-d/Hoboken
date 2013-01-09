@@ -7,7 +7,7 @@ import logging
 from numbers import Number
 from datetime import date, datetime, timedelta
 
-from hoboken.six import text_type
+from hoboken.six import iteritems, PY3, text_type
 from hoboken.objects.util import caching_property
 
 # Get logger for this module.
@@ -33,6 +33,53 @@ COOKIE_RE = re.compile(
     br"\s*;?"                           # Probably ending in a semi-colon
 )
 
+# Regex for detecting quoted things.
+QUOTED_RE = re.compile(br'\\([0-3][0-7][0-7]|.)')
+
+# We use string.translate to quickly determine if something is valid.  These
+# tables are used for that.
+_noop_trans_table = b' ' * 256
+_safe_chars = (string.ascii_letters + string.digits + "!#$%&'*+-.^_`|~/")
+_safe_chars_bytes = _safe_chars.encode('ascii')
+
+# Escape table.  For use in quoting a string.
+_escape_table = dict((chr(i), '\\%03o' % i) for i in range(256))
+
+# Update our escape table.  In order:
+# 1. All safe characters are allowed, so we replace them with themselves.
+_escape_table.update((x, x) for x in _safe_chars)
+
+# 2. The characters ':' and ' ' can be used without escaping, too.
+_escape_table[':'] = ':'
+_escape_table[' '] = ' '
+
+# 3. The escapes for quotes and slashes are special.
+_escape_table['"'] = r'\"'
+_escape_table['\\'] = r'\\'
+
+# Finally, we might need to convert this table to operate on bytes, if we're
+# on Python 3.
+if PY3:     # pragma: no cover
+    new = {}
+    for k, v in iteritems(_escape_table):
+        new[ord(k)] = v.encode('ascii')
+
+    _escape_table = new
+
+# This map is used to unquote things.  It contains two types of entries:
+#   1. '101' --> 'A'        (octal --> single character)
+#   2. 'A'   --> 'A'        (character -> same character)
+_unquoter_table = dict(('%03o' % i, chr(i)) for i in range(256))
+_unquoter_table.update((v, v) for v in list(_unquoter_table.values()))
+
+# Convert to Python3 format if necessary
+if PY3:
+    new = {}
+    for k, v in iteritems(_unquoter_table):
+        new[k.encode('latin-1')] = v.encode('latin-1')
+
+    _unquoter_table = new
+
 # Renaming array.  This mapping converts from a lower-case representation to
 # the traditional mixed-case formatting.  Also from the standard library.
 _rename_mapping = {
@@ -56,6 +103,40 @@ months = (None, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
           'Oct', 'Nov', 'Dec')
 
 
+class CookieError(Exception):
+    """
+    An exception representing an error in cookie parsing.
+    """
+    pass
+
+
+def _needs_quoting(value):
+    # string.translate will replace all characters in the string with the
+    # associated character in the first translation table, and remove all
+    # characters in the second argument.  We use this to remove all 'safe'
+    # characters from the string, and then replace all remaining characters
+    # with spaces.  Then we can check if the string is empty - if not, then
+    # there must have been an invalid character in the original string.
+    return bool(value.translate(_noop_trans_table, _safe_chars_bytes))
+
+
+def _quote(value):
+    if _needs_quoting(value):
+        value = b'"' + b''.join(map(_escape_table.__getitem__, value)) + b'"'
+    return value
+
+
+def _unquote(value):
+    if value[:1] == value[-1:] == b'"':
+        value = value[1:-1]
+
+    return QUOTED_RE.sub(_unquoter_func, value)
+
+
+def _unquoter_func(match):
+    return _unquoter_table[match.group(1)]
+
+
 def parse_cookie(data, pattern=COOKIE_RE):
     i = 0
     n = len(data)
@@ -71,6 +152,7 @@ def parse_cookie(data, pattern=COOKIE_RE):
         # Get the name and value.
         name = match.group('name')
         value = match.group('val')
+        print("Morsel: %r / %r" % (name, value))
 
         # Move to the end of this match.
         i = match.end(0)
@@ -81,15 +163,16 @@ def parse_cookie(data, pattern=COOKIE_RE):
             if morsel:
                 morsel[name[1:]] = value
 
-        elif name.lower() in RESERVED_NAMES:
+        elif name.lower() in _reserved_names:
+            print("  Morsel in reserved, setting on previous")
             if morsel:
-                morsel[name] = value
+                morsel[name] = _unquote(value)
 
         else:
             # Try and get the morsel, and if it doesn't exist, create it.
             morsel = morsels.get(name)
             if morsel is None:
-                morsel = Morsel(name, value)
+                morsel = Morsel(name, _unquote(value))
                 morsels[name] = morsel
             else:
                 logger.warn("Overwriting cookie value for morsel named: %r "
@@ -98,13 +181,6 @@ def parse_cookie(data, pattern=COOKIE_RE):
 
     # Return our morsels.
     return morsels
-
-
-class CookieError(Exception):
-    """
-    An exception representing an error in cookie parsing.
-    """
-    pass
 
 
 def _morsel_property(key, serializer=lambda v: v):
@@ -163,12 +239,31 @@ class Morsel(object):
     max_age = _morsel_property(b'max-age', serialize_max_age)
     httponly = _morsel_property(b'httponly', bool)
     secure = _morsel_property(b'secure', bool)
+    version = _morsel_property(b'version')
 
     def __setitem__(self, key, value):
-        self.attributes[key] = value
+        self.attributes[key.lower()] = value
 
     def serialize(self, full=True):
-        pass
+        result = []
+        result.append(self.name + b'=' + _quote(self.value))
+        if full:
+            for key in ['comment', 'domain', 'max-age', 'path']:
+                val = self.attributes.get(key)
+                if val:
+                    result.append(_rename_mapping[key] + b'=' + _quote(val))
+
+            expires = self.attributes.get(b'expires')
+            if expires:
+                result.append(b'expires=' + expires)
+
+            if self.secure:
+                result.append(b'secure')
+
+            if self.httponly:
+                result.append(b'HttpOnly')
+
+        return b'; '.join(result)
 
     def __repr__(self):
         return "%s(name=%r, value=%r)" % (self.__class__.__name__, self.name,
@@ -202,5 +297,6 @@ class WSGICookiesMixin(object):
 
 # TODO:
 #   - Check for valid names
-#   - Serialization support
+#   - Serialize the entire header (for Set-Cookie, in responses)
 #   - Tests!
+#   - Setting (new) cookies is currently really broken

@@ -155,6 +155,48 @@ class TestCachedProperty(unittest.TestCase):
         self.assertTrue(isinstance(self.TestClass.cache, cached_property))
 
 
+class TestCachingProperty(unittest.TestCase):
+    def setUp(self):
+        self.calls = 0
+
+        class TestClass(object):
+            should_cache = False
+            def _cache_func(self):
+                return self.should_cache
+
+            @caching_property(_cache_func)
+            def prop(blah):
+                self.calls += 1
+                return 123
+
+        self.TestClass = TestClass
+        self.cls = TestClass()
+
+    def test_will_cache(self):
+        self.cls.should_cache = True
+
+        self.assertEqual(self.cls.prop, 123)
+        self.assertEqual(self.calls, 1)
+
+        val = self.cls.prop
+
+        self.assertEqual(self.calls, 1)
+
+    def test_will_not_cache(self):
+        self.cls.should_cache = False
+
+        self.assertEqual(self.cls.prop, 123)
+        self.assertEqual(self.calls, 1)
+
+        val = self.cls.prop
+
+        self.assertEqual(self.calls, 1)
+
+    def test_get_from_class(self):
+        p = self.TestClass.prop
+        self.assertEqual(self.calls, 0)
+
+
 class TestBytesIteratorFile(unittest.TestCase):
     def setUp(self):
         self.f = BytesIteratorFile([b'foo', b'bar', b'baz'])
