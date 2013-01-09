@@ -85,8 +85,10 @@ class TestParsing(unittest.TestCase):
             morsel = morsels.pop(morsel_name)
             self.assertEqual(morsel.value, morsel_value)
 
-            for attr in test_morsel.get('attributes', []):
-                test_name, test_val = attr.popitem()
+            attrs = test_morsel.get('attributes', [])
+            while len(attrs):
+                test_name, test_val = attrs.popitem()
+                print("Testing: %r / %r" % (test_name, test_val))
                 actual_val = getattr(morsel, test_name)
                 self.assertEqual(actual_val, _e(test_val))
 

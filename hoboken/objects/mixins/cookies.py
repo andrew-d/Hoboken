@@ -156,7 +156,6 @@ def parse_cookie(data, pattern=COOKIE_RE):
         # Get the name and value.
         name = match.group('name')
         value = match.group('val')
-        print("Morsel: %r / %r" % (name, value))
 
         # Move to the end of this match.
         i = match.end(0)
@@ -168,7 +167,6 @@ def parse_cookie(data, pattern=COOKIE_RE):
                 morsel[name[1:]] = value
 
         elif name.lower() in _reserved_names:
-            print("  Morsel in reserved, setting on previous")
             if morsel:
                 morsel[name] = _unquote(value)
 
@@ -222,7 +220,7 @@ def serialize_cookie_date(val):
     # '%a' or '%b' format for strftime is locale-dependent, and HTTP requires
     # using the US locale's names.
     ret = time.strftime('%%s, %d-%%s-%Y %H:%M:%S GMT', val)
-    return (val % (weekdays[val[6]], months[val[1]])).encode('ascii')
+    return (ret % (weekdays[val[6]], months[val[1]])).encode('ascii')
 
 
 class Morsel(object):
