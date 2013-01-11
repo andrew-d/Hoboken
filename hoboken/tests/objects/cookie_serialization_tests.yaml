@@ -1,0 +1,48 @@
+# The following tests are from the tests in the Python standard library.
+# --------------------------------------------------
+values:
+    name: Customer
+    value: WILE_E_COYOTE
+    attributes:
+        version: '1'
+        path: /acme
+output: Customer=WILE_E_COYOTE; Path=/acme; Version=1
+---
+values:
+    name: Customer
+    value: W
+    attributes:
+        expires: Wed, 01 Jan 2010 00:00:00 GMT
+output: Customer=W; expires=Wed, 01 Jan 2010 00:00:00 GMT
+---
+values:
+    name: Customer
+    value: W
+    attributes:
+        expires: Wed, 01 Jan 98 00:00:00 GMT
+output: Customer=W; expires=Wed, 01 Jan 98 00:00:00 GMT
+---
+values:
+    name: Customer
+    value: WILE_E_COYOTE
+    attributes:
+        version: '1'
+        path: /acme
+output: Customer=WILE_E_COYOTE; Path=/acme; Version=1
+---
+
+# The following tests are mine
+# --------------------------------------------------
+values:
+    name: name
+    value: value
+    attributes:
+        comment: comment
+        domain: domain
+        max_age: 1000
+        path: /path
+        expires: Wed, 09-Jan-2013 15:33:43 GMT
+        secure: true
+        httponly: true
+output: name=value; Comment=comment; Domain=domain; Max-Age=1000; Path=/path; expires=Wed, 09-Jan-2013 15:33:43 GMT; secure; HttpOnly
+---

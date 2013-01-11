@@ -19,9 +19,9 @@ SPECIAL_CHARS = b"~!@#$%^&*()_+=-`.?|:/(){}<>'"
 LEGAL_CHAR_RE = b"[\w\d" + re.escape(SPECIAL_CHARS) + b"]"
 COOKIE_RE = re.compile(
     br"(?x)"                            # This is a Verbose pattern
-    br"(?P<name>"                       # Start of group 'key'
+    br"(?P<name>"                       # Start of group 'name'
     b"" + LEGAL_CHAR_RE + b"+?"         # Any word of at least one letter, nongreedy
-    br")"                               # End of group 'key'
+    br")"                               # End of group 'name'
     br"\s*=\s*"                         # Equal Sign
     br"(?P<val>"                        # Start of group 'val'
     br'"(?:[^\\"]|\\.)*"'               # Any doublequoted string
@@ -30,7 +30,7 @@ COOKIE_RE = re.compile(
     br"|"                               # or
     b"" + LEGAL_CHAR_RE + b"*"          # Any word or empty string
     br")"                               # End of group 'val'
-    br"\s*;?"                           # Probably ending in a semi-colon
+    br"\s*;?"                           # Probably ending in a semicolon
 )
 
 # Regex for detecting quoted things.
@@ -131,6 +131,9 @@ def _quote(value):
 
 
 def _unquote(value):
+    if isinstance(value, bool):
+        return value
+
     if value[:1] == value[-1:] == b'"':
         value = value[1:-1]
 
@@ -147,6 +150,7 @@ def parse_cookie(data, pattern=COOKIE_RE):
     morsel = None
     morsels = {}
 
+    # Split all cookies.
     while 0 <= i <= n:
         # Search for a cookie.
         match = pattern.search(data, i)
@@ -250,7 +254,7 @@ class Morsel(object):
         result = []
         result.append(self.name + b'=' + _quote(self.value))
         if full:
-            for key in ['comment', 'domain', 'max-age', 'path']:
+            for key in [b'comment', b'domain', b'max-age', b'path', b'version']:
                 val = self.attributes.get(key)
                 if val:
                     result.append(_rename_mapping[key] + b'=' + _quote(val))

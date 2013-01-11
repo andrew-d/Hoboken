@@ -56,18 +56,25 @@ class TestQuoting(unittest.TestCase):
         self.assertEqual(_unquote(b'"\000\001"'), b'\x00\x01')
 
 
-# Load tests.
-tests_file = os.path.join(os.path.dirname(__file__), 'cookie_tests.yaml')
+# Load all tests.
+parse_tests_file = os.path.join(os.path.dirname(__file__),
+                                 'cookie_parsing_tests.yaml')
+ser_tests_file = os.path.join(os.path.dirname(__file__),
+                              'cookie_serialization_tests.yaml')
 
-with open(tests_file, 'rb') as f:
-    test_data = f.read()
+with open(parse_tests_file, 'rb') as f:
+    test_data1 = f.read()
 
-cookie_tests = yaml.load_all(test_data)
+with open(ser_tests_file, 'rb') as f:
+    test_data2 = f.read()
+
+parse_tests = yaml.load_all(test_data1)
+serialization_tests = yaml.load_all(test_data2)
 
 
 @parametrize_class
 class TestParsing(unittest.TestCase):
-    @parametrize('param', cookie_tests)
+    @parametrize('param', parse_tests)
     def test_cookie_parsing(self, param):
         if param is None:
             return
@@ -88,9 +95,25 @@ class TestParsing(unittest.TestCase):
             attrs = test_morsel.get('attributes', [])
             while len(attrs):
                 test_name, test_val = attrs.popitem()
+
                 print("Testing: %r / %r" % (test_name, test_val))
                 actual_val = getattr(morsel, test_name)
                 self.assertEqual(actual_val, _e(test_val))
+
+    @parametrize('param', serialization_tests)
+    def test_cookie_serialization(self, param):
+        if not param:
+            return
+
+        name = _e(param['values']['name'])
+        value = _e(param['values']['value'])
+
+        m = Morsel(name, value)
+        for name, val in iteritems(param['values']['attributes']):
+            setattr(m, name, val)
+
+        output = _e(param['output'])
+        self.assertEqual(m.serialize(), output)
 
 
 def suite():

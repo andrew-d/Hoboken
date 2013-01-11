@@ -1,0 +1,19 @@
+# The following tests are from the tests in the Python standard library.
+# --------------------------------------------------
+input: chips=ahoy; vienna=finger
+morsels:
+    - name: chips
+      value: ahoy
+    - name: vienna
+      value: finger
+---
+input: 'keebler="E=mc2; L=\"Loves\"; fudge=\012;"'
+morsels:
+    - name: keebler
+      value: "E=mc2; L=\"Loves\"; fudge=\x0a;"
+---
+input: 'keebler=E=mc2'
+morsels:
+    - name: keebler
+      value: E=mc2
+---
