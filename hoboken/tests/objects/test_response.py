@@ -79,7 +79,7 @@ class TestWSGIBaseResponse(unittest.TestCase):
 
         self.assertEqual(it, [b''])
         start_response.assert_called_with("200 OK",
-            [('Response-Header', b'value')]
+            [('Response-Header', 'value')]
         )
 
 

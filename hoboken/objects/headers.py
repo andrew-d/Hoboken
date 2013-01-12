@@ -1,6 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 from collections import MutableMapping
 from hoboken.six import PY3, iterkeys, iteritems
+from hoboken.objects.datastructures import MultiDict
 
 
 class WSGIHeaders(MutableMapping):
@@ -43,3 +44,28 @@ class WSGIHeaders(MutableMapping):
 
     def to_list(self):
         return list(iteritems(self))
+
+
+class ConvertingMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(ConvertingMixin, self).__init__(*args, **kwargs)
+
+    def __setitem__(self, name, value):
+        if PY3:
+            if isinstance(name, bytes):
+                name = name.decode('latin-1')
+            if isinstance(value, bytes):
+                value = value.decode('latin-1')
+
+        return super(ConvertingMixin, self).__setitem__(name, value)
+
+    def __getitem__(self, name):
+        val = super(ConvertingMixin, self).__getitem__(name)
+        if PY3 and isinstance(val, str):
+            val = val.encode('latin-1')
+        return val
+
+
+class WSGIResponseHeaders(ConvertingMixin, MultiDict):
+    def __init__(self, *args, **kwargs):
+        super(WSGIResponseHeaders, self).__init__(*args, **kwargs)
