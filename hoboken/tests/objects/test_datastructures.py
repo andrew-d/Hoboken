@@ -323,7 +323,7 @@ class TestMultiDict(unittest.TestCase):
 
     def test_proper_iterator(self):
         def assert_iterator(val):
-            self.assertTrue(isinstance(val, collections.Iterator))
+            self.assertTrue(isinstance(val, collections.Iterable))
 
         def assert_list(val):
             self.assertTrue(isinstance(val, list))

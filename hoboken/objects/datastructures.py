@@ -175,33 +175,12 @@ class ImmutableConvertingDict(ImmutableDictMixin, ConvertingDict):
         return self
 
 
-def py_iter_wrapper(func):
-    """
-    This function handles the difference between iterator methods on Python 2
-    and Python 3.  It will convert a function that returns an iterator to one
-    that returns a list on Python 2 only, otherwise returning the input
-    function.
-    """
-    if not PY3:     # pragma: no cover
-        @wraps(func)
-        def iter_wrapper(self, *args, **kwargs):
-            ret = func(self, *args, **kwargs)
-            return list(ret)
+def list_wrapper(func):
+    @wraps(func)
+    def wrapper_func(*args, **kwargs):
+        return list(func(*args, **kwargs))
 
-    else:           # pragma: no cover
-        iter_wrapper = func
-
-    return iter_wrapper
-
-# Cross-Python dict iterators.
-if PY3:             # pragma: no cover
-    _dict_item_iter  = dict.items
-    _dict_key_iter   = dict.keys
-    _dict_value_iter = dict.values
-else:               # pragma: no cover
-    _dict_item_iter  = dict.iteritems
-    _dict_key_iter   = dict.iterkeys
-    _dict_value_iter = dict.itervalues
+    return wrapper_func
 
 
 def iter_multi_items(mapping):
@@ -232,7 +211,7 @@ class MultiDict(ConvertingDict):
         # First, handle initializing from other MultiDicts.
         if isinstance(mapping, MultiDict):
             tmp = ((k, l[:]) for k, l in mapping.iterlists())
-            dict.__init__(self, tmp)
+            super(MultiDict, self).__init__(tmp)
 
         # Otherwise, if we're given another dictionary:
         elif isinstance(mapping, dict):
@@ -247,7 +226,7 @@ class MultiDict(ConvertingDict):
 
                 tmp[key] = value
 
-            dict.__init__(self, tmp)
+            super(MultiDict, self).__init__(tmp)
 
         # Otherwise, we assume this is some iterable of some sort.
         else:
@@ -255,7 +234,7 @@ class MultiDict(ConvertingDict):
             for key, value in (mapping or ()):
                 tmp.setdefault(key, []).append(value)
 
-            dict.__init__(self, tmp)
+            super(MultiDict, self).__init__(tmp)
 
     # Pickle-related functions
     # #############################
@@ -263,16 +242,16 @@ class MultiDict(ConvertingDict):
         return dict(self.lists())
 
     def __setstate__(self, value):
-        dict.clear(self)
-        dict.update(self, value)
+        super(MultiDict, self).clear()
+        super(MultiDict, self).update(value)
 
     # Dict access
     # #############################
     def __getitem__(self, key):
-        return dict.__getitem__(self, key)[0]
+        return super(MultiDict, self).__getitem__(key)[0]
 
     def __setitem__(self, key, value):
-        dict.__setitem__(self, key, [value])
+        super(MultiDict, self).__setitem__(key, [value])
 
     # Dict methods.
     # #############################
@@ -295,7 +274,7 @@ class MultiDict(ConvertingDict):
         discarded.
         """
         try:
-            return dict.pop(self, key)[0]
+            return super(MultiDict, self).pop(key)[0]
         except KeyError:
             if default is not missing:
                 return default
@@ -306,55 +285,83 @@ class MultiDict(ConvertingDict):
         """
         Pop an item from the dict.
         """
-        item = dict.popitem(self)
+        item = super(MultiDict, self).popitem()
         return (item[0], item[1][0])
 
     # Iteration methods.
     # #############################
-    def items(self, multi=False):
-        for key, values in _dict_item_iter(self):
-            if multi:
-                for value in values:
-                    yield key, value
-            else:
-                yield key, values[0]
 
-    # NOTE: We keep this here even on PY3, since six's iteritems() wrapper
-    # won't pass through kwargs, so we can't call iteritems with the multi
-    # flag in a cross-Python way.
-    iteritems = items
-    items = py_iter_wrapper(items)
+    if PY3:             # pragma: no cover
+        def items(self, multi=False):
+            for key, values in super(MultiDict, self).items():
+                if multi:
+                    for value in values:
+                        yield key, value
+                else:
+                    yield key, values[0]
 
-    def values(self):
-        for values in _dict_value_iter(self):
-            yield values[0]
+        def values(self):
+            for values in super(MultiDict, self).values():
+                yield values[0]
 
-    itervalues = values
-    values = py_iter_wrapper(values)
+        def lists(self):
+            for key, values in super(MultiDict, self).items():
+                yield key, list(values)
 
-    def lists(self):
-        for key, values in _dict_item_iter(self):
-            yield key, list(values)
+        def listvalues(self):
+            return super(MultiDict, self).values()
 
-    iterlists = lists
-    lists = py_iter_wrapper(lists)
+        def __iter__(self):
+            return iter(super(MultiDict, self).keys())
 
-    def listvalues(self):
-        return iter(_dict_value_iter(self))
+        # We keep these here despite the fact we're on Python 3, since it
+        # gives us a cross-Python way of getting iteration functions.
+        iteritems = items
+        itervalues = values
+        iterlists = lists
+        iterlistvalues = listvalues
 
-    iterlistvalues = listvalues
-    listvalues = py_iter_wrapper(listvalues)
+        # We don't change this behavior, but have this anyway, for the same
+        # reasons as mentioned above.
+        def iterkeys(self):
+            return super(MultiDict, self).keys()
 
-    def __iter__(self):
-        return iter(_dict_key_iter(self))
+    else:                   # pragma: no cover
+        def iteritems(self, multi=False):
+            for key, values in super(MultiDict, self).iteritems():
+                if multi:
+                    for value in values:
+                        yield key, value
+                else:
+                    yield key, values[0]
 
-    # Multidict-specific methods.
+        def itervalues(self):
+            for values in super(MultiDict, self).itervalues():
+                yield values[0]
+
+        def iterlists(self):
+            for key, values in super(MultiDict, self).iteritems():
+                yield key, list(values)
+
+        def iterlistvalues(self):
+            return super(MultiDict, self).itervalues()
+
+        def __iter__(self):
+            return super(MultiDict, self).iterkeys()
+
+        # Python 2 list versions.
+        items = list_wrapper(iteritems)
+        values = list_wrapper(itervalues)
+        lists = list_wrapper(iterlists)
+        listvalues = list_wrapper(iterlistvalues)
+
+    # MultiDict-specific methods.
     # #############################
     def add(self, key, value):
         """
         Add a new value for a key.
         """
-        dict.setdefault(self, key, []).append(value)
+        super(MultiDict, self).setdefault(key, []).append(value)
 
     def getlist(self, key, type=None):
         """
@@ -365,7 +372,7 @@ class MultiDict(ConvertingDict):
         the returned list will be converted using that callable.
         """
         try:
-            ret = dict.__getitem__(self, key)
+            ret = super(MultiDict, self).__getitem__(key)
         except KeyError:
             return []
 
@@ -385,7 +392,7 @@ class MultiDict(ConvertingDict):
         """
         Set the new list of items for a given key.
         """
-        dict.__setitem__(self, key, list(new_list))
+        super(MultiDict, self).__setitem__(key, list(new_list))
 
     def setlistdefault(self, key, default_list=None):
         """
@@ -393,9 +400,9 @@ class MultiDict(ConvertingDict):
         """
         if key not in self:
             default_list = list(default_list or ())
-            dict.__setitem__(self, key, default_list)
+            super(MultiDict, self).__setitem__(key, default_list)
         else:
-            default_list = dict.__getitem__(self, key)
+            default_list = super(MultiDict, self).__getitem__(key)
 
         return default_list
 
@@ -404,13 +411,13 @@ class MultiDict(ConvertingDict):
         Pop the list for a key from this dict.  If the key is not found in
         the dict, an empty list is returned.
         """
-        return dict.pop(self, key, [])
+        return super(MultiDict, self).pop(key, [])
 
     def popitemlist(self):
         """
         Pop a list from the dictionary.  Returns a (key, list) tuple.
         """
-        return dict.popitem(self)
+        return super(MultiDict, self).popitem()
 
     def __copy__(self):
         return self.copy()
