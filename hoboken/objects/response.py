@@ -7,6 +7,7 @@ from hoboken.objects.base import BaseResponse
 from hoboken.objects.headers import WSGIHeaders
 from hoboken.objects.constants import status_reasons, status_generic_reasons
 from hoboken.objects.util import iter_close
+from hoboken.objects.datastructures import MultiDict
 
 
 class EmptyResponse(object):
@@ -73,7 +74,7 @@ class WSGIBaseResponse(BaseResponse):
 
     def _headers_getter(self):
         if self._headers is None:
-            self._headers = WSGIHeaders({})
+            self._headers = MultiDict()
         return self._headers
 
     def _headers_setter(self, value):
@@ -102,7 +103,7 @@ class WSGIBaseResponse(BaseResponse):
         iter_close(self._response_iter)
 
     def __call__(self, environ, start_response):
-        header_list = self.headers.to_list()
+        header_list = list(self.headers.iteritems(multi=True))
         start_response(self.status, header_list)
 
         # We special-case the HEAD method to return an empty response.
