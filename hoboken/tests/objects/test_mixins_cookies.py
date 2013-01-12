@@ -5,9 +5,12 @@ import yaml
 from hoboken.tests.compat import parametrize, parametrize_class, unittest
 from mock import MagicMock, Mock, patch
 
+from hoboken.objects.mixins import cookies
 from hoboken.objects.mixins.cookies import *
 from hoboken.six import iteritems, PY3, text_type
 
+# Done after the 'from *' above, as that clobbers datetime.
+import datetime
 
 def _e(val):
     if isinstance(val, text_type):
@@ -55,6 +58,12 @@ class TestQuoting(unittest.TestCase):
         self.assertEqual(_unquote(b'"asdf"'), b'asdf')
         self.assertEqual(_unquote(b'"\000\001"'), b'\x00\x01')
 
+    def test_unquote_handles_bool(self):
+        from hoboken.objects.mixins.cookies import _unquote
+
+        self.assertEqual(_unquote(True), True)
+        self.assertEqual(_unquote(False), False)
+
 
 # Load all tests.
 parse_tests_file = os.path.join(os.path.dirname(__file__),
@@ -73,7 +82,7 @@ serialization_tests = yaml.load_all(test_data2)
 
 
 @parametrize_class
-class TestParsing(unittest.TestCase):
+class TestParsingAndSerializing(unittest.TestCase):
     @parametrize('param', parse_tests)
     def test_cookie_parsing(self, param):
         if param is None:
@@ -116,9 +125,59 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(m.serialize(), output)
 
 
+class TestMiscellaneous(unittest.TestCase):
+    def test_serialize_max_age(self):
+        d1 = datetime.datetime(2013, 1, 11, 20, 0, 0)
+        d2 = datetime.datetime(2013, 1, 11, 20, 0, 10)
+        td = d2 - d1
+        self.assertEqual(serialize_max_age(td), b'10')
+
+    def test_serialize_cookie_date_with_None(self):
+        self.assertEqual(serialize_cookie_date(None), None)
+
+    def test_serialize_cookie_date_with_text(self):
+        txt = 'foobar'.decode('ascii')
+        self.assertEqual(serialize_cookie_date(txt), b'foobar')
+
+    def test_serialize_cookie_date_with_Number(self):
+        d = datetime.datetime(2013, 1, 11, 20, 0, 0)
+        expected = b'Fri, 11-Jan-2013 20:00:10 GMT'
+
+        with patch.object(cookies, '_utcnow') as mock:
+            mock.return_value = d
+
+            v = serialize_cookie_date(10)
+            self.assertEqual(v, expected)
+
+    def test_serialize_cookie_date_with_datetime(self):
+        d = datetime.datetime(2013, 1, 11, 20, 0, 0)
+        v = serialize_cookie_date(d)
+        self.assertEqual(v, b'Fri, 11-Jan-2013 20:00:00 GMT')
+
+
+class TestWSGIRequestCookiesMixin(unittest.TestCase):
+    def setUp(self):
+        class MixedIn(WSGIRequestCookiesMixin):
+            headers = {}
+
+        self.c = MixedIn()
+
+    def test_defaults_to_empty(self):
+        self.assertEqual(self.c.cookies, {})
+
+    def test_will_parse_cookies(self):
+        self.c.headers['Cookie'] = b'foo=bar'
+        self.assertIn('foo', self.c.cookies)
+
+        c = self.c.cookies['foo']
+        self.assertEqual(c.value, b'bar')
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestQuoting))
-    suite.addTest(unittest.makeSuite(TestParsing))
+    suite.addTest(unittest.makeSuite(TestParsingAndSerializing))
+    suite.addTest(unittest.makeSuite(TestMiscellaneous))
+    suite.addTest(unittest.makeSuite(TestWSGIRequestCookiesMixin))
 
     return suite

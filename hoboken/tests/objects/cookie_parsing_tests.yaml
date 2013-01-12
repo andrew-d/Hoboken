@@ -17,3 +17,22 @@ morsels:
     - name: keebler
       value: E=mc2
 ---
+
+# The following tests are mine.
+# --------------------------------------------------
+
+# Test overwriting a value.
+input: value=one; value=two
+morsels:
+    - name: value
+      value: two
+---
+
+# Test setting attributes.  Note that we don't actually use this when parsing
+# a Cookie header.
+input: foo=bar; Path=/foo; $Other=asdf
+morsels:
+    - name: foo
+      value: bar
+      attributes:
+          path: /foo

@@ -103,6 +103,11 @@ months = (None, 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
           'Oct', 'Nov', 'Dec')
 
 
+# This is a special function that we save for calculating the current time.
+# It's useful for testing, when we want to mock out the dateime module.
+_utcnow = datetime.utcnow
+
+
 class CookieError(Exception):
     """
     An exception representing an error in cookie parsing.
@@ -216,7 +221,7 @@ def serialize_cookie_date(val):
         val = timedelta(seconds=val)
 
     if isinstance(val, timedelta):
-        val = datetime.utcnow() + val
+        val = _utcnow() + val
     if isinstance(val, (datetime, date)):
         val = val.timetuple()
 
@@ -276,9 +281,9 @@ class Morsel(object):
                                           self.value)
 
 
-class WSGICookiesMixin(object):
+class WSGIRequestCookiesMixin(object):
     def __init__(self, *args, **kwargs):
-        super(WSGICookiesMixin, self).__init__(*args, **kwargs)
+        super(WSGIRequestCookiesMixin, self).__init__(*args, **kwargs)
         self.__cookies_header = None
 
     def __cookie_cache_func(self):
@@ -301,8 +306,17 @@ class WSGICookiesMixin(object):
         return morsels
 
 
+class WSGIResponseCookiesMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(WSGIResponseCookiesMixin, self).__init__(*args, **kwargs)
+
+        self.__cookies = {}
+
+    @property
+    def set_cookie(self):
+        return self.__cookies
+
+
 # TODO:
 #   - Check for valid names
-#   - Serialize the entire header (for Set-Cookie, in responses)
-#   - Tests!
 #   - Setting (new) cookies is currently really broken
