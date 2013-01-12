@@ -119,7 +119,7 @@ class TestParsingAndSerializing(unittest.TestCase):
 
         m = Morsel(name, value)
         for name, val in iteritems(param['values']['attributes']):
-            setattr(m, name, val)
+            setattr(m, name, _e(val))
 
         output = _e(param['output'])
         self.assertEqual(m.serialize(), output)
@@ -136,7 +136,7 @@ class TestMiscellaneous(unittest.TestCase):
         self.assertEqual(serialize_cookie_date(None), None)
 
     def test_serialize_cookie_date_with_text(self):
-        txt = 'foobar'.decode('ascii')
+        txt = b'foobar'.decode('ascii')
         self.assertEqual(serialize_cookie_date(txt), b'foobar')
 
     def test_serialize_cookie_date_with_Number(self):
@@ -167,9 +167,12 @@ class TestWSGIRequestCookiesMixin(unittest.TestCase):
 
     def test_will_parse_cookies(self):
         self.c.headers['Cookie'] = b'foo=bar'
-        self.assertIn('foo', self.c.cookies)
+        self.assertIn(b'foo', self.c.cookies)
 
-        c = self.c.cookies['foo']
+        c = self.c.cookies[b'foo']
+        self.assertEqual(c.value, b'bar')
+
+        # Call again to assert that caching works.
         self.assertEqual(c.value, b'bar')
 
 
