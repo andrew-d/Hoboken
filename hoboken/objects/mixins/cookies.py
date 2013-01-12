@@ -203,7 +203,12 @@ def _morsel_property(key, serializer=lambda v: v):
 
 def serialize_max_age(val):
     if isinstance(val, timedelta):
-        val = str(int(val.total_seconds()))
+        if hasattr(val, 'total_seconds'):
+            val = val.total_seconds()
+        else:       # pragma: no cover
+            val = val.seconds + val.days * 24 * 3600
+
+        val = str(int(val))
     elif isinstance(val, Number):
         val = str(val)
 
