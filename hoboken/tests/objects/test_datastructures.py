@@ -341,6 +341,15 @@ class TestMultiDict(unittest.TestCase):
             # Assert that the "iter" + name version is always an iterator.
             assert_iterator(getattr(self.e, "iter" + f)())
 
+    def test_to_dict(self):
+        d1 = self.m.to_dict(flat=True)
+        for _, v in iteritems(d1):
+            self.assertFalse(isinstance(v, list))
+
+        d2 = self.m.to_dict(flat=False)
+        for _, v in iteritems(d2):
+            self.assertTrue(isinstance(v, list))
+
 
 
 def suite():

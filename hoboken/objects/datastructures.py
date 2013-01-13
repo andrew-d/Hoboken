@@ -194,7 +194,7 @@ def iter_multi_items(mapping):
             yield item
 
     elif isinstance(mapping, dict):
-        for key, value in _dict_item_iter(mapping):
+        for key, value in iteritems(mapping):
             if isinstance(value, (tuple, list)):
                 for value in value:
                     yield key, value
@@ -418,6 +418,11 @@ class MultiDict(ConvertingDict):
         Pop a list from the dictionary.  Returns a (key, list) tuple.
         """
         return super(MultiDict, self).popitem()
+
+    def to_dict(self, flat=True):
+        if flat:
+            return dict(self.iteritems())
+        return dict(self.lists())
 
     def __copy__(self):
         return self.copy()
