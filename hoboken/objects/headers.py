@@ -2,7 +2,7 @@ from __future__ import with_statement, absolute_import, print_function
 from functools import wraps
 from collections import MutableMapping
 from hoboken.six import binary_type, PY3, iterkeys, iteritems, text_type
-from hoboken.objects.datastructures import MultiDict
+from hoboken.objects.datastructures import ReturnTranslatingMultiDict
 
 
 class EnvironHeaders(MutableMapping):
@@ -66,7 +66,7 @@ def _to_wsgi(val):  # pragma: no cover
     return val
 
 
-class ResponseHeaders(MultiDict):
+class ResponseHeaders(ReturnTranslatingMultiDict):
     """
     Unlike in a request, a response can have multiple headers with the same
     name.  Thus, this class is a subclass of a MultiDict, with the various
@@ -81,4 +81,9 @@ class ResponseHeaders(MultiDict):
 
     def __valtrans__(self, val):
         return _to_wsgi(val)
+
+    def __rettrans__(self, val):
+        if PY3 and isinstance(val, str):
+            val = val.encode('latin-1')
+        return val
 

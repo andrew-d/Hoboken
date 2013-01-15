@@ -176,7 +176,7 @@ class ImmutableConvertingDict(ImmutableDictMixin, ConvertingDict):
         return self
 
 
-def list_wrapper(func):
+def list_wrapper(func):     # pragma: no cover
     @wraps(func)
     def wrapper_func(*args, **kwargs):
         return list(func(*args, **kwargs))
