@@ -567,6 +567,116 @@ class TestCallbackDict(unittest.TestCase):
         self.assertd({'foo': 1, 'bar': 2})
 
 
+class TestReturnTranslatingMultiDict(unittest.TestCase):
+    def setUp(self):
+        self.r = ReturnTranslatingMultiDict({'foo': 1, 'bar': 2, 3: 4})
+        self.e = ReturnTranslatingMultiDict()
+
+        def trans(val):
+            # print("Translating: %r --> %r" % (val, val + 1))
+            return val + 1
+        self.r.__rettrans__ = self.e.__rettrans__ = trans
+
+    def assertr(self, val):
+        self.assertEqual(
+            sorted(list(self.r.iterlists(original=True))),
+            sorted(list(val.items()))
+        )
+
+    def asserte(self, val):
+        self.assertEqual(
+            sorted(list(self.e.iterlists(original=True))),
+            sorted(list(val.items()))
+        )
+
+    def test_constructor(self):
+        self.assertr({'foo': [1], 'bar': [2], 3: [4]})
+
+    def test_getitem(self):
+        self.assertEqual(self.r['foo'], 2)
+        self.assertEqual(self.r[3], 5)
+
+    def test_setitem(self):
+        self.e['foo'] = 10
+        self.assertEqual(self.e['foo'], 11)
+        self.asserte({'foo': [10]})
+
+    def test_get(self):
+        self.assertEqual(self.r.get('foo'), 2)
+
+    def test_pop(self):
+        self.assertEqual(self.r.pop('foo'), 2)
+        self.assertr({'bar': [2], 3: [4]})
+
+    def test_setdefault(self):
+        self.assertEqual(self.r.setdefault('foo', 6), 2)
+        self.assertEqual(self.r.setdefault('qqq', 8), 9)
+
+    def test_getlist(self):
+        self.r.add('foo', 3)
+        self.assertEqual(self.r.getlist('foo'), [2, 4])
+
+    def test_poplist(self):
+        self.r.add('foo', 3)
+        self.assertEqual(self.r.poplist('foo'), [2, 4])
+
+    def test_setlistdefault(self):
+        self.assertEqual(self.e.setlistdefault('qqq', [1, 2, 3]),
+                         [2, 3, 4]
+                         )
+        self.asserte({'qqq': [1, 2, 3]})
+
+    def test_popitem(self):
+        self.e.add('foo', 3)
+        k, v = self.e.popitem()
+
+        self.assertEqual(k, 'foo')
+        self.assertEqual(v, 4)
+
+    def test_popitemlist(self):
+        self.e.add('foo', 3)
+        k, v = self.e.popitemlist()
+
+        self.assertEqual(k, 'foo')
+        self.assertEqual(v, [4])
+
+    def test_items(self):
+        i = list(self.r.items(original=False))
+        self.assertEqual(sorted(i), [(3, 5), ('bar', 3), ('foo', 2)])
+
+        i = list(self.r.items(original=True))
+        self.assertEqual(sorted(i), [(3, 4), ('bar', 2), ('foo', 1)])
+
+    def test_values(self):
+        v = list(self.r.values(original=False))
+        self.assertEqual(sorted(v), [2, 3, 5])
+
+        v = list(self.r.values(original=True))
+        self.assertEqual(sorted(v), [1, 2, 4])
+
+    def test_lists(self):
+        l = list(self.r.lists(original=False))
+        self.assertEqual(sorted(l), [
+            (3, [5]),
+            ('bar', [3]),
+            ('foo', [2]),
+        ])
+
+        l = list(self.r.lists(original=True))
+        self.assertEqual(sorted(l), [
+            (3, [4]),
+            ('bar', [2]),
+            ('foo', [1]),
+        ])
+
+    def test_listvalues(self):
+        l = list(self.r.listvalues(original=False))
+        self.assertEqual(sorted(l), [[2], [3], [5]])
+
+        l = list(self.r.listvalues(original=True))
+        self.assertEqual(sorted(l), [[1], [2], [4]])
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestImmutableList))
@@ -576,5 +686,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestMultiDict))
     suite.addTest(unittest.makeSuite(TestCallbackList))
     suite.addTest(unittest.makeSuite(TestCallbackDict))
+    suite.addTest(unittest.makeSuite(TestReturnTranslatingMultiDict))
 
     return suite

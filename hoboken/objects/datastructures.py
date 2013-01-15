@@ -563,3 +563,107 @@ class CallbackDict(MutableMapping):
     # Proxy the __repr__ to the underlying dict.
     def __repr__(self):
         return repr(self.__dict)
+
+
+# Wrap every function in a wrapper that will call the '__rettrans__' function
+# on the output.  This is kinda confusing, so here's a breakdown:
+#  - When a function is called on this class, it actually calls our wrapper
+#    function.
+#  - The wrapper function calls the original function, and gets the return
+#    value.
+#  - The wrapper then calls the __rettrans__ function with the return value to
+#    obtain a (possibly) new return value.
+#  - The wrapper function then returns the newly-translated return value.
+def _make_list_wrapper(func):
+    @wraps(func)
+    def new_function(self, *args, **kwargs):
+        ret = func(self, *args, **kwargs)
+        return list(self.__rettrans__(x) for x in ret)
+
+    return new_function
+
+
+class ReturnTranslatingMultiDict(MultiDict):
+    # Dummy translating func.
+    def __rettrans__(self, val):        # pragma: no cover
+        return val
+
+    # This returns a single value, so we just wrap it as-is.
+    def __getitem__(self, key):
+        return self.__rettrans__(
+            super(ReturnTranslatingMultiDict, self).__getitem__(key)
+        )
+
+    # We need to provide a concrete implementation of setdefault, since we
+    # only want to translate the return value if we don't read from the dict
+    # (since the read will call __getitem__, which then already translates).
+    def setdefault(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            self[key] = default
+
+        return self.__rettrans__(default)
+
+    # These functions return a list of values, so we need to wrap them in a
+    # variant that handles this.
+    getlist = _make_list_wrapper(MultiDict.getlist)
+    poplist = _make_list_wrapper(MultiDict.poplist)
+    setlistdefault = _make_list_wrapper(MultiDict.setlistdefault)
+
+    # This is special, in that it returns a (key, value) tuple.  We need to
+    # deal with this manually.
+    def popitemlist(self):
+        (k, v) = super(ReturnTranslatingMultiDict, self).popitemlist()
+        return (k, list(self.__rettrans__(x) for x in v))
+
+    # Iteration methods
+    def iteritems(self, **kwargs):
+        if kwargs.pop('original', False):
+            return super(ReturnTranslatingMultiDict, self).iteritems(**kwargs)
+
+        return (
+            (k, self.__rettrans__(v)) for (k, v) in
+            super(ReturnTranslatingMultiDict, self).iteritems(**kwargs)
+        )
+
+    def itervalues(self, **kwargs):
+        if kwargs.pop('original', False):
+            return super(ReturnTranslatingMultiDict,
+                         self).itervalues(**kwargs)
+
+        return (self.__rettrans__(x) for x in
+                super(ReturnTranslatingMultiDict, self).itervalues())
+
+    def iterlists(self, **kwargs):
+        if kwargs.pop('original', False):
+            return super(ReturnTranslatingMultiDict, self).iterlists(**kwargs)
+
+        return (
+            (k, list(self.__rettrans__(x) for x in v)) for (k, v)
+            in super(ReturnTranslatingMultiDict, self).iterlists()
+        )
+
+    def iterlistvalues(self, **kwargs):
+        if kwargs.pop('original', False):
+            return super(ReturnTranslatingMultiDict,
+                         self).iterlistvalues(**kwargs)
+
+        return list(
+            list(self.__rettrans__(l) for l in x) for x in
+            super(ReturnTranslatingMultiDict, self).iterlistvalues()
+        )
+
+    # Remember, iteration is different on Python 2/3.
+    if PY3:         # pragma: no cover
+        lists = iterlists
+        items = iteritems
+        values = itervalues
+        listvalues = iterlistvalues
+
+    else:
+        # Python 2 list versions.
+        items = list_wrapper(iteritems)
+        values = list_wrapper(itervalues)
+        lists = list_wrapper(iterlists)
+        listvalues = list_wrapper(iterlistvalues)
