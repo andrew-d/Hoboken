@@ -209,7 +209,6 @@ def iter_multi_items(mapping):
 
 class MultiDict(MutableMapping):
     def __init__(self, mapping=None):
-    # def __init__(self, *args, **kwargs):
         self.__d = {}
         _kt = self.__keytrans__
         _vt = self.__valtrans__
@@ -246,6 +245,12 @@ class MultiDict(MutableMapping):
                 tmp.setdefault(_kt(key), []).append(_vt(value))
 
             self.__d = tmp
+
+    @classmethod
+    def fromkeys(cls, keys, value=None):
+        instance = cls.__new__(cls)
+        instance.__init__(zip(keys, repeat(value)))
+        return instance
 
     # Function hooks.
     # --------------------------------------------------
@@ -303,6 +308,20 @@ class MultiDict(MutableMapping):
     def update(self, other):
         for key, value in iter_multi_items(other):
             self.add(key, value)
+
+    # Comparison methods
+    # --------------------------------------------------
+    def __lt__(self, other):
+        return self.__d < other.__d
+
+    def __le__(self, other):
+        return (self < other) or (self == other)
+
+    def __gt__(self, other):
+        return (not (self < other)) and (self != other)
+
+    def __ge__(self, other):
+        return not (self < other)
 
     # Pickle-related stuff
     # --------------------------------------------------
@@ -450,16 +469,6 @@ class MultiDict(MutableMapping):
         )
 
 
-def _callback_wrap(func):
-    @wraps(func)
-    def new_func(self, *args, **kwargs):
-        ret = func(*args, **kwargs)
-        self.on_change()
-        return ret
-
-    return func
-
-
 class CallbackList(MutableSequence):
     def __init__(self, iterable=None):
         if iterable is not None:
@@ -468,7 +477,7 @@ class CallbackList(MutableSequence):
             self.__list = list()
 
     # This is our callback function for list modifications.  Override it!
-    def on_change(self):
+    def on_change(self):        # pragma: no cover
         pass
 
     # The following methods are methods that need to be provided for a
@@ -525,7 +534,8 @@ class CallbackDict(MutableMapping):
     def __init__(self, *args, **kwargs):
         self.__dict = dict(*args, **kwargs)
 
-    def on_change(self):
+    # This is our callback function for dict modifications.  Override it!
+    def on_change(self):        # pragma: no cover
         pass
 
     # The following methods are methods that need to be provided for a

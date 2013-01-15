@@ -197,6 +197,31 @@ class TestMultiDict(unittest.TestCase):
         self.m = MultiDict([('a', 1), ('b', 2)])
         self.assertm({'a': [1], 'b': [2]})
 
+    def test_fromkeys(self):
+        self.m = MultiDict.fromkeys([1, 2, 3], 4)
+        self.assertm({1: [4], 2: [4], 3: [4]})
+
+    def test_comparison(self):
+        d0 = MultiDict({1: 0})
+        d1 = MultiDict({1: 1})
+        d1c = d1.copy()
+        d2 = MultiDict({1: 2})
+
+        self.assertTrue(d1 < d2)
+        self.assertFalse(d2 < d1)
+
+        self.assertTrue(d1 <= d1c)
+        self.assertFalse(d1 <= d0)
+
+        self.assertTrue(d1 >= d1c)
+        self.assertFalse(d1 >= d2)
+
+        self.assertTrue(d2 >= d1)
+        self.assertFalse(d1 >= d2)
+
+        self.assertTrue(d2 > d1)
+        self.assertFalse(d1 > d2)
+
     def test_is_picklable(self):
         dst = BytesIO()
         p = pickle.Pickler(dst)
@@ -524,6 +549,10 @@ class TestCallbackDict(unittest.TestCase):
         self.d.update({'foo': 1, 'bar': 2})
         c = self.d.copy()
         self.assertEqual(c, {'foo': 1, 'bar': 2})
+
+    def test_copy_module(self):
+        c = copy.copy(self.d)
+        self.assertEqual(c, self.d)
 
     def test_get(self):
         with self.assert_modified(False):
