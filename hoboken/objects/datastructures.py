@@ -309,20 +309,6 @@ class MultiDict(MutableMapping):
         for key, value in iter_multi_items(other):
             self.add(key, value)
 
-    # Comparison methods
-    # --------------------------------------------------
-    def __lt__(self, other):
-        return self.__d < other.__d
-
-    def __le__(self, other):
-        return (self < other) or (self == other)
-
-    def __gt__(self, other):
-        return (not (self < other)) and (self != other)
-
-    def __ge__(self, other):
-        return not (self < other)
-
     # Pickle-related stuff
     # --------------------------------------------------
     def __getstate__(self):
