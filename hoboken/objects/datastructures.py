@@ -3,6 +3,7 @@ from __future__ import with_statement, absolute_import, print_function
 import logging
 from functools import wraps
 from itertools import repeat
+from collections import MutableMapping, MutableSequence
 from hoboken.six import iteritems, PY3
 from hoboken.objects.util import missing
 
@@ -206,12 +207,22 @@ def iter_multi_items(mapping):
             yield item
 
 
-class MultiDict(ConvertingDict):
+class MultiDict(MutableMapping):
     def __init__(self, mapping=None):
+    # def __init__(self, *args, **kwargs):
+        self.__d = {}
+        _kt = self.__keytrans__
+        _vt = self.__valtrans__
+
         # First, handle initializing from other MultiDicts.
         if isinstance(mapping, MultiDict):
-            tmp = ((k, l[:]) for k, l in mapping.iterlists())
-            super(MultiDict, self).__init__(tmp)
+            tmp = (
+                (
+                    _kt(k),
+                    list(_vt(x) for x in l)
+                ) for k, l in mapping.iterlists()
+            )
+            self.__d = dict(tmp)
 
         # Otherwise, if we're given another dictionary:
         elif isinstance(mapping, dict):
@@ -220,159 +231,104 @@ class MultiDict(ConvertingDict):
             for key, value in iteritems(mapping):
                 # We convert lists of things to multidict lists.
                 if isinstance(value, (list, tuple)):
-                    value = list(value)
+                    value = list(_vt(x) for x in value)
                 else:
-                    value = [value]
+                    value = [_vt(value)]
 
-                tmp[key] = value
+                tmp[_kt(key)] = value
 
-            super(MultiDict, self).__init__(tmp)
+            self.__d = tmp
 
         # Otherwise, we assume this is some iterable of some sort.
         else:
             tmp = {}
             for key, value in (mapping or ()):
-                tmp.setdefault(key, []).append(value)
+                tmp.setdefault(_kt(key), []).append(_vt(value))
 
-            super(MultiDict, self).__init__(tmp)
+            self.__d = tmp
 
-    # Pickle-related functions
-    # #############################
+    # Function hooks.
+    # --------------------------------------------------
+    def __keytrans__(self, key):
+        """
+        Translate a key before it's used to index the MultiDict.
+        """
+        return key
+
+    def __valtrans__(self, val):
+        """
+        Translate a value before being written to the dictionary.
+        """
+        return val
+
+    # MutableMapping functions that must be implemented.
+    # --------------------------------------------------
+    def __getitem__(self, key):
+        try:
+            return self.__d[self.__keytrans__(key)][0]
+        except KeyError:
+            raise KeyError(key)
+
+    def __setitem__(self, key, val):
+        self.__d[self.__keytrans__(key)] = [self.__valtrans__(val)]
+
+    def __delitem__(self, key):
+        del self.__d[self.__keytrans__(key)]
+
+    def __len__(self):
+        return len(self.__d)
+
+    def copy(self):
+        return self.__class__(self)
+
+    def __copy__(self):
+        return self.copy()
+
+    # Dict functions.
+    # --------------------------------------------------
+    def get(self, key, default=None, type=None):
+        try:
+            ret = self[key]
+            if type is not None:
+                ret = type(ret)
+        except (KeyError, ValueError):
+            ret = default
+
+        return ret
+
+    if not PY3:     # pragma: no cover
+        def has_key(self, key):
+            return key in self
+
+    def update(self, other):
+        for key, value in iter_multi_items(other):
+            self.add(key, value)
+
+    # Pickle-related stuff
+    # --------------------------------------------------
     def __getstate__(self):
         return dict(self.lists())
 
     def __setstate__(self, value):
-        super(MultiDict, self).clear()
-        super(MultiDict, self).update(value)
+        # Since Pickle doesn't call our __init__ function, initialize ourself.
+        self.__d = {}
 
-    # Dict access
-    # #############################
-    def __getitem__(self, key):
-        return super(MultiDict, self).__getitem__(key)[0]
-
-    def __setitem__(self, key, value):
-        super(MultiDict, self).__setitem__(key, [value])
-
-    # Dict methods.
-    # #############################
-    def setdefault(self, key, default=None):
-        if key not in self:
-            self[key] = default
-        else:
-            default = self[key]
-
-        return default
-
-    def update(self, other):
-        for key, value in iter_multi_items(other):
-            MultiDict.add(self, key, value)
-
-    def pop(self, key, default=missing):
-        """
-        Pop the first item for a list in this dict.  Afterwords, the key is
-        removed from the dict, so additional values for the same key are
-        discarded.
-        """
-        try:
-            return super(MultiDict, self).pop(key)[0]
-        except KeyError:
-            if default is not missing:
-                return default
-
-            raise
-
-    def popitem(self):
-        """
-        Pop an item from the dict.
-        """
-        item = super(MultiDict, self).popitem()
-        return (item[0], item[1][0])
-
-    # Iteration methods.
-    # #############################
-
-    if PY3:             # pragma: no cover
-        def items(self, multi=False):
-            for key, values in super(MultiDict, self).items():
-                if multi:
-                    for value in values:
-                        yield key, value
-                else:
-                    yield key, values[0]
-
-        def values(self):
-            for values in super(MultiDict, self).values():
-                yield values[0]
-
-        def lists(self):
-            for key, values in super(MultiDict, self).items():
-                yield key, list(values)
-
-        def listvalues(self):
-            return super(MultiDict, self).values()
-
-        def __iter__(self):
-            return iter(super(MultiDict, self).keys())
-
-        # We keep these here despite the fact we're on Python 3, since it
-        # gives us a cross-Python way of getting iteration functions.
-        iteritems = items
-        itervalues = values
-        iterlists = lists
-        iterlistvalues = listvalues
-
-        # We don't change this behavior, but have this anyway, for the same
-        # reasons as mentioned above.
-        def iterkeys(self):
-            return super(MultiDict, self).keys()
-
-    else:                   # pragma: no cover
-        def iteritems(self, multi=False):
-            for key, values in super(MultiDict, self).iteritems():
-                if multi:
-                    for value in values:
-                        yield key, value
-                else:
-                    yield key, values[0]
-
-        def itervalues(self):
-            for values in super(MultiDict, self).itervalues():
-                yield values[0]
-
-        def iterlists(self):
-            for key, values in super(MultiDict, self).iteritems():
-                yield key, list(values)
-
-        def iterlistvalues(self):
-            return super(MultiDict, self).itervalues()
-
-        def __iter__(self):
-            return super(MultiDict, self).iterkeys()
-
-        # Python 2 list versions.
-        items = list_wrapper(iteritems)
-        values = list_wrapper(itervalues)
-        lists = list_wrapper(iterlists)
-        listvalues = list_wrapper(iterlistvalues)
+        # Set the values on the dict.
+        self.clear()
+        self.update(value)
 
     # MultiDict-specific methods.
-    # #############################
+    # --------------------------------------------------
     def add(self, key, value):
-        """
-        Add a new value for a key.
-        """
-        super(MultiDict, self).setdefault(key, []).append(value)
+        key = self.__keytrans__(key)
+        val = self.__valtrans__(value)
+        self.__d.setdefault(key, []).append(val)
 
     def getlist(self, key, type=None):
-        """
-        Return a list of items for a specific key.  If the key is not in this
-        dict, then the return value will be an empty list.
+        key = self.__keytrans__(key)
 
-        Similar to get(), if the 'type' parameter is given, then all items in
-        the returned list will be converted using that callable.
-        """
         try:
-            ret = super(MultiDict, self).__getitem__(key)
+            ret = self.__d[key]
         except KeyError:
             return []
 
@@ -389,46 +345,225 @@ class MultiDict(ConvertingDict):
         return result
 
     def setlist(self, key, new_list):
-        """
-        Set the new list of items for a given key.
-        """
-        super(MultiDict, self).__setitem__(key, list(new_list))
+        key = self.__keytrans__(key)
+        self.__d[key] = list(self.__valtrans__(x) for x in new_list)
 
     def setlistdefault(self, key, default_list=None):
-        """
-        Like 'setdefault', but sets multiple values.
-        """
+        key = self.__keytrans__(key)
+
         if key not in self:
-            default_list = list(default_list or ())
-            super(MultiDict, self).__setitem__(key, default_list)
+            if default_list is not None:
+                default_list = list(
+                    self.__valtrans__(x) for x in default_list
+                )
+            else:
+                default_list = ()
+
+            self.__d[key] = default_list
         else:
-            default_list = super(MultiDict, self).__getitem__(key)
+            default_list = self.__d[key]
 
         return default_list
 
     def poplist(self, key):
-        """
-        Pop the list for a key from this dict.  If the key is not found in
-        the dict, an empty list is returned.
-        """
-        return super(MultiDict, self).pop(key, [])
+        key = self.__keytrans__(key)
+        return self.__d.pop(key, [])
 
     def popitemlist(self):
-        """
-        Pop a list from the dictionary.  Returns a (key, list) tuple.
-        """
-        return super(MultiDict, self).popitem()
+        return self.__d.popitem()
 
     def to_dict(self, flat=True):
         if flat:
             return dict(self.iteritems())
         return dict(self.lists())
 
-    def __copy__(self):
-        return self.copy()
+    # Iteration methods.
+    # --------------------------------------------------
+    if PY3:             # pragma: no cover
+        def items(self, multi=False):
+            for key, values in self.__d.items():
+                if multi:
+                    for value in values:
+                        yield key, value
+                else:
+                    yield key, values[0]
+
+        def values(self):
+            for values in self.__d.values():
+                yield values[0]
+
+        def lists(self):
+            for key, values in self.__d.items():
+                yield key, list(values)
+
+        def listvalues(self):
+            return self.__d.values()
+
+        def __iter__(self):
+            return iter(self.__d.keys())
+
+        # We keep these here despite the fact we're on Python 3, since it
+        # gives us a cross-Python way of getting iteration functions.
+        iteritems = items
+        itervalues = values
+        iterlists = lists
+        iterlistvalues = listvalues
+
+        # We don't change this behavior, but have this anyway, for the same
+        # reasons as mentioned above.
+        def iterkeys(self):
+            return self.__d.keys()
+
+    else:                   # pragma: no cover
+        def iteritems(self, multi=False):
+            for key, values in self.__d.iteritems():
+                if multi:
+                    for value in values:
+                        yield key, value
+                else:
+                    yield key, values[0]
+
+        def itervalues(self):
+            for values in self.__d.itervalues():
+                yield values[0]
+
+        def iterlists(self):
+            for key, values in self.__d.iteritems():
+                yield key, list(values)
+
+        def iterlistvalues(self):
+            return self.__d.itervalues()
+
+        def __iter__(self):
+            return self.__d.iterkeys()
+
+        # Python 2 list versions.
+        items = list_wrapper(iteritems)
+        values = list_wrapper(itervalues)
+        lists = list_wrapper(iterlists)
+        listvalues = list_wrapper(iterlistvalues)
 
     def __repr__(self):
         return "%s(%r)" % (
             self.__class__.__name__,
             list(self.items(multi=True))
         )
+
+
+def _callback_wrap(func):
+    @wraps(func)
+    def new_func(self, *args, **kwargs):
+        ret = func(*args, **kwargs)
+        self.on_change()
+        return ret
+
+    return func
+
+
+class CallbackList(MutableSequence):
+    def __init__(self, iterable=None):
+        if iterable is not None:
+            self.__list = list(iterable)
+        else:
+            self.__list = list()
+
+    # This is our callback function for list modifications.  Override it!
+    def on_change(self):
+        pass
+
+    # The following methods are methods that need to be provided for a
+    # MutableSequence to be instantiated.
+    def __getitem__(self, idx):
+        return self.__list[idx]
+
+    def __setitem__(self, idx, val):
+        self.__list[idx] = val
+        self.on_change()
+
+    def __delitem__(self, idx):
+        del self.__list[idx]
+        self.on_change()
+
+    def __len__(self):
+        return len(self.__list)
+
+    def insert(self, idx, val):
+        self.__list.insert(idx, val)
+        self.on_change()
+
+    # MutableSequence doesn't provide the sort() function, so we do.
+    def sort(self, *args, **kwargs):
+        self.__list.sort(*args, **kwargs)
+        self.on_change()
+
+    # Note that we provide concrete implementations for these next two methods
+    # since otherwise the on_change() function is called multiple times.
+    def extend(self, *args, **kwargs):
+        self.__list.extend(*args, **kwargs)
+        self.on_change()
+
+    def reverse(self, *args, **kwargs):
+        self.__list.reverse(*args, **kwargs)
+        self.on_change()
+
+    # We override the __eq__ method to support comparing with regular lists.
+    # Otherwise, it seems like they won't compare properly.
+    def __eq__(self, other):
+        if isinstance(other, list):
+            return list(self) == other
+        elif isinstance(other, CallbackList):
+            return self.__list == other.__list
+        else:
+            return NotImplemented
+
+    # Proxy the __repr__ to the underlying list.
+    def __repr__(self):
+        return repr(self.__list)
+
+
+class CallbackDict(MutableMapping):
+    def __init__(self, *args, **kwargs):
+        self.__dict = dict(*args, **kwargs)
+
+    def on_change(self):
+        pass
+
+    # The following methods are methods that need to be provided for a
+    # MutableMapping to be instantiated.
+    def __getitem__(self, key):
+        return self.__dict[key]
+
+    def __setitem__(self, key, val):
+        self.__dict[key] = val
+        self.on_change()
+
+    def __delitem__(self, key):
+        del self.__dict[key]
+        self.on_change()
+
+    def __len__(self):
+        return len(self.__dict)
+
+    def __iter__(self):
+        return iter(self.__dict)
+
+    # Note that we provide concrete implementations for these next two methods
+    # since otherwise the on_change() function is called multiple times.
+    def clear(self):
+        self.__dict.clear()
+        self.on_change()
+
+    def update(self, *args, **kwargs):
+        self.__dict.update(*args, **kwargs)
+        self.on_change()
+
+    # MutableMapping doesn't provide a copy() function, so we do.
+    def copy(self):
+        return self.__class__(self)
+
+    def __copy__(self):
+        return self.copy()
+
+    # Proxy the __repr__ to the underlying dict.
+    def __repr__(self):
+        return repr(self.__dict)

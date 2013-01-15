@@ -2,6 +2,7 @@
 
 import copy
 import pickle
+import contextlib
 import collections
 from io import BytesIO
 from hoboken.tests.compat import unittest
@@ -171,10 +172,10 @@ class TestMultiDict(unittest.TestCase):
         self.e = MultiDict()    # Empty dict.
 
     def assertm(self, val):
-        self.assertEqual(dict(self.m), val)
+        self.assertEqual(self.m.to_dict(flat=False), val)
 
     def asserte(self, val):
-        self.assertEqual(dict(self.e), val)
+        self.assertEqual(self.e.to_dict(flat=False), val)
 
     def test_default_value(self):
         self.asserte({})
@@ -253,6 +254,17 @@ class TestMultiDict(unittest.TestCase):
         self.e.add('q', 9)
         self.asserte({'q': [1, 9]})
 
+    def test_get_with_default(self):
+        self.assertEqual(self.m.get('a'), 1)
+
+    def test_get_error(self):
+        self.assertEqual(self.m.get('q', default=3), 3)
+
+    def test_get_with_type(self):
+        self.e['a'] = '1'
+        v = self.e.get('a', type=int)
+        self.assertEqual(v, 1)
+
     def test_getlist(self):
         self.assertEqual(self.m.getlist('b'), [2])
         self.assertEqual(self.m.getlist('c'), [3, 4])
@@ -286,7 +298,7 @@ class TestMultiDict(unittest.TestCase):
 
     def test_copy_module(self):
         c = copy.copy(self.e)
-        self.assertTrue(isinstance(c, dict))
+        self.assertTrue(isinstance(c, MultiDict))
         self.assertIsNot(c, self.e)
 
     def test_iter(self):
@@ -351,6 +363,196 @@ class TestMultiDict(unittest.TestCase):
             self.assertTrue(isinstance(v, list))
 
 
+class TestCallbackList(unittest.TestCase):
+    def setUp(self):
+        self.call_count = 0
+
+        class MyList(CallbackList):
+            def on_change(this):
+                self.call_count += 1
+
+        self.l = MyList()
+
+    def assertl(self, val):
+        self.assertEqual(self.l, val)
+
+    @contextlib.contextmanager
+    def assert_modified(self, count_or_val):
+        self.call_count = 0
+
+        yield
+
+        if count_or_val is True:
+            self.assertTrue(self.call_count > 0)
+        else:
+            self.assertEqual(self.call_count, count_or_val)
+
+    def test_init(self):
+        cb_list = CallbackList([1, 2, 3])
+        self.assertEqual(list(cb_list), [1, 2, 3])
+
+    def test_setting(self):
+        self.l.append(1)
+
+        with self.assert_modified(1):
+            self.l[0] = 2
+
+        self.assertl([2])
+
+    def test_getting(self):
+        self.l.append(1)
+
+        with self.assert_modified(False):
+            self.l[0]
+
+    def test_append(self):
+        with self.assert_modified(2):
+            self.l.append(1)
+            self.l.append(2)
+
+        self.assertl([1, 2])
+
+    def test_count(self):
+        self.l = CallbackList([1, 2, 3, 3, 3])
+
+        with self.assert_modified(False):
+            self.assertEqual(self.l.count(3), 3)
+
+    def test_extend(self):
+        with self.assert_modified(1):
+            self.l.extend([4, 5, 6])
+
+        self.assertl([4, 5, 6])
+
+    def test_index(self):
+        self.l.extend([4, 5, 6])
+
+        with self.assert_modified(False):
+            self.assertEqual(self.l.index(5), 1)
+
+    def test_insert(self):
+        with self.assert_modified(3):
+            self.l.insert(0, 1)
+            self.l.insert(0, 2)
+            self.l.insert(0, 3)
+
+        self.assertl([3, 2, 1])
+
+    def test_pop(self):
+        self.l.extend([1, 2, 3])
+
+        with self.assert_modified(1):
+            self.l.pop()
+
+        self.assertl([1, 2])
+
+    def test_remove(self):
+        self.l.extend([1, 2, 3])
+
+        with self.assert_modified(1):
+            self.l.remove(3)
+
+        self.assertl([1, 2])
+
+    def test_reverse(self):
+        self.l.extend([1, 2, 3])
+
+        with self.assert_modified(1):
+            self.l.reverse()
+
+        self.assertl([3, 2, 1])
+
+    def test_sort(self):
+        self.l.extend([2, 1, 3])
+
+        with self.assert_modified(1):
+            self.l.sort()
+
+        self.assertl([1, 2, 3])
+
+    def test_eq(self):
+        self.assertTrue(self.l == [])
+        self.assertTrue(CallbackList([1, 2, 3]) == CallbackList([1, 2, 3]))
+        self.assertFalse(self.l == 3)
+
+
+class TestCallbackDict(unittest.TestCase):
+    def setUp(self):
+        self.call_count = 0
+
+        class MyDict(CallbackDict):
+            def on_change(this):
+                self.call_count += 1
+
+        self.d = MyDict()
+
+    def assertd(self, val):
+        self.assertEqual(self.d, val)
+
+    @contextlib.contextmanager
+    def assert_modified(self, count_or_val):
+        self.call_count = 0
+
+        yield
+
+        if count_or_val is True:
+            self.assertTrue(self.call_count > 0)
+        else:
+            self.assertEqual(self.call_count, count_or_val)
+
+    def test_init(self):
+        d = CallbackDict(foo=1, bar=2)
+        self.assertEqual(d, {'foo': 1, 'bar': 2})
+
+    def test_getting(self):
+        self.d.update({'foo': 1, 'bar': 2})
+
+        with self.assert_modified(False):
+            self.d['foo']
+
+    def test_setting(self):
+        with self.assert_modified(1):
+            self.d['qq'] = 3
+
+    def test_clear(self):
+        self.d.update({'foo': 1, 'bar': 2})
+
+        with self.assert_modified(1):
+            self.d.clear()
+
+    def test_copy(self):
+        self.d.update({'foo': 1, 'bar': 2})
+        c = self.d.copy()
+        self.assertEqual(c, {'foo': 1, 'bar': 2})
+
+    def test_get(self):
+        with self.assert_modified(False):
+            self.d.get('foo')
+            self.d.get('qqq')
+
+    def test_pop(self):
+        self.d.update({'foo': 1, 'bar': 2})
+
+        with self.assert_modified(1):
+            self.d.pop('foo')
+
+        with self.assert_modified(False):
+            self.d.pop('nonexisting', None)
+
+        self.assertd({'bar': 2})
+
+    def test_popitem(self):
+        self.d.update({'foo': 1, 'bar': 2})
+
+        with self.assert_modified(1):
+            self.d.popitem()
+
+    def test_update(self):
+        with self.assert_modified(1):
+            self.d.update({'foo': 1, 'bar': 2})
+
+        self.assertd({'foo': 1, 'bar': 2})
+
 
 def suite():
     suite = unittest.TestSuite()
@@ -359,5 +561,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestConvertingDict))
     suite.addTest(unittest.makeSuite(TestImmutableConvertingDict))
     suite.addTest(unittest.makeSuite(TestMultiDict))
+    suite.addTest(unittest.makeSuite(TestCallbackList))
+    suite.addTest(unittest.makeSuite(TestCallbackDict))
 
     return suite
