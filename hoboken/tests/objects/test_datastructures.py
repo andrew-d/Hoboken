@@ -578,16 +578,10 @@ class TestReturnTranslatingMultiDict(unittest.TestCase):
         self.r.__rettrans__ = self.e.__rettrans__ = trans
 
     def assertr(self, val):
-        self.assertEqual(
-            sorted(list(self.r.iterlists(original=True))),
-            sorted(list(val.items()))
-        )
+        self.assertEqual(self.r.to_dict(flat=False, original=True), val)
 
     def asserte(self, val):
-        self.assertEqual(
-            sorted(list(self.e.iterlists(original=True))),
-            sorted(list(val.items()))
-        )
+        self.assertEqual(self.e.to_dict(flat=False, original=True), val)
 
     def test_constructor(self):
         self.assertr({'foo': [1], 'bar': [2], 3: [4]})
@@ -641,11 +635,11 @@ class TestReturnTranslatingMultiDict(unittest.TestCase):
         self.assertEqual(v, [4])
 
     def test_items(self):
-        i = list(self.r.items(original=False))
-        self.assertEqual(sorted(i), [(3, 5), ('bar', 3), ('foo', 2)])
+        i = list((str(k), str(v)) for (k, v) in self.r.items(original=False))
+        self.assertEqual(sorted(i), [('3', '5'), ('bar', '3'), ('foo', '2')])
 
-        i = list(self.r.items(original=True))
-        self.assertEqual(sorted(i), [(3, 4), ('bar', 2), ('foo', 1)])
+        i = list((str(k), str(v)) for (k, v) in self.r.items(original=True))
+        self.assertEqual(sorted(i), [('3', '4'), ('bar', '2'), ('foo', '1')])
 
     def test_values(self):
         v = list(self.r.values(original=False))
@@ -655,18 +649,26 @@ class TestReturnTranslatingMultiDict(unittest.TestCase):
         self.assertEqual(sorted(v), [1, 2, 4])
 
     def test_lists(self):
-        l = list(self.r.lists(original=False))
+        l = list(
+            (str(k),
+             list(str(x) for x in v)
+             ) for (k, v) in self.r.lists(original=False)
+        )
         self.assertEqual(sorted(l), [
-            (3, [5]),
-            ('bar', [3]),
-            ('foo', [2]),
+            ('3', ['5']),
+            ('bar', ['3']),
+            ('foo', ['2']),
         ])
 
-        l = list(self.r.lists(original=True))
+        l = list(
+            (str(k),
+             list(str(x) for x in v)
+             ) for (k, v) in self.r.lists(original=True)
+        )
         self.assertEqual(sorted(l), [
-            (3, [4]),
-            ('bar', [2]),
-            ('foo', [1]),
+            ('3', ['4']),
+            ('bar', ['2']),
+            ('foo', ['1']),
         ])
 
     def test_listvalues(self):

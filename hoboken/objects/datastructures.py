@@ -377,10 +377,10 @@ class MultiDict(MutableMapping):
     def popitemlist(self):
         return self.__d.popitem()
 
-    def to_dict(self, flat=True):
+    def to_dict(self, flat=True, **kwargs):
         if flat:
-            return dict(self.iteritems())
-        return dict(self.lists())
+            return dict(self.iteritems(**kwargs))
+        return dict(self.lists(**kwargs))
 
     # Iteration methods.
     # --------------------------------------------------
@@ -661,7 +661,7 @@ class ReturnTranslatingMultiDict(MultiDict):
         values = itervalues
         listvalues = iterlistvalues
 
-    else:
+    else:           # pragma: no cover
         # Python 2 list versions.
         items = list_wrapper(iteritems)
         values = list_wrapper(itervalues)
