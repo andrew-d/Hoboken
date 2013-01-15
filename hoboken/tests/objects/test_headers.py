@@ -3,15 +3,15 @@
 from hoboken.tests.compat import unittest
 from mock import MagicMock, Mock, patch
 
-from hoboken.objects.headers import WSGIHeaders
+from hoboken.objects.headers import EnvironHeaders
 
-class TestWSGIHeaders(unittest.TestCase):
+class TestEnvironHeaders(unittest.TestCase):
     def setUp(self):
         self.environ = {
             'HTTP_HEADER': b'value',
             'HTTP_OTHER_HEADER': b'other'
         }
-        self.h = WSGIHeaders(self.environ)
+        self.h = EnvironHeaders(self.environ)
 
     def test_realname(self):
         self.assertEqual(self.h._realname('header'), 'HTTP_HEADER')
@@ -45,7 +45,7 @@ class TestWSGIHeaders(unittest.TestCase):
 
     def test_with_no_environ(self):
         env = {}
-        h = WSGIHeaders(env)
+        h = EnvironHeaders(env)
 
         h['Header'] = b'123'
         self.assertEqual(h['Header'], b'123')
@@ -57,7 +57,7 @@ class TestWSGIHeaders(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestWSGIHeaders))
+    suite.addTest(unittest.makeSuite(TestEnvironHeaders))
 
     return suite
 

@@ -4,7 +4,7 @@ from numbers import Number
 import collections
 
 from hoboken.objects.base import BaseResponse
-from hoboken.objects.headers import WSGIHeaders, WSGIResponseHeaders
+from hoboken.objects.headers import ResponseHeaders
 from hoboken.objects.constants import status_reasons, status_generic_reasons
 from hoboken.objects.util import iter_close
 
@@ -73,7 +73,7 @@ class WSGIBaseResponse(BaseResponse):
 
     def _headers_getter(self):
         if self._headers is None:
-            self._headers = WSGIResponseHeaders()
+            self._headers = ResponseHeaders()
         return self._headers
 
     def _headers_setter(self, value):

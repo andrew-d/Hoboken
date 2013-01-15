@@ -4,7 +4,7 @@ import re
 from hoboken.objects.base import BaseRequest
 from hoboken.objects.util import *
 from hoboken.objects.http import quote, unquote
-from hoboken.objects.headers import WSGIHeaders
+from hoboken.objects.headers import EnvironHeaders
 from hoboken.six import *
 from hoboken.objects.oproperty import oproperty, property_overriding
 
@@ -84,7 +84,7 @@ class WSGIBaseRequest(BaseRequest):
 
     def _headers_getter(self):
         if self._headers is None:
-            self._headers = WSGIHeaders(self.environ)
+            self._headers = EnvironHeaders(self.environ)
         return self._headers
 
     def _headers_setter(self, value):

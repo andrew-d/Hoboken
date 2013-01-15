@@ -1,10 +1,17 @@
 from __future__ import with_statement, absolute_import, print_function
+from functools import wraps
 from collections import MutableMapping
-from hoboken.six import PY3, iterkeys, iteritems
+from hoboken.six import binary_type, PY3, iterkeys, iteritems, text_type
 from hoboken.objects.datastructures import MultiDict
 
 
-class WSGIHeaders(MutableMapping):
+class EnvironHeaders(MutableMapping):
+    """
+    This class is a mapping for a set of HTTP headers constructed from a WSGI
+    environ.  Since, in a request, all headers with the same name will be
+    collapsed into a single header, this class is simpler and doesn't need to
+    handle the multiple header case.
+    """
     def __init__(self, environ):
         self.environ = environ
 
@@ -46,26 +53,32 @@ class WSGIHeaders(MutableMapping):
         return list(iteritems(self))
 
 
-class ConvertingMixin(object):
-    def __init__(self, *args, **kwargs):
-        super(ConvertingMixin, self).__init__(*args, **kwargs)
-
-    def __setitem__(self, name, value):
-        if PY3:
-            if isinstance(name, bytes):
-                name = name.decode('latin-1')
-            if isinstance(value, bytes):
-                value = value.decode('latin-1')
-
-        return super(ConvertingMixin, self).__setitem__(name, value)
-
-    def __getitem__(self, name):
-        val = super(ConvertingMixin, self).__getitem__(name)
-        if PY3 and isinstance(val, str):
+def _to_wsgi(val):  # pragma: no cover
+    if PY3:
+        if isinstance(val, bytes):
+            val = val.decode('latin-1')
+        elif isinstance(val, str):
+            val = val.encode('latin-1').decode('latin-1')
+    else:
+        if isinstance(val, unicode):
             val = val.encode('latin-1')
-        return val
+
+    return val
 
 
-class WSGIResponseHeaders(ConvertingMixin, MultiDict):
+class ResponseHeaders(MultiDict):
+    """
+    Unlike in a request, a response can have multiple headers with the same
+    name.  Thus, this class is a subclass of a MultiDict, with the various
+    accessor functions overridden to handle dealing with the bytes/unicode
+    difference on Python 3.
+    """
     def __init__(self, *args, **kwargs):
-        super(WSGIResponseHeaders, self).__init__(*args, **kwargs)
+        super(ResponseHeaders, self).__init__(*args, **kwargs)
+
+    def __keytrans__(self, key):
+        return _to_wsgi(key)
+
+    def __valtrans__(self, val):
+        return _to_wsgi(val)
+

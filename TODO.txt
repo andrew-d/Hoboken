@@ -34,3 +34,22 @@ New Todo
       an object that supports slicing `foo[10:20]`, and then a helper function
       that will only send the correct range.
 
+
+
+More planning:
+  - Want to be able to modify cookies by using something that approximates a
+    normal dict().  Something like: req.cookies['name'] = b'val'
+  - Problem: modifying the cookies array, or modifying the attributes on the
+    cookie won't notify the request to re-serialize headers.  Need to be
+    notified when something changes so we can re-serialize headers.
+  - Also a problem: headers don't support multiple items properly.
+  - If we use a MultiDict() for headers, it doesn't support modifying the key
+    when accessed - this is since I want to support indexing headers with
+    either a binary or text type (i.e. b'foo' or u'foo').
+
+Possible solutions:
+  - MutableMapping-based CallbackDict that will callback whenever a dictionary
+    entry is modified.
+  - Similar to above, MutableSequence-based CallbackList.
+  - Modify MultiDict to be based on MutableMapping, have functions
+    __keytransform__ and __valuetransform__ that will modify keys/values.
