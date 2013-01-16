@@ -59,19 +59,6 @@ class EnvironHeaders(MutableMapping):
         return list(iteritems(self))
 
 
-def _to_wsgi(val):  # pragma: no cover
-    if PY3:
-        if isinstance(val, bytes):
-            val = val.decode('latin-1')
-        elif isinstance(val, str):
-            val = val.encode('latin-1').decode('latin-1')
-    else:
-        if isinstance(val, unicode):
-            val = val.encode('latin-1')
-
-    return val
-
-
 class ResponseHeaders(MutableMapping):
     def __init__(self, defaults=None):
         self.__l = []
