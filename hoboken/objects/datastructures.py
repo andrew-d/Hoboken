@@ -194,7 +194,7 @@ def iter_multi_items(mapping):
         for item in mapping.iteritems(multi=True):
             yield item
 
-    elif isinstance(mapping, dict):
+    elif isinstance(mapping, MutableMapping):
         for key, value in iteritems(mapping):
             if isinstance(value, (tuple, list)):
                 for value in value:

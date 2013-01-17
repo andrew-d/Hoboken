@@ -166,6 +166,45 @@ class TestImmutableConvertingDict(unittest.TestCase):
         self.assertIs(copy.copy(self.d), self.d)
 
 
+class TestIterMulti(unittest.TestCase):
+    def assertm(self, mapping, l):
+        self.assertEqual(list(iter_multi_items(mapping)), l)
+
+    def test_with_multidict(self):
+        m = MultiDict()
+        m.add(1, 1)
+        m.add(1, 2)
+        m.add(1, 3)
+
+        self.assertm(m, [(1, 1), (1, 2), (1, 3)])
+
+    def test_with_dict(self):
+        d = {1: 1, 2: 2, 3: 3}
+        self.assertm(d, [(1, 1), (2, 2), (3, 3)])
+
+    def test_with_dict_and_nested(self):
+        d = {
+            1: [1, 2],
+            3: (4, 5),
+        }
+        self.assertm(d, [(1, 1), (1, 2), (3, 4), (3, 5)])
+
+    def test_with_other_MutableMapping(self):
+        d = CallbackDict({
+            1: 1,
+            2: 2
+        })
+        self.assertm(d, [(1, 1), (2, 2)])
+
+    def test_with_other_iterable(self):
+        l = [
+            (1, 1),
+            (2, 2),
+            (3, 3),
+        ]
+        self.assertm(l, [(1, 1), (2, 2), (3, 3)])
+
+
 class TestMultiDict(unittest.TestCase):
     def setUp(self):
         self.m = MultiDict({'a': 1, 'b': [2], 'c': [3, 4]})
@@ -803,6 +842,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestImmutableDict))
     suite.addTest(unittest.makeSuite(TestConvertingDict))
     suite.addTest(unittest.makeSuite(TestImmutableConvertingDict))
+    suite.addTest(unittest.makeSuite(TestIterMulti))
     suite.addTest(unittest.makeSuite(TestMultiDict))
     suite.addTest(unittest.makeSuite(TestCallbackList))
     suite.addTest(unittest.makeSuite(TestCallbackDict))
