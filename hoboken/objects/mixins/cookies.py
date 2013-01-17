@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 
 from hoboken.six import iteritems, PY3, text_type
 from hoboken.objects.util import caching_property
-from hoboken.objects.datastructures import CallbackMultiDict
+from hoboken.objects.datastructures import CallbackMultiDictMixin, TranslatingMultiDict
 
 # Get logger for this module.
 logger = logging.getLogger(__name__)
@@ -291,7 +291,7 @@ class Morsel(object):
                                           self.value)
 
 
-class CookiesDict(CallbackMultiDict):
+class CookiesDict(CallbackMultiDictMixin, TranslatingMultiDict):
     def __keytrans__(self, key):
         if PY3 and isinstance(key, str):
             key = key.encode('latin-1')
