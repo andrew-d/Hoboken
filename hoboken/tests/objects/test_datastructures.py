@@ -5,7 +5,7 @@ import pickle
 import contextlib
 import collections
 from io import BytesIO
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import unittest, xfail
 from mock import Mock
 
 from hoboken.objects.datastructures import *
@@ -565,6 +565,124 @@ class TestCallbackDict(unittest.TestCase):
             self.d.update({'foo': 1, 'bar': 2})
 
         self.assertd({'foo': 1, 'bar': 2})
+
+
+class TestCallbackMultiDict(unittest.TestCase):
+    def setUp(self):
+        self.call_count = 0
+
+        class MyMultiDict(CallbackMultiDict):
+            def on_change(this):
+                self.call_count += 1
+
+        self.d = MyMultiDict()
+
+    def assertd(self, val):
+        self.assertEqual(self.d.to_dict(flat=False), val)
+
+    @contextlib.contextmanager
+    def assert_modified(self, count_or_val):
+        self.call_count = 0
+
+        yield
+
+        if count_or_val is True:
+            self.assertTrue(self.call_count > 0)
+        else:
+            self.assertEqual(self.call_count, count_or_val)
+
+    def test_getting(self):
+        self.d[1] = 2
+        with self.assert_modified(0):
+            self.d[1]
+
+    def test_setting(self):
+        with self.assert_modified(1):
+            self.d[1] = 2
+
+    def test_add(self):
+        with self.assert_modified(2):
+            self.d.add(1, 2)
+            self.d.add(1, 3)
+
+        self.assertd({1: [2, 3]})
+
+    def test_delete(self):
+        self.d[1] = 2
+        with self.assert_modified(1):
+            del self.d[1]
+
+        self.assertd({})
+
+    def test_clear(self):
+        self.d[1] = 2
+        self.d[3] = 4
+
+        with self.assert_modified(1):
+            self.d.clear()
+
+        self.assertd({})
+
+    def test_pop(self):
+        self.d.add(1, 1)
+        self.d.add(1, 2)
+
+        with self.assert_modified(1):
+            self.d.pop(1)
+
+    @xfail(reason="on_change() always called")
+    def test_pop_not_modified(self):
+        with self.assert_modified(0):
+            self.d.pop(1, 'default')
+
+    def test_popitem(self):
+        self.d[1] = 2
+
+        with self.assert_modified(1):
+            self.d.popitem()
+
+    def test_popitemlist(self):
+        self.d.add(1, 1)
+        self.d.add(1, 2)
+
+        with self.assert_modified(1):
+            self.d.popitemlist()
+
+    def test_setdefault(self):
+        self.d[1] = 2
+
+        with self.assert_modified(1):
+            self.d.setdefault(3, 4)
+
+        self.assertEqual(self.d[1], 2)
+
+    @xfail(reason="on_change() always called")
+    def test_setdefault_not_modified(self):
+        with self.assert_modified(0):
+            self.d.setdefault(1, 5)
+
+        self.assertEqual(self.d[3], 4)
+
+    def test_setlist(self):
+        with self.assert_modified(1):
+            self.d.setlist(1, [2, 3])
+
+    def test_setlistdefault(self):
+        with self.assert_modified(1):
+            self.d.setlistdefault(2, [3, 4])
+
+    @xfail(reason="on_change() always called")
+    def test_setlistdefault_not_modified(self):
+        self.d[1] = 2
+
+        with self.assert_modified(0):
+            self.d.setlistdefault(1, [3, 4])
+
+    def test_update(self):
+        with self.assert_modified(1):
+            self.d.update({1: 2, 3: 4})
+
+        self.assertd({1: [2], 3: [4]})
 
 
 class TestReturnTranslatingMultiDict(unittest.TestCase):

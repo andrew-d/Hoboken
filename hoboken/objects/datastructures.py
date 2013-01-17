@@ -565,6 +565,57 @@ class CallbackDict(MutableMapping):
         return repr(self.__dict)
 
 
+class CallbackMultiDict(MultiDict):
+    def __init__(self, *args, **kwargs):
+        # Initialize our call depth to 1.  Note that this is to prevent the
+        # on_change() function from being called during __init__
+        self.__call_depth = 1
+
+        super(CallbackMultiDict, self).__init__(*args, **kwargs)
+
+        # Reset call depth.  This now allows on_change()
+        self.__call_depth = 0
+
+    def _change_wrapper(func):
+        @wraps(func)
+        def new_func(self, *args, **kwargs):
+            # Increment the call depth
+            self.__call_depth += 1
+
+            try:
+                ret = func(self, *args, **kwargs)
+            finally:
+                # Always decrement call depth (exception or no)
+                self.__call_depth -= 1
+
+            # If the call depth is 0, we're not being called from another
+            # function of this MultiDict, so we can trigger the on_change()
+            # callback.
+            if self.__call_depth == 0:
+                self.on_change()
+
+            return ret
+
+        return new_func
+
+    # This is our callback function for modifications.
+    def on_change(self):        # pragma: no cover
+        pass
+
+    # These are all the functions that modify the dict.
+    __setitem__ = _change_wrapper(MultiDict.__setitem__)
+    __delitem__ = _change_wrapper(MultiDict.__delitem__)
+    add = _change_wrapper(MultiDict.add)
+    clear = _change_wrapper(MultiDict.clear)
+    pop = _change_wrapper(MultiDict.pop)
+    popitem = _change_wrapper(MultiDict.popitem)
+    popitemlist = _change_wrapper(MultiDict.popitemlist)
+    setdefault = _change_wrapper(MultiDict.setdefault)
+    setlist = _change_wrapper(MultiDict.setlist)
+    setlistdefault = _change_wrapper(MultiDict.setlistdefault)
+    update = _change_wrapper(MultiDict.update)
+
+
 # Wrap every function in a wrapper that will call the '__rettrans__' function
 # on the output.  This is kinda confusing, so here's a breakdown:
 #  - When a function is called on this class, it actually calls our wrapper
