@@ -448,6 +448,45 @@ class MultiDict(MutableMapping):
         )
 
 
+class TranslatingMultiDict(MultiDict):
+    def __init__(self, *args, **kwargs):
+        super(TranslatingMultiDict, self).__init__(*args, **kwargs)
+
+    # Translation functions.
+    # --------------------------------------------------
+    def __keytrans__(self, key):
+        """
+        Translate a key before it's used to index the MultiDict.
+        """
+        return key
+
+    def __valtrans__(self, val):
+        """
+        Translate a value before being written to the dictionary.
+        """
+        return val
+
+    # Override functions to perform translation.
+    # --------------------------------------------------
+    def getlist(self, key, **kwargs):
+        key = self.__keytrans__(key)
+        super(TranslatingMultiDict, self).getlist(key, **kwargs)
+
+    def setlist(self, key, new_list):
+        key = self.__keytrans__(key)
+        new_list = list(self.__valtrans__(x) for x in new_list)
+        super(TranslatingMultiDict, self).setlist(key, new_list)
+
+    def __delitem__(self, key):
+        key = self.__keytrans__(key)
+        super(TranslatingMultiDict, self).__delitem__(key)
+
+    def add(self, key, value):
+        key = self.__keytrans__(key)
+        val = self.__valtrans__(value)
+        super(TranslatingMultiDict, self).add(key, val)
+
+
 class CallbackList(MutableSequence):
     def __init__(self, iterable=None):
         if iterable is not None:
