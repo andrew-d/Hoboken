@@ -210,41 +210,31 @@ def iter_multi_items(mapping):
 class MultiDict(MutableMapping):
     def __init__(self, mapping=None):
         self.__d = {}
-        _kt = self.__keytrans__
-        _vt = self.__valtrans__
 
         # First, handle initializing from other MultiDicts.
         if isinstance(mapping, MultiDict):
-            tmp = (
-                (
-                    _kt(k),
-                    list(_vt(x) for x in l)
-                ) for k, l in mapping.iterlists()
-            )
-            self.__d = dict(tmp)
+            for key, lst in mapping.iterlists():
+                self.setlist(key, lst)
 
         # Otherwise, if we're given another dictionary:
         elif isinstance(mapping, dict):
-            tmp = {}
-
             for key, value in iteritems(mapping):
                 # We convert lists of things to multidict lists.
                 if isinstance(value, (list, tuple)):
-                    value = list(_vt(x) for x in value)
+                    value = list(value)
                 else:
-                    value = [_vt(value)]
+                    value = [value]
 
-                tmp[_kt(key)] = value
-
-            self.__d = tmp
+                self.setlist(key, value)
 
         # Otherwise, we assume this is some iterable of some sort.
         else:
             tmp = {}
             for key, value in (mapping or ()):
-                tmp.setdefault(_kt(key), []).append(_vt(value))
+                tmp.setdefault(key, []).append(value)
 
-            self.__d = tmp
+            for key, lst in iteritems(tmp):
+                self.setlist(key, lst)
 
     @classmethod
     def fromkeys(cls, keys, value=None):
@@ -252,33 +242,54 @@ class MultiDict(MutableMapping):
         instance.__init__(zip(keys, repeat(value)))
         return instance
 
-    # Function hooks.
+    # Similarly to MutableMapping, we implement everything in this MultiDict
+    # in terms of the following functions.
     # --------------------------------------------------
-    def __keytrans__(self, key):
-        """
-        Translate a key before it's used to index the MultiDict.
-        """
-        return key
+    def getlist(self, key, type=None, _raise=False):
+        try:
+            ret = self.__d[key]
+        except KeyError:
+            if _raise:
+                raise
 
-    def __valtrans__(self, val):
-        """
-        Translate a value before being written to the dictionary.
-        """
-        return val
+            return []
+
+        if type is None:
+            return list(ret)
+
+        result = []
+        for x in ret:
+            try:
+                result.append(type(x))
+            except ValueError:
+                pass
+
+        return result
+
+    def setlist(self, key, new_list):
+        self.__d[key] = list(new_list)
+
+    # NOTE: we could implement the following functions in terms of getlist/
+    # setlist, but using this function makes things much faster.
+    def add(self, key, value):
+        self.__d.setdefault(key, []).append(value)
+
+    def clear(self):
+        self.__d.clear()
+
+    def __delitem__(self, key):
+        del self.__d[key]
 
     # MutableMapping functions that must be implemented.
     # --------------------------------------------------
     def __getitem__(self, key):
         try:
-            return self.__d[self.__keytrans__(key)][0]
+            return self.getlist(key, _raise=True)[0]
         except KeyError:
             raise KeyError(key)
 
     def __setitem__(self, key, val):
-        self.__d[self.__keytrans__(key)] = [self.__valtrans__(val)]
-
-    def __delitem__(self, key):
-        del self.__d[self.__keytrans__(key)]
+        self.setlist(key, [val])
 
     def __len__(self):
         return len(self.__d)
@@ -289,7 +300,7 @@ class MultiDict(MutableMapping):
     def __copy__(self):
         return self.copy()
 
-    # Dict functions.
+    # Other dict functions.
     # --------------------------------------------------
     def get(self, key, default=None, type=None):
         try:
@@ -300,6 +311,14 @@ class MultiDict(MutableMapping):
             ret = default
 
         return ret
+
+    def setdefault(self, key, default=None):
+        try:
+            default = self[key]
+        except KeyError:
+            self[key] = default
+
+        return default
 
     if not PY3:     # pragma: no cover
         def has_key(self, key):
@@ -324,58 +343,32 @@ class MultiDict(MutableMapping):
 
     # MultiDict-specific methods.
     # --------------------------------------------------
-    def add(self, key, value):
-        key = self.__keytrans__(key)
-        val = self.__valtrans__(value)
-        self.__d.setdefault(key, []).append(val)
-
-    def getlist(self, key, type=None):
-        key = self.__keytrans__(key)
-
-        try:
-            ret = self.__d[key]
-        except KeyError:
-            return []
-
-        if type is None:
-            return list(ret)
-
-        result = []
-        for x in ret:
-            try:
-                result.append(type(x))
-            except ValueError:
-                pass
-
-        return result
-
-    def setlist(self, key, new_list):
-        key = self.__keytrans__(key)
-        self.__d[key] = list(self.__valtrans__(x) for x in new_list)
-
     def setlistdefault(self, key, default_list=None):
-        key = self.__keytrans__(key)
-
         if key not in self:
-            if default_list is not None:
-                default_list = list(
-                    self.__valtrans__(x) for x in default_list
-                )
-            else:
-                default_list = ()
-
-            self.__d[key] = default_list
+            self.setlist(key, default_list or ())
         else:
-            default_list = self.__d[key]
+            default_list = self.getlist(key)
 
         return default_list
 
     def poplist(self, key):
-        key = self.__keytrans__(key)
-        return self.__d.pop(key, [])
+        try:
+            val = self.getlist(key, _raise=True)
+        except KeyError:
+            return []
+        else:
+            del self[key]
+            return val
 
     def popitemlist(self):
-        return self.__d.popitem()
+        try:
+            key = next(iter(self))
+        except StopIteration:
+            raise KeyError
+
+        val = self.getlist(key)
+        del self[key]
+        return key, val
 
     def to_dict(self, flat=True, **kwargs):
         if flat:
