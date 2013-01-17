@@ -184,6 +184,10 @@ class TestResponseHeaders(unittest.TestCase):
             ('Header2', '2'),
         ])
 
+    def test_remove(self):
+        self.assertTrue(self.h.remove('Foo'))
+        self.assertFalse(self.h.remove('Qqqq'))
+
 
 def suite():
     suite = unittest.TestSuite()

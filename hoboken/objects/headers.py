@@ -245,10 +245,15 @@ class ResponseHeaders(MutableMapping):
             for key, val in it:
                 self.add(key, val)
 
+    def remove(self, key):
+        """
+        Remove a value without erroring if it doesn't exist.  Returns whether
+        any elements were removed.
+        """
+        return self._remove(self._normalize_key(key))
+
     # Internal functions
     # --------------------------------------------------
-    # Remove a value without erroring if it doesn't exist.  Returns whether
-    # any elements were removed.
     def _remove(self, norm_key):
         lst = self.__l
         found = False
