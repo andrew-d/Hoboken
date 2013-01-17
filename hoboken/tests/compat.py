@@ -46,9 +46,16 @@ except ImportError:
 
 if pytest is not None:
     slow_test = pytest.mark.slow_test
+    xfail = pytest.mark.xfail
 
 else:
     slow_test = lambda x: x
+
+    def xfail(*args, **kwargs):
+        if len(args) > 0 and isinstance(args[0], types.FunctionType):
+            return args[0]
+
+        return lambda x: x
 
 
 # We don't use the py.test parametrizing function, since it seems to break
