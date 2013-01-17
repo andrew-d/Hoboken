@@ -597,156 +597,34 @@ class CallbackDict(MutableMapping):
         return repr(self.__dict)
 
 
-class CallbackMultiDict(MultiDict):
+class CallbackMultiDictMixin(object):
     def __init__(self, *args, **kwargs):
-        # Initialize our call depth to 1.  Note that this is to prevent the
-        # on_change() function from being called during __init__
-        self.__call_depth = 1
+        super(CallbackMultiDictMixin, self).__init__(*args, **kwargs)
 
-        super(CallbackMultiDict, self).__init__(*args, **kwargs)
-
-        # Reset call depth.  This now allows on_change()
-        self.__call_depth = 0
-
-    def _change_wrapper(func):
-        @wraps(func)
-        def new_func(self, *args, **kwargs):
-            # Increment the call depth
-            self.__call_depth += 1
-
-            try:
-                ret = func(self, *args, **kwargs)
-            finally:
-                # Always decrement call depth (exception or no)
-                self.__call_depth -= 1
-
-            # If the call depth is 0, we're not being called from another
-            # function of this MultiDict, so we can trigger the on_change()
-            # callback.
-            if self.__call_depth == 0:
-                self.on_change()
-
-            return ret
-
-        return new_func
-
-    # This is our callback function for modifications.
     def on_change(self):        # pragma: no cover
         pass
 
-    # These are all the functions that modify the dict.
-    __setitem__ = _change_wrapper(MultiDict.__setitem__)
-    __delitem__ = _change_wrapper(MultiDict.__delitem__)
-    add = _change_wrapper(MultiDict.add)
-    clear = _change_wrapper(MultiDict.clear)
-    pop = _change_wrapper(MultiDict.pop)
-    popitem = _change_wrapper(MultiDict.popitem)
-    popitemlist = _change_wrapper(MultiDict.popitemlist)
-    setdefault = _change_wrapper(MultiDict.setdefault)
-    setlist = _change_wrapper(MultiDict.setlist)
-    setlistdefault = _change_wrapper(MultiDict.setlistdefault)
-    update = _change_wrapper(MultiDict.update)
+    def setlist(self, key, new_list):
+        super(CallbackMultiDictMixin, self).setlist(key, new_list)
+        self.on_change()
+
+    def __delitem__(self, key):
+        super(CallbackMultiDictMixin, self).__delitem__(key)
+        self.on_change()
+
+    def add(self, key, value):
+        super(CallbackMultiDictMixin, self).add(key, value)
+        self.on_change()
+
+    def clear(self):
+        super(CallbackMultiDictMixin, self).clear()
+        self.on_change()
+
+    def copy(self):
+        # We don't want to track copies.
+        return MultiDict(self)
 
 
-# Wrap every function in a wrapper that will call the '__rettrans__' function
-# on the output.  This is kinda confusing, so here's a breakdown:
-#  - When a function is called on this class, it actually calls our wrapper
-#    function.
-#  - The wrapper function calls the original function, and gets the return
-#    value.
-#  - The wrapper then calls the __rettrans__ function with the return value to
-#    obtain a (possibly) new return value.
-#  - The wrapper function then returns the newly-translated return value.
-def _make_list_wrapper(func):
-    @wraps(func)
-    def new_function(self, *args, **kwargs):
-        ret = func(self, *args, **kwargs)
-        return list(self.__rettrans__(x) for x in ret)
-
-    return new_function
-
-
-class ReturnTranslatingMultiDict(MultiDict):
-    # Dummy translating func.
-    def __rettrans__(self, val):        # pragma: no cover
-        return val
-
-    # This returns a single value, so we just wrap it as-is.
-    def __getitem__(self, key):
-        return self.__rettrans__(
-            super(ReturnTranslatingMultiDict, self).__getitem__(key)
-        )
-
-    # We need to provide a concrete implementation of setdefault, since we
-    # only want to translate the return value if we don't read from the dict
-    # (since the read will call __getitem__, which then already translates).
-    def setdefault(self, key, default=None):
-        try:
-            return self[key]
-        except KeyError:
-            self[key] = default
-
-        return self.__rettrans__(default)
-
-    # These functions return a list of values, so we need to wrap them in a
-    # variant that handles this.
-    getlist = _make_list_wrapper(MultiDict.getlist)
-    poplist = _make_list_wrapper(MultiDict.poplist)
-    setlistdefault = _make_list_wrapper(MultiDict.setlistdefault)
-
-    # This is special, in that it returns a (key, value) tuple.  We need to
-    # deal with this manually.
-    def popitemlist(self):
-        (k, v) = super(ReturnTranslatingMultiDict, self).popitemlist()
-        return (k, list(self.__rettrans__(x) for x in v))
-
-    # Iteration methods
-    def iteritems(self, **kwargs):
-        if kwargs.pop('original', False):
-            return super(ReturnTranslatingMultiDict, self).iteritems(**kwargs)
-
-        return (
-            (k, self.__rettrans__(v)) for (k, v) in
-            super(ReturnTranslatingMultiDict, self).iteritems(**kwargs)
-        )
-
-    def itervalues(self, **kwargs):
-        if kwargs.pop('original', False):
-            return super(ReturnTranslatingMultiDict,
-                         self).itervalues(**kwargs)
-
-        return (self.__rettrans__(x) for x in
-                super(ReturnTranslatingMultiDict, self).itervalues())
-
-    def iterlists(self, **kwargs):
-        if kwargs.pop('original', False):
-            return super(ReturnTranslatingMultiDict, self).iterlists(**kwargs)
-
-        return (
-            (k, list(self.__rettrans__(x) for x in v)) for (k, v)
-            in super(ReturnTranslatingMultiDict, self).iterlists()
-        )
-
-    def iterlistvalues(self, **kwargs):
-        if kwargs.pop('original', False):
-            return super(ReturnTranslatingMultiDict,
-                         self).iterlistvalues(**kwargs)
-
-        return list(
-            list(self.__rettrans__(l) for l in x) for x in
-            super(ReturnTranslatingMultiDict, self).iterlistvalues()
-        )
-
-    # Remember, iteration is different on Python 2/3.
-    if PY3:         # pragma: no cover
-        lists = iterlists
-        items = iteritems
-        values = itervalues
-        listvalues = iterlistvalues
-
-    else:           # pragma: no cover
-        # Python 2 list versions.
-        items = list_wrapper(iteritems)
-        values = list_wrapper(itervalues)
-        lists = list_wrapper(iterlists)
-        listvalues = list_wrapper(iterlistvalues)
+class CallbackMultiDict(CallbackMultiDictMixin, MultiDict):
+    def __init__(self, *args, **kwargs):
+        super(CallbackMultiDict, self).__init__(*args, **kwargs)

@@ -669,7 +669,6 @@ class TestCallbackMultiDict(unittest.TestCase):
         with self.assert_modified(1):
             self.d.pop(1)
 
-    @xfail(reason="on_change() always called")
     def test_pop_not_modified(self):
         with self.assert_modified(0):
             self.d.pop(1, 'default')
@@ -688,19 +687,18 @@ class TestCallbackMultiDict(unittest.TestCase):
             self.d.popitemlist()
 
     def test_setdefault(self):
-        self.d[1] = 2
-
         with self.assert_modified(1):
             self.d.setdefault(3, 4)
 
-        self.assertEqual(self.d[1], 2)
+        self.assertEqual(self.d[3], 4)
 
-    @xfail(reason="on_change() always called")
     def test_setdefault_not_modified(self):
+        self.d[1] = 2
+
         with self.assert_modified(0):
             self.d.setdefault(1, 5)
 
-        self.assertEqual(self.d[3], 4)
+        self.assertEqual(self.d[1], 2)
 
     def test_setlist(self):
         with self.assert_modified(1):
@@ -710,7 +708,6 @@ class TestCallbackMultiDict(unittest.TestCase):
         with self.assert_modified(1):
             self.d.setlistdefault(2, [3, 4])
 
-    @xfail(reason="on_change() always called")
     def test_setlistdefault_not_modified(self):
         self.d[1] = 2
 
@@ -718,122 +715,10 @@ class TestCallbackMultiDict(unittest.TestCase):
             self.d.setlistdefault(1, [3, 4])
 
     def test_update(self):
-        with self.assert_modified(1):
+        with self.assert_modified(True):
             self.d.update({1: 2, 3: 4})
 
         self.assertd({1: [2], 3: [4]})
-
-
-class TestReturnTranslatingMultiDict(unittest.TestCase):
-    def setUp(self):
-        self.r = ReturnTranslatingMultiDict({'foo': 1, 'bar': 2, 3: 4})
-        self.e = ReturnTranslatingMultiDict()
-
-        def trans(val):
-            # print("Translating: %r --> %r" % (val, val + 1))
-            return val + 1
-        self.r.__rettrans__ = self.e.__rettrans__ = trans
-
-    def assertr(self, val):
-        self.assertEqual(self.r.to_dict(flat=False, original=True), val)
-
-    def asserte(self, val):
-        self.assertEqual(self.e.to_dict(flat=False, original=True), val)
-
-    def test_init(self):
-        self.assertr({'foo': [1], 'bar': [2], 3: [4]})
-
-    def test_getitem(self):
-        self.assertEqual(self.r['foo'], 2)
-        self.assertEqual(self.r[3], 5)
-
-    def test_setitem(self):
-        self.e['foo'] = 10
-        self.assertEqual(self.e['foo'], 11)
-        self.asserte({'foo': [10]})
-
-    def test_get(self):
-        self.assertEqual(self.r.get('foo'), 2)
-
-    def test_pop(self):
-        self.assertEqual(self.r.pop('foo'), 2)
-        self.assertr({'bar': [2], 3: [4]})
-
-    def test_setdefault(self):
-        self.assertEqual(self.r.setdefault('foo', 6), 2)
-        self.assertEqual(self.r.setdefault('qqq', 8), 9)
-
-    def test_getlist(self):
-        self.r.add('foo', 3)
-        self.assertEqual(self.r.getlist('foo'), [2, 4])
-
-    def test_poplist(self):
-        self.r.add('foo', 3)
-        self.assertEqual(self.r.poplist('foo'), [2, 4])
-
-    def test_setlistdefault(self):
-        self.assertEqual(self.e.setlistdefault('qqq', [1, 2, 3]),
-                         [2, 3, 4]
-                         )
-        self.asserte({'qqq': [1, 2, 3]})
-
-    def test_popitem(self):
-        self.e.add('foo', 3)
-        k, v = self.e.popitem()
-
-        self.assertEqual(k, 'foo')
-        self.assertEqual(v, 4)
-
-    def test_popitemlist(self):
-        self.e.add('foo', 3)
-        k, v = self.e.popitemlist()
-
-        self.assertEqual(k, 'foo')
-        self.assertEqual(v, [4])
-
-    def test_items(self):
-        i = list((str(k), str(v)) for (k, v) in self.r.items(original=False))
-        self.assertEqual(sorted(i), [('3', '5'), ('bar', '3'), ('foo', '2')])
-
-        i = list((str(k), str(v)) for (k, v) in self.r.items(original=True))
-        self.assertEqual(sorted(i), [('3', '4'), ('bar', '2'), ('foo', '1')])
-
-    def test_values(self):
-        v = list(self.r.values(original=False))
-        self.assertEqual(sorted(v), [2, 3, 5])
-
-        v = list(self.r.values(original=True))
-        self.assertEqual(sorted(v), [1, 2, 4])
-
-    def test_lists(self):
-        l = list(
-            (str(k),
-             list(str(x) for x in v)
-             ) for (k, v) in self.r.lists(original=False)
-        )
-        self.assertEqual(sorted(l), [
-            ('3', ['5']),
-            ('bar', ['3']),
-            ('foo', ['2']),
-        ])
-
-        l = list(
-            (str(k),
-             list(str(x) for x in v)
-             ) for (k, v) in self.r.lists(original=True)
-        )
-        self.assertEqual(sorted(l), [
-            ('3', ['4']),
-            ('bar', ['2']),
-            ('foo', ['1']),
-        ])
-
-    def test_listvalues(self):
-        l = list(self.r.listvalues(original=False))
-        self.assertEqual(sorted(l), [[2], [3], [5]])
-
-        l = list(self.r.listvalues(original=True))
-        self.assertEqual(sorted(l), [[1], [2], [4]])
 
 
 def suite():
@@ -846,6 +731,6 @@ def suite():
     suite.addTest(unittest.makeSuite(TestMultiDict))
     suite.addTest(unittest.makeSuite(TestCallbackList))
     suite.addTest(unittest.makeSuite(TestCallbackDict))
-    suite.addTest(unittest.makeSuite(TestReturnTranslatingMultiDict))
 
     return suite
+
