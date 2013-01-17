@@ -454,13 +454,13 @@ class TranslatingMultiDict(MultiDict):
 
     # Translation functions.
     # --------------------------------------------------
-    def __keytrans__(self, key):
+    def __keytrans__(self, key):            # pragma: no cover
         """
         Translate a key before it's used to index the MultiDict.
         """
         return key
 
-    def __valtrans__(self, val):
+    def __valtrans__(self, val):            # pragma: no cover
         """
         Translate a value before being written to the dictionary.
         """

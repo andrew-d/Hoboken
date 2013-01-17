@@ -335,9 +335,15 @@ class TestMultiDict(unittest.TestCase):
     def test_poplist(self):
         self.assertEqual(self.m.poplist('c'), [3, 4])
 
+    def test_poplist_nonexistant(self):
+        self.assertEqual(self.e.poplist('qqq'), [])
+
     def test_popitemlist(self):
         self.e.setlist('q', [1, 2, 3])
         self.assertEqual(self.e.popitemlist(), ('q', [1, 2, 3]))
+
+        with self.assertRaises(KeyError):
+            self.e.popitemlist()
 
     def test_copy_module(self):
         c = copy.copy(self.e)
@@ -404,6 +410,37 @@ class TestMultiDict(unittest.TestCase):
         d2 = self.m.to_dict(flat=False)
         for _, v in iteritems(d2):
             self.assertTrue(isinstance(v, list))
+
+
+class TestTranslatingMultiDict(unittest.TestCase):
+    def setUp(self):
+        self.d = TranslatingMultiDict()
+        self.d.__keytrans__ = Mock(return_value=lambda k: k)
+        self.d.__valtrans__ = Mock(return_value=lambda v: v)
+
+    def test_getlist(self):
+        self.d.getlist('qqq')
+        self.d.__keytrans__.assert_called_once_with('qqq')
+
+    def test_setlist(self):
+        self.d.setlist('qqq', [1])
+        self.d.__keytrans__.assert_called_once_with('qqq')
+        self.d.__valtrans__.assert_called_once_with(1)
+
+    def test_delitem(self):
+        self.d[1] = 2
+
+        self.d.__keytrans__.reset_mock()
+        self.d.__valtrans__.reset_mock()
+
+        del self.d[1]
+
+        self.d.__keytrans__.assert_called_once_with(1)
+
+    def test_add(self):
+        self.d.add(1, 1)
+        self.d.__keytrans__.assert_called_once_with(1)
+        self.d.__valtrans__.assert_called_once_with(1)
 
 
 class TestCallbackList(unittest.TestCase):
@@ -719,6 +756,10 @@ class TestCallbackMultiDict(unittest.TestCase):
             self.d.update({1: 2, 3: 4})
 
         self.assertd({1: [2], 3: [4]})
+
+    def test_copy(self):
+        q = self.d.copy()
+        self.assertFalse(isinstance(q, CallbackMultiDictMixin))
 
 
 def suite():
