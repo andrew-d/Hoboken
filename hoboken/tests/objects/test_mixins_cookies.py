@@ -5,6 +5,7 @@ import yaml
 from hoboken.tests.compat import parametrize, parametrize_class, unittest
 from mock import MagicMock, Mock, patch
 
+from hoboken.objects.headers import ResponseHeaders
 from hoboken.objects.mixins import cookies
 from hoboken.objects.mixins.cookies import *
 from hoboken.six import iteritems, PY3, text_type
@@ -188,6 +189,58 @@ class TestWSGIRequestCookiesMixin(unittest.TestCase):
 
         # Call again to assert that caching works.
         self.c.cookies
+
+
+class TestWSGIResponseCookiesMixin(unittest.TestCase):
+    def setUp(self):
+        class MixedIn(WSGIResponseCookiesMixin):
+            def __init__(self):
+                self.headers = ResponseHeaders()
+                super(MixedIn, self).__init__()
+
+        self.c = MixedIn()
+
+    def assert_cookies(self, *cookies):
+        # Make our cookies MultiDict into a sorted list of (name, val) tuples.
+        have_c = sorted(map(
+            lambda tup: (tup[0], tup[1].value),
+            self.c.cookies.iteritems(multi=True)
+        ))
+        check_c = sorted(cookies)
+        self.assertEqual(have_c, check_c)
+
+    def test_defaults_to_empty(self):
+        self.assert_cookies()
+
+    def test_will_serialize(self):
+        self.c.cookies['foo'] = Morsel(b'foo', b'bar')
+        self.assert_cookies((b'foo', b'bar'))
+
+    def test_will_serialize_multiple(self):
+        self.c.cookies['foo'] = Morsel(b'foo', b'bar')
+        self.c.cookies.add('foo', Morsel(b'foo', b'asdf'))
+        self.assert_cookies((b'foo', b'bar'), (b'foo', b'asdf'))
+
+        self.assertEqual(sorted(self.c.headers),
+                         [('Set-Cookie', 'foo=asdf'), ('Set-Cookie', 'foo=bar')]
+                         )
+
+    def test_will_override_name(self):
+        self.c.cookies['name'] = Morsel(b'bad', b'val')
+        self.assertEqual(sorted(self.c.headers),
+                         [('Set-Cookie', 'name=val')]
+                         )
+
+    def test_cookies_setter(self):
+        self.c.cookies['foo'] = Morsel(b'foo', b'bar')
+        self.c.cookies = {'aaa': Morsel(b'aaa', b'bbb')}
+        self.assert_cookies((b'aaa', b'bbb'))
+
+    def test_cookies_deleter(self):
+        self.c.cookies['foo'] = Morsel(b'foo', b'bar')
+        del self.c.cookies
+        self.assert_cookies()
+
 
 
 def suite():

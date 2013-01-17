@@ -9,6 +9,7 @@ from datetime import date, datetime, timedelta
 
 from hoboken.six import iteritems, PY3, text_type
 from hoboken.objects.util import caching_property
+from hoboken.objects.datastructures import CallbackMultiDict
 
 # Get logger for this module.
 logger = logging.getLogger(__name__)
@@ -322,11 +323,39 @@ class WSGIResponseCookiesMixin(object):
     def __init__(self, *args, **kwargs):
         super(WSGIResponseCookiesMixin, self).__init__(*args, **kwargs)
 
-        self.__cookies = {}
+        self.__cookies = CallbackMultiDict()
+        self.__cookies.on_change = self.__on_change
+
+    def __on_change(self):
+        # Remove all old Set-Cookie headers.
+        self.headers.pop('Set-Cookie', None)
+
+        # Update all new headers.
+        for name, morsel in self.__cookies.iteritems(multi=True):
+            # Encode the name properly.
+            if PY3 and isinstance(name, str):
+                name = name.encode('latin-1')
+
+            # We reset the name on the morsel, since we assume that the name
+            # in the cookies MultiDict wins.
+            morsel.name = name
+
+            # Serialize and set.
+            val = morsel.serialize(full=True)
+            self.headers.add('Set-Cookie', val)
 
     @property
-    def set_cookie(self):
+    def cookies(self):
         return self.__cookies
+
+    @cookies.setter
+    def cookies(self, val):
+        self.__cookies.clear()
+        self.__cookies.update(val)
+
+    @cookies.deleter
+    def cookies(self):
+        self.__cookies.clear()
 
 
 # TODO:
