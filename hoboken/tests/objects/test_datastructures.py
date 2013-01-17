@@ -583,7 +583,7 @@ class TestReturnTranslatingMultiDict(unittest.TestCase):
     def asserte(self, val):
         self.assertEqual(self.e.to_dict(flat=False, original=True), val)
 
-    def test_constructor(self):
+    def test_init(self):
         self.assertr({'foo': [1], 'bar': [2], 3: [4]})
 
     def test_getitem(self):

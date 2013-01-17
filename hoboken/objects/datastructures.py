@@ -462,7 +462,7 @@ class CallbackList(MutableSequence):
         else:
             self.__list = list()
 
-    # This is our callback function for list modifications.  Override it!
+    # This is our callback function for list modifications.
     def on_change(self):        # pragma: no cover
         pass
 
@@ -520,7 +520,7 @@ class CallbackDict(MutableMapping):
     def __init__(self, *args, **kwargs):
         self.__dict = dict(*args, **kwargs)
 
-    # This is our callback function for dict modifications.  Override it!
+    # This is our callback function for dict modifications.
     def on_change(self):        # pragma: no cover
         pass
 

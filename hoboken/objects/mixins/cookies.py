@@ -281,6 +281,13 @@ class Morsel(object):
 
         return b'; '.join(result)
 
+    def __eq__(self, other):
+        return (
+            self.name == other.name and
+            self.value == other.value and
+            self.attributes == other.attributes
+        )
+
     def __repr__(self):
         return "%s(name=%r, value=%r)" % (self.__class__.__name__, self.name,
                                           self.value)

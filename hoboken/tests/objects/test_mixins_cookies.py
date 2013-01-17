@@ -154,6 +154,20 @@ class TestMiscellaneous(unittest.TestCase):
         v = serialize_cookie_date(d)
         self.assertEqual(v, b'Fri, 11-Jan-2013 20:00:00 GMT')
 
+    def test_morsel_equality(self):
+        m1 = Morsel(b'foo', b'bar')
+        m2 = Morsel(b'foo', b'other')
+        self.assertNotEqual(m1, m2)
+
+        m2.value = b'bar'
+        self.assertEqual(m1, m2)
+
+        m1.httponly = True
+        self.assertNotEqual(m1, m2)
+
+        m2.httponly = True
+        self.assertEqual(m1, m2)
+
 
 class TestWSGIRequestCookiesMixin(unittest.TestCase):
     def setUp(self):
@@ -173,7 +187,7 @@ class TestWSGIRequestCookiesMixin(unittest.TestCase):
         self.assertEqual(c.value, b'bar')
 
         # Call again to assert that caching works.
-        self.assertEqual(c.value, b'bar')
+        self.c.cookies
 
 
 def suite():
