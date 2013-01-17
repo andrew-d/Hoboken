@@ -91,6 +91,8 @@ def caching_property(cache_func):
     class caching_property_class(object):
         def __init__(self, func):
             self.func = func
+            self.cache_name = '_cache_' + func.__name__
+
             self.__name__ = func.__name__
             self.__doc__ = func.__doc__
             self.__module__ = func.__module__
@@ -99,10 +101,18 @@ def caching_property(cache_func):
             if obj is None:
                 return self
 
-            value = obj.__dict__.get(self.__name__, missing)
-            if value is missing or cache_func() is False:
+            # Caching behavior:
+            #   - If the value exists in the object's __dict__, we call our
+            #     cache function, and use that to determine whether to re-call
+            #     the original function.
+            #   - Otherwise, call the original function.
+            value = obj.__dict__.get(self.cache_name, missing)
+            if value is missing:
                 value = self.func(obj)
-                obj.__dict__[self.__name__] = value
+                obj.__dict__[self.cache_name] = value
+            else:
+                if not cache_func(obj):
+                    value = self.func(obj)
 
             return value
 

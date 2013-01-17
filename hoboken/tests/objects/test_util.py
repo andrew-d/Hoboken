@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from hoboken.tests.compat import unittest
+from hoboken.tests.compat import unittest, xfail
 from mock import Mock
 
 from hoboken.objects.util import *
@@ -164,10 +164,17 @@ class TestCachingProperty(unittest.TestCase):
             def _cache_func(self):
                 return self.should_cache
 
+            def _failing_func(self):
+                assert False
+
             @caching_property(_cache_func)
             def prop(blah):
                 self.calls += 1
                 return 123
+
+            @caching_property(_failing_func)
+            def fail(blah):
+                pass
 
         self.TestClass = TestClass
         self.cls = TestClass()
@@ -185,16 +192,22 @@ class TestCachingProperty(unittest.TestCase):
     def test_will_not_cache(self):
         self.cls.should_cache = False
 
+        # Ensure that the we've called the function.
         self.assertEqual(self.cls.prop, 123)
         self.assertEqual(self.calls, 1)
 
+        # Calling it again should call our cache function again.
         val = self.cls.prop
-
-        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.calls, 2)
 
     def test_get_from_class(self):
         p = self.TestClass.prop
         self.assertEqual(self.calls, 0)
+
+    @xfail(reason="Should fail")
+    def test_failing(self):
+        v1 = self.cls.fail
+        v2 = self.cls.fail
 
 
 class TestBytesIteratorFile(unittest.TestCase):
