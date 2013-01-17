@@ -294,6 +294,14 @@ class Morsel(object):
                                           self.value)
 
 
+class CookiesDict(CallbackMultiDict):
+    def __keytrans__(self, key):
+        if PY3 and isinstance(key, str):
+            key = key.encode('latin-1')
+
+        return key
+
+
 class WSGIRequestCookiesMixin(object):
     def __init__(self, *args, **kwargs):
         super(WSGIRequestCookiesMixin, self).__init__(*args, **kwargs)
@@ -323,7 +331,7 @@ class WSGIResponseCookiesMixin(object):
     def __init__(self, *args, **kwargs):
         super(WSGIResponseCookiesMixin, self).__init__(*args, **kwargs)
 
-        self.__cookies = CallbackMultiDict()
+        self.__cookies = CookiesDict()
         self.__cookies.on_change = self.__on_change
 
     def __on_change(self):
