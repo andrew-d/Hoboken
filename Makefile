@@ -6,10 +6,10 @@ test:
 test_all:
 	py.test hoboken/tests
 
-test_cov:
+cov:
 	py.test --cov-report term-missing --cov-config .coveragerc --cov hoboken hoboken/tests
 
-test_tox:
+tox:
 	tox
 
 test_deps:

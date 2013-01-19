@@ -9,7 +9,10 @@ from datetime import date, datetime, timedelta
 
 from hoboken.six import iteritems, PY3, text_type
 from hoboken.objects.util import caching_property
-from hoboken.objects.datastructures import CallbackMultiDictMixin, TranslatingMultiDict
+from hoboken.objects.datastructures import (
+    CallbackMultiDictMixin,
+    TranslatingMultiDict,
+)
 
 # Get logger for this module.
 logger = logging.getLogger(__name__)
@@ -21,13 +24,14 @@ LEGAL_CHAR_RE = b"[\w\d" + re.escape(SPECIAL_CHARS) + b"]"
 COOKIE_RE = re.compile(
     br"(?x)"                            # This is a Verbose pattern
     br"(?P<name>"                       # Start of group 'name'
-    b"" + LEGAL_CHAR_RE + b"+?"         # Any word of at least one letter, nongreedy
+    b"" + LEGAL_CHAR_RE + b"+?"         # Any word of at least one letter,
+                                        # matching nongreedily
     br")"                               # End of group 'name'
     br"\s*=\s*"                         # Equal Sign
     br"(?P<val>"                        # Start of group 'val'
     br'"(?:[^\\"]|\\.)*"'               # Any doublequoted string
     br"|"                               # or
-    br"\w{3},\s[\s\w\d-]{9,11}\s[\d:]{8}\sGMT" # Special case for "expires" attr
+    br"\w{3},\s[\s\w\d-]{9,11}\s[\d:]{8}\sGMT"  # Special case for "expires"
     br"|"                               # or
     b"" + LEGAL_CHAR_RE + b"*"          # Any word or empty string
     br")"                               # End of group 'val'
@@ -262,7 +266,8 @@ class Morsel(object):
         result = []
         result.append(self.name + b'=' + _quote(self.value))
         if full:
-            for key in [b'comment', b'domain', b'max-age', b'path', b'version']:
+            for key in [b'comment', b'domain', b'max-age', b'path',
+                        b'version']:
                 val = self.attributes.get(key)
                 if val:
                     result.append(_rename_mapping[key] + b'=' + _quote(val))

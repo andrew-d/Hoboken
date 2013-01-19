@@ -268,4 +268,3 @@ class ResponseHeaders(MutableMapping):
 
         # Return whether we found anything.
         return found
-

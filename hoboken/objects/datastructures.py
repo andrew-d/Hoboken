@@ -483,6 +483,7 @@ class ImmutableMultiDictMixin(object):
         return self
 
     _hash_cache = None
+
     def __hash__(self):
         if self._hash_cache is not None:
             return self._hash_cache
