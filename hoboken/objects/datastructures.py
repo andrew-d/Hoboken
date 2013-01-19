@@ -448,6 +448,166 @@ class MultiDict(MutableMapping):
         )
 
 
+class ImmutableMultiDictMixin(object):
+    def __init__(self, *args, **kwargs):
+        self.__is_initializing = True
+        super(ImmutableMultiDictMixin, self).__init__(*args, **kwargs)
+        self.__is_initializing = False
+
+    def __reduce_ex__(self, protocol):
+        return type(self), (dict(self),)
+
+    def setlist(self, key, lst):
+        if self.__is_initializing:
+            return super(ImmutableMultiDictMixin, self).setlist(key, lst)
+        is_immutable(self)
+
+    def __delitem__(self, key):
+        is_immutable(self)
+
+    def add(self, key, val):
+        is_immutable(self)
+
+    def clear(self):
+        is_immutable(self)
+
+    def copy(self):
+        # We don't want to track copies.
+        return MultiDict(self)
+
+    def __copy__(self):
+        """
+        This method makes the standard library's copy() function a no-op,
+        just like it is for, e.g., tuples.
+        """
+        return self
+
+    _hash_cache = None
+    def __hash__(self):
+        if self._hash_cache is not None:
+            return self._hash_cache
+        rv = self._hash_cache = hash(tuple(self.iteritems(multi=True)))
+        return rv
+
+
+class ImmutableMultiDict(ImmutableMultiDictMixin, MultiDict):
+    pass
+
+
+class NestedMultiDict(ImmutableMultiDictMixin, MultiDict):
+    def __init__(self, *dicts):
+        self.dicts = dicts
+
+    def getlist(self, key, type=None):
+        res = []
+        for d in self.dicts:
+            res.extend(d.getlist(key, type=type))
+
+        return res
+
+    def copy(self):
+        return MultiDict(self)
+
+    def __len__(self):
+        l = 0
+        for d in self.dicts:
+            l += len(d)
+
+        return l
+
+    def __contains__(self, key):
+        for d in self.dicts:
+            if key in d:
+                return True
+
+        return False
+
+    if not PY3:         # pragma: no cover
+        has_key = __contains__
+
+    def __nonzero__(self):
+        for d in self.dicts:
+            if d:
+                return True
+
+        return False
+
+    if PY3:             # pragma: no cover
+        __bool__ = __nonzero__
+        del __nonzero__
+
+    # Iteration stuff.
+    # --------------------------------------------------
+    if PY3:             # pragma: no cover
+        def items(self, **kwargs):
+            for d in self.dicts:
+                for item in d.items(**kwargs):
+                    yield item
+
+        def values(self):
+            for d in self.dicts:
+                for v in d.values():
+                    yield v
+
+        def lists(self):
+            for d in self.dicts:
+                for l in d.lists():
+                    yield l
+
+        def listvalues(self):
+            for d in self.dicts:
+                for l in d.listvalues():
+                    yield l
+
+        def keys(self):
+            for d in self.dicts:
+                for k in d.keys():
+                    yield k
+
+        iteritems = items
+        itervalues = values
+        iterlists = lists
+        iterlistvalues = listvalues
+        iterkeys = keys
+
+    else:               # pragma: no cover
+        def iteritems(self, **kwargs):
+            for d in self.dicts:
+                for item in d.iteritems(**kwargs):
+                    yield item
+
+        def itervalues(self):
+            for d in self.dicts:
+                for v in d.itervalues():
+                    yield v
+
+        def iterlists(self):
+            for d in self.dicts:
+                for l in d.iterlists():
+                    yield l
+
+        def iterlistvalues(self):
+            for d in self.dicts:
+                for l in d.iterlistvalues():
+                    yield l
+
+        def iterkeys(self):
+            for d in self.dicts:
+                for k in d.iterkeys():
+                    yield k
+
+        # Python 2 list versions.
+        items = list_wrapper(iteritems)
+        values = list_wrapper(itervalues)
+        lists = list_wrapper(iterlists)
+        listvalues = list_wrapper(iterlistvalues)
+
+    def __iter__(self):
+        for d in self.dicts:
+            for key in d:
+                yield key
+
+
 class TranslatingMultiDict(MultiDict):
     def __init__(self, *args, **kwargs):
         super(TranslatingMultiDict, self).__init__(*args, **kwargs)

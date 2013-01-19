@@ -140,6 +140,137 @@ class TestImmutableDict(unittest.TestCase):
         self.assertEqual(self.d, j)
 
 
+class TestImmutableMultiDict(unittest.TestCase):
+    def setUp(self):
+        self.d = ImmutableMultiDict({'a': 'b', 'c': 'd'})
+
+    def test_delete_item(self):
+        with self.assertRaises(TypeError):
+            del self.d['a']
+
+    def test_set_item(self):
+        with self.assertRaises(TypeError):
+            self.d['a'] = 1
+
+    def test_update(self):
+        with self.assertRaises(TypeError):
+            self.d.update({'e': 'f'})
+
+    def test_pop(self):
+        with self.assertRaises(TypeError):
+            self.d.pop('a')
+
+    def test_popitem(self):
+        with self.assertRaises(TypeError):
+            self.d.popitem()
+
+    def test_clear(self):
+        with self.assertRaises(TypeError):
+            self.d.clear()
+
+    def test_setdefault(self):
+        with self.assertRaises(TypeError):
+            self.d.setdefault('e', 'f')
+
+    def test_setlistdefault(self):
+        with self.assertRaises(TypeError):
+            self.d.setlistdefault('e', ['f', 'g'])
+
+    def test_poplist(self):
+        with self.assertRaises(TypeError):
+            self.d.poplist('a')
+
+    def test_popitemlist(self):
+        with self.assertRaises(TypeError):
+            self.d.popitemlist()
+
+    def test_fromkeys(self):
+        d = ImmutableMultiDict.fromkeys([1, 2, 3])
+        self.assertEqual(list(d.keys()), [1, 2, 3])
+
+    def test_is_hashable(self):
+        h = hash(self.d)
+        self.assertIsNotNone(h)
+        self.assertEqual(hash(self.d), h)
+
+    def test_copy(self):
+        self.assertTrue(isinstance(self.d.copy(), MultiDict))
+
+    def test_copy_module(self):
+        c = copy.copy(self.d)
+        self.assertIs(c, self.d)
+
+    def test_is_picklable(self):
+        dst = BytesIO()
+        p = pickle.Pickler(dst)
+        p.dump(self.d)
+
+        data = dst.getvalue()
+        src = BytesIO(data)
+        u = pickle.Unpickler(src)
+        j = u.load()
+
+        self.assertEqual(self.d, j)
+
+
+class TestNestedMultiDict(unittest.TestCase):
+    def setUp(self):
+        self.m1 = MultiDict({'a': 'b', 'c': 'd'})
+        self.m2 = MultiDict({1: 2, 3: 4})
+
+        self.d = NestedMultiDict(self.m1, self.m2)
+
+    def test_get(self):
+        self.assertEqual(self.d['a'], 'b')
+        self.assertEqual(self.d[1], 2)
+
+    def test_copy(self):
+        c = self.d.copy()
+        self.assertTrue(isinstance(c, MultiDict))
+
+    def test_len(self):
+        self.assertEqual(len(self.d), 4)
+
+    def test_contains(self):
+        for k in ['a', 'c', 1, 3]:
+            self.assertIn(k, self.d)
+
+        self.assertNotIn('qqq', self.d)
+
+    def test_converts_to_bool(self):
+        self.assertTrue(bool(self.d))
+
+        # Clear, this should return false.
+        self.m1.clear()
+        self.m2.clear()
+        self.assertFalse(bool(self.d))
+
+    def test_iter_items(self):
+        self.assertEqual(list(self.d.iteritems(multi=True)),
+                         [('a', 'b'), ('c', 'd'), (1, 2), (3, 4)]
+                         )
+
+    def test_iter_values(self):
+        self.assertEqual(list(self.d.itervalues()), ['b', 'd', 2, 4])
+
+    def test_iter_keys(self):
+        self.assertEqual(list(self.d.iterkeys()), ['a', 'c', 1, 3])
+
+    def test_iter_lists(self):
+        self.assertEqual(list(self.d.iterlists()), [
+            ('a', ['b']),
+            ('c', ['d']),
+            (1, [2]),
+            (3, [4])
+        ])
+
+    def test_iter_listvalues(self):
+        self.assertEqual(list(self.d.iterlistvalues()), [['b'], ['d'], [2], [4]])
+
+    def test_iter(self):
+        self.assertEqual(list(iter(self.d)), ['a', 'c', 1, 3])
+
+
 class TestConvertingDict(unittest.TestCase):
     def setUp(self):
         self.d = ConvertingDict({'a': '1', 'b': 2})
@@ -770,6 +901,8 @@ def suite():
     suite.addTest(unittest.makeSuite(TestImmutableConvertingDict))
     suite.addTest(unittest.makeSuite(TestIterMulti))
     suite.addTest(unittest.makeSuite(TestMultiDict))
+    suite.addTest(unittest.makeSuite(TestImmutableMultiDict))
+    suite.addTest(unittest.makeSuite(TestNestedMultiDict))
     suite.addTest(unittest.makeSuite(TestCallbackList))
     suite.addTest(unittest.makeSuite(TestCallbackDict))
 
