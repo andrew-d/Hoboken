@@ -245,13 +245,16 @@ class MultiDict(MutableMapping):
     # Similarly to MutableMapping, we implement everything in this MultiDict
     # in terms of the following functions.
     # --------------------------------------------------
-    def getlist(self, key, type=None, _raise=False):
+    def getlist(self, key, type=None):
+        """
+        Get a list containing all values for a given key.  If the parameter
+        'type' is given, then it is assumed to be a function and will be
+        called to convert all values.  If the key is not found in this
+        MultiDict, an empty list will be returned.
+        """
         try:
             ret = self.__d[key]
         except KeyError:
-            if _raise:
-                raise
-
             return []
 
         if type is None:
@@ -283,9 +286,10 @@ class MultiDict(MutableMapping):
     # MutableMapping functions that must be implemented.
     # --------------------------------------------------
     def __getitem__(self, key):
-        try:
-            return self.getlist(key, _raise=True)[0]
-        except KeyError:
+        lst = self.getlist(key)
+        if len(lst):
+            return lst[0]
+        else:
             raise KeyError(key)
 
     def __setitem__(self, key, val):
@@ -352,13 +356,12 @@ class MultiDict(MutableMapping):
         return default_list
 
     def poplist(self, key):
-        try:
-            val = self.getlist(key, _raise=True)
-        except KeyError:
-            return []
-        else:
+        lst = self.getlist(key)
+        if len(lst):
             del self[key]
-            return val
+        else:
+            lst = []
+        return lst
 
     def popitemlist(self):
         try:
