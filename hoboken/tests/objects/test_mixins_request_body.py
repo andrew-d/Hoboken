@@ -53,6 +53,17 @@ class TestField(unittest.TestCase):
         self.f.close()
         self.assertEqual(self.f.value, b'test123')
 
+    def test_from_value(self):
+        f = Field.from_value(b'name', b'value')
+        self.assertEqual(f.field_name, b'name')
+        self.assertEqual(f.value, b'value')
+
+    def test_equality(self):
+        f1 = Field.from_value(b'name', b'value')
+        f2 = Field.from_value(b'name', b'value')
+
+        self.assertEqual(f1, f2)
+
 
 class TestFile(unittest.TestCase):
     def setUp(self):
@@ -267,9 +278,6 @@ class TestBaseParser(unittest.TestCase):
 
 
 class TestQuerystringParser(unittest.TestCase):
-    def on_field(self, val):
-        self.f.append(val)
-
     def assert_fields(self, *args, **kwargs):
         if kwargs.pop('finalize', True):
             self.p.finalize()

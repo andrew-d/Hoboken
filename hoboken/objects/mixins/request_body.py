@@ -158,6 +158,13 @@ class Field(object):
         # We cache the joined version of _value for speed.
         self._cache = None
 
+    @classmethod
+    def from_value(klass, name, value):
+        f = klass(name)
+        f.write(value)
+        f.finalize()
+        return f
+
     def write(self, data):
         return self.on_data(data)
 
@@ -189,6 +196,26 @@ class Field(object):
             self._cache = b''.join(self._value)
 
         return self._cache
+
+    def __eq__(self, other):
+        return (
+            self.field_name == other.field_name and
+            self.value == other.value
+        )
+
+    def __repr__(self):
+        if len(self.value) > 97:
+            # We get the repr, and then insert three dots before the final
+            # quote.
+            v = repr(self.value[:97])[:-1] + "...'"
+        else:
+            v = repr(self.value)
+
+        return "%s(field_name=%r, value=%s)" % (
+            self.__class__.__name__,
+            self.field_name,
+            v
+        )
 
 
 class File(object):
