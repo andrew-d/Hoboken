@@ -340,9 +340,6 @@ class MultiDict(MutableMapping):
     def __setstate__(self, value):
         # Since Pickle doesn't call our __init__ function, initialize ourself.
         self.__d = {}
-
-        # Set the values on the dict.
-        self.clear()
         self.update(value)
 
     # MultiDict-specific methods.
