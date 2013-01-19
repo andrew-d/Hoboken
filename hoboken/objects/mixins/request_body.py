@@ -11,7 +11,11 @@ from hoboken.six import (
     advance_iterator,
     PY3,
 )
-from hoboken.objects.datastructures import MultiDict
+from hoboken.objects.datastructures import (
+    ImmutableMultiDict,
+    MultiDict,
+    NestedMultiDict,
+)
 
 try:
     from urlparse import parse_qs
@@ -1378,8 +1382,9 @@ class RequestBodyMixin(object):
         super(RequestBodyMixin, self).__init__(*args, **kwargs)
 
         # Our fields and files default to nothing.
-        self.__fields = MultiDict()
-        self.__files = MultiDict()
+        self.__querystring_fields = None
+        self.__post_fields = None
+        self.__files = None
 
     # TODO: do we make this a property?
     def form_parser(self, on_field, on_file):
@@ -1391,11 +1396,13 @@ class RequestBodyMixin(object):
             logger.warn("No Content-Type header given")
             raise ValueError("No Content-Type header given!")
 
-        # Try and get our boundary.
+        # Boundaries are optional (the FormParser will raise if one is needed
+        # but not given.
         content_type, params = parse_options_header(content_type)
         boundary = params.get(b'boundary')
 
-        # Try and get a filename.
+        # File names are optional.
+        # TODO: should we have a 'TRUST_X_HEADERS' config?
         file_name = self.headers.get(b'X-File-Name')
 
         # Get our configuration.
@@ -1450,13 +1457,83 @@ class RequestBodyMixin(object):
         finally:
             fp.close()
 
-        self.__fields = fields
+        self.__post_fields = fields
         self.__files = files
+
+    def parse_querystring(self):
+        fields = []
+        name_buffer = []
+        data_buffer = []
+
+        def on_field_name(data, start, end):
+            name_buffer.append(data[start:end])
+
+        def on_field_data(data, start, end):
+            data_buffer.append(data[start:end])
+
+        def on_field_end():
+            # Create a field.
+            field = Field(b''.join(name_buffer))
+            field.write(b''.join(data_buffer))
+            field.finalize()
+
+            # Append to our list (which will be turned into a MultiDict later)
+            fields.append((field.field_name, field))
+
+            # Clear buffers for next field.
+            del name_buffer[:]
+            del data_buffer[:]
+
+        callbacks = {
+            'on_field_name': on_field_name,
+            'on_field_data': on_field_data,
+            'on_field_end': on_field_end
+        }
+
+        parser = QuerystringParser(callbacks)
+        parser.write(self.query_string)
+        parser.finalize()
+
+        self.__querystring_fields = MultiDict(fields)
+
+    @property
+    def GET(self):
+        """
+        this property returns a multidict containing only the get parameters -
+        i.e. the parameters that were passed in the query string of the
+        request.
+        """
+        return (self.__querystring_fields if
+                self.__querystring_fields is not None else
+                ImmutableMultiDict()
+                )
+
+    @property
+    def POST(self):
+        """
+        This property returns a MultiDict containing only the POST parameters -
+        i.e. the parameters that were passed in the body of the request.
+        """
+        return (self.__post_fields if
+                self.__post_fields is not None else
+                ImmutableMultiDict()
+                )
 
     @property
     def fields(self):
-        return self.__fields
+        """
+        This property returns a NestedMultiDict encapsulating all fields in
+        the request - both in the POST body (if any), and the query string
+        (if any).
+        """
+        return NestedMultiDict(self.GET, self.POST)
 
     @property
     def files(self):
-        return self.__files
+        """
+        This property returns a MultiDict which contains files uploaded in the
+        POST body of a request (if any).
+        """
+        return (self.__files if
+                self.__files is not None else
+                ImmutableMultiDict())

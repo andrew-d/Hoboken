@@ -914,9 +914,9 @@ class TestRequestBodyMixin(unittest.TestCase):
         self.m.input_stream = BytesIO(test_data)
         self.m.parse_body()
 
-        self.assertEqual(len(self.m.fields), 1)
-        self.assertIn(b'field', self.m.fields)
-        self.assertEqual(self.m.fields[b'field'].value, b'test1')
+        self.assertEqual(len(self.m.POST), 1)
+        self.assertIn(b'field', self.m.POST)
+        self.assertEqual(self.m.POST[b'field'].value, b'test1')
 
         self.assertEqual(len(self.m.files), 1)
         self.assertIn(b'file', self.m.files)
@@ -929,12 +929,58 @@ class TestRequestBodyMixin(unittest.TestCase):
         self.assertEqual(file_data, b'test2')
 
     def test_default_fields_files(self):
+        self.assertEqual(self.m.GET, {})
+        self.assertEqual(self.m.POST, {})
         self.assertEqual(self.m.fields, {})
         self.assertEqual(self.m.files, {})
 
     def test_errors_with_no_content_type(self):
         with self.assertRaises(ValueError):
             f = self.m.form_parser(None, None)
+
+    # Helper for querystring assertions.
+    def assert_fields(self, multidict, kvs):
+        # Assert that we have all our data.
+        _key = lambda f: (f[1].field_name, f[1].value)
+        check = sorted(multidict.iteritems(multi=True), key=_key)
+
+        # Make (name, Field) tuples from our given tuples.
+        def _make(tup):
+            return (tup[0], Field.from_value(tup[0], tup[1]))
+        given = sorted(map(_make, kvs), key=_key)
+
+        self.assertEqual(check, given)
+
+    def test_parse_querystring(self):
+        self.m.query_string = b'foo=bar&other=asdf&foo=other'
+        self.m.parse_querystring()
+
+        self.assert_fields(self.m.GET, [
+            (b'foo', b'bar'),
+            (b'foo', b'other'),
+            (b'other', b'asdf'),
+        ])
+
+    def test_will_mix_querystring(self):
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        # Parse POST body.
+        self.m.headers[b'Content-Type'] = b'multipart/form-data; boundary="boundary"'
+        self.m.input_stream = BytesIO(test_data)
+        self.m.parse_body()
+
+        # Parse querystring.
+        self.m.query_string = b'field=query&other=asdf'
+        self.m.parse_querystring()
+
+        self.assert_fields(self.m.fields, [
+            (b'field', b'query'),
+            (b'field', b'test1'),
+            (b'other', b'asdf'),
+        ])
 
 
 def suite():

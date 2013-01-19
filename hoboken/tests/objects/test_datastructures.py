@@ -245,19 +245,25 @@ class TestNestedMultiDict(unittest.TestCase):
         self.m2.clear()
         self.assertFalse(bool(self.d))
 
+    def assertEqualSorted(self, list1, list2):
+        def _key(val):
+            return str(val)
+
+        self.assertEqual(sorted(list1, key=_key), sorted(list2, key=_key))
+
     def test_iter_items(self):
-        self.assertEqual(list(self.d.iteritems(multi=True)),
-                         [('a', 'b'), ('c', 'd'), (1, 2), (3, 4)]
-                         )
+        self.assertEqualSorted(list(self.d.iteritems(multi=True)),
+                               [('a', 'b'), ('c', 'd'), (1, 2), (3, 4)]
+                               )
 
     def test_iter_values(self):
-        self.assertEqual(list(self.d.itervalues()), ['b', 'd', 2, 4])
+        self.assertEqualSorted(list(self.d.itervalues()), ['b', 'd', 2, 4])
 
     def test_iter_keys(self):
-        self.assertEqual(list(self.d.iterkeys()), ['a', 'c', 1, 3])
+        self.assertEqualSorted(list(self.d.iterkeys()), ['a', 'c', 1, 3])
 
     def test_iter_lists(self):
-        self.assertEqual(list(self.d.iterlists()), [
+        self.assertEqualSorted(list(self.d.iterlists()), [
             ('a', ['b']),
             ('c', ['d']),
             (1, [2]),
@@ -265,10 +271,12 @@ class TestNestedMultiDict(unittest.TestCase):
         ])
 
     def test_iter_listvalues(self):
-        self.assertEqual(list(self.d.iterlistvalues()), [['b'], ['d'], [2], [4]])
+        self.assertEqualSorted(list(self.d.iterlistvalues()),
+                               [['b'], ['d'], [2], [4]]
+                               )
 
     def test_iter(self):
-        self.assertEqual(list(iter(self.d)), ['a', 'c', 1, 3])
+        self.assertEqualSorted(list(iter(self.d)), ['a', 'c', 1, 3])
 
 
 class TestConvertingDict(unittest.TestCase):
