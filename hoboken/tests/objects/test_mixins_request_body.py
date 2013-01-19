@@ -5,6 +5,7 @@ import sys
 import glob
 import yaml
 import base64
+import random
 import tempfile
 from hoboken.tests.compat import parametrize, parametrize_class, unittest
 from io import BytesIO
@@ -706,7 +707,8 @@ class TestFormParser(unittest.TestCase):
 
     def test_random_splitting(self):
         """
-        This test runs a simple multipart body with one field and one file through every possible split.
+        This test runs a simple multipart body with one field and one file
+        through every possible split.
         """
         # Load test data.
         test_file = 'single_field_single_file.http'
@@ -759,6 +761,115 @@ class TestFormParser(unittest.TestCase):
         # Assert that our file and field are here.
         self.assert_field(b'field', b'test1')
         self.assert_file(b'file', b'file.txt', b'test2')
+
+    def test_request_body_fuzz(self):
+        """
+        This test randomly fuzzes the request body to ensure that no strange
+        exceptions are raised and we don't end up in a strange state.  The
+        fuzzing consists of randomly doing one of the following:
+            - Adding a random byte at a random offset
+            - Randomly deleting a single byte
+            - Randomly swapping two bytes
+        """
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        iterations = 1000
+        successes = 0
+        failures = 0
+        exceptions = 0
+
+        print("Running %d iterations of fuzz testing:" % (iterations,))
+        for i in range(iterations):
+            # Create a bytearray to mutate.
+            fuzz_data = bytearray(test_data)
+
+            # Pick what we're supposed to do.
+            choice = random.choice([1, 2, 3])
+            if choice == 1:
+                # Add a random byte.
+                i = random.randrange(len(test_data))
+                b = random.randrange(256)
+
+                fuzz_data.insert(i, b)
+                msg = "Inserting byte %r at offset %d" % (b, i)
+
+            elif choice == 2:
+                # Remove a random byte.
+                i = random.randrange(len(test_data))
+                del fuzz_data[i]
+
+                msg = "Deleting byte at offset %d" % (i,)
+
+            elif choice == 3:
+                # Swap two bytes.
+                i = random.randrange(len(test_data) - 1)
+                fuzz_data[i], fuzz_data[i + 1] = fuzz_data[i + 1], fuzz_data[i]
+
+                msg = "Swapping bytes %d and %d" % (i, i + 1)
+
+            # Print message, so if this crashes, we can inspect the output.
+            print("  " + msg)
+
+            # Create form parser.
+            self.make(b'boundary')
+
+            # Feed with data, and ignore form parser exceptions.
+            i = 0
+            try:
+                i = self.f.write(bytes(fuzz_data))
+                self.f.finalize()
+            except FormParserError:
+                exceptions += 1
+            else:
+                if i == len(fuzz_data):
+                    successes += 1
+                else:
+                    failures += 1
+
+        print("--------------------------------------------------")
+        print("Successes:  %d" % (successes,))
+        print("Failures:   %d" % (failures,))
+        print("Exceptions: %d" % (exceptions,))
+
+    def test_request_body_fuzz_random_data(self):
+        """
+        This test will fuzz the multipart parser with some number of iterations
+        of randomly-generated data.
+        """
+        iterations = 1000
+        successes = 0
+        failures = 0
+        exceptions = 0
+
+        print("Running %d iterations of fuzz testing:" % (iterations,))
+        for i in range(iterations):
+            data_size = random.randrange(100, 4096)
+            data = os.urandom(data_size)
+            print("  Testing with %d random bytes..." % (data_size,))
+
+            # Create form parser.
+            self.make(b'boundary')
+
+            # Feed with data, and ignore form parser exceptions.
+            i = 0
+            try:
+                i = self.f.write(bytes(data))
+                self.f.finalize()
+            except FormParserError:
+                exceptions += 1
+            else:
+                if i == len(data):
+                    successes += 1
+                else:
+                    failures += 1
+
+        print("--------------------------------------------------")
+        print("Successes:  %d" % (successes,))
+        print("Failures:   %d" % (failures,))
+        print("Exceptions: %d" % (exceptions,))
 
     def test_bad_start_boundary(self):
         self.make(b'boundary')
