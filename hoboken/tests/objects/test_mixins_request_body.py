@@ -64,6 +64,11 @@ class TestField(unittest.TestCase):
 
         self.assertEqual(f1, f2)
 
+    def test_equality_with_other(self):
+        f = Field.from_value(b'foo', b'bar')
+        self.assertFalse(f == b'foo')
+        self.assertFalse(b'foo' == f)
+
 
 class TestFile(unittest.TestCase):
     def setUp(self):

@@ -202,10 +202,13 @@ class Field(object):
         return self._cache
 
     def __eq__(self, other):
-        return (
-            self.field_name == other.field_name and
-            self.value == other.value
-        )
+        if isinstance(other, Field):
+            return (
+                self.field_name == other.field_name and
+                self.value == other.value
+            )
+        else:
+            return NotImplemented
 
     def __repr__(self):
         if len(self.value) > 97:

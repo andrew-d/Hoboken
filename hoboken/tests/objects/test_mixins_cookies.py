@@ -169,6 +169,11 @@ class TestMiscellaneous(unittest.TestCase):
         m2.httponly = True
         self.assertEqual(m1, m2)
 
+    def test_morsel_compare_other(self):
+        m = Morsel(b'foo')
+        self.assertFalse(m == b'foo')
+        self.assertFalse(b'foo' == m)
+
 
 class TestWSGIRequestCookiesMixin(unittest.TestCase):
     def setUp(self):
