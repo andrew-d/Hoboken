@@ -436,7 +436,8 @@ class BaseParser(object):
         """
         This function calls a provided callback with some data.
         """
-        func = self.callbacks.get("on_" + name)
+        name = "on_" + name
+        func = self.callbacks.get(name)
         if func is None:
             return
 
@@ -446,12 +447,10 @@ class BaseParser(object):
             if start is not None and start == end:
                 return
 
-            logger.debug("Calling %s with data[%d:%d] = %r" % (
-                'on_' + name, start, end, data[start:end]
-            ))
+            logger.debug("Calling %s with data[%d:%d]", name, start, end)
             func(data, start, end)
         else:
-            logger.debug("Calling %s with no data" % ('on_' + name,))
+            logger.debug("Calling %s with no data", name)
             func()
 
     def set_callback(self, name, new_func):
