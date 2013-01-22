@@ -7,7 +7,12 @@ import yaml
 import base64
 import random
 import tempfile
-from hoboken.tests.compat import parametrize, parametrize_class, unittest
+from hoboken.tests.compat import (
+    parametrize,
+    parametrize_class,
+    slow_test,
+    unittest,
+)
 from io import BytesIO
 
 from mock import MagicMock, Mock, patch
@@ -762,6 +767,7 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b'field', b'test1')
         self.assert_file(b'file', b'file.txt', b'test2')
 
+    @slow_test
     def test_request_body_fuzz(self):
         """
         This test randomly fuzzes the request body to ensure that no strange
@@ -834,6 +840,7 @@ class TestFormParser(unittest.TestCase):
         print("Failures:   %d" % (failures,))
         print("Exceptions: %d" % (exceptions,))
 
+    @slow_test
     def test_request_body_fuzz_random_data(self):
         """
         This test will fuzz the multipart parser with some number of iterations
