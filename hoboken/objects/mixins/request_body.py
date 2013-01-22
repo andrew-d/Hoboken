@@ -1136,6 +1136,9 @@ class FormParser(object):
         'UPLOAD_DIR': None,
         'UPLOAD_KEEP_FILENAME': False,
         'UPLOAD_KEEP_EXTENSIONS': False,
+
+        # Error on invalid Content-Transfer-Encoding?
+        'UPLOAD_ERROR_ON_BAD_CTE': False,
     }
 
     def __init__(self, content_type, on_field, on_file, on_end=None,
@@ -1319,15 +1322,18 @@ class FormParser(object):
                     vars.writer = QuotedPrintableDecoder(vars.f)
 
                 else:
-                    # TODO: do we really want to raise an exception here?  Or
-                    # should we just continue parsing?
                     logger.warn("Unknown Content-Transfer-Encoding: %r",
                                 transfer_encoding)
-                    raise FormParserError(
-                        'Unknown Content-Transfer-Encoding "{0}"'.format(
-                            transfer_encoding
+                    if self.config['UPLOAD_ERROR_ON_BAD_CTE']:
+                        raise FormParserError(
+                            'Unknown Content-Transfer-Encoding "{0}"'.format(
+                                transfer_encoding
+                            )
                         )
-                    )
+                    else:
+                        # If we aren't erroring, then we just treat this as an
+                        # unencoded Content-Transfer-Encoding.
+                        vars.writer = vars.f
 
             def on_end():
                 vars.writer.finalize()

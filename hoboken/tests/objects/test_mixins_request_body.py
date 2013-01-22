@@ -980,12 +980,23 @@ class TestFormParser(unittest.TestCase):
         on_field = Mock()
         on_end = Mock()
 
+        # Test with erroring.
+        config = {'UPLOAD_ERROR_ON_BAD_CTE': True}
         f = FormParser(b'multipart/form-data', on_field, on_file,
-                       on_end=on_end, boundary=b'--boundary')
+                       on_end=on_end, boundary=b'--boundary', config=config)
 
         with self.assertRaises(FormParserError):
             f.write(data)
             f.finalize()
+
+        # Test without erroring.
+        config = {'UPLOAD_ERROR_ON_BAD_CTE': False}
+        f = FormParser(b'multipart/form-data', on_field, on_file,
+                       on_end=on_end, boundary=b'--boundary', config=config)
+
+        f.write(data)
+        f.finalize()
+        self.assert_file_data(files[0], b'Test')
 
 
 class TestRequestBodyMixin(unittest.TestCase):
