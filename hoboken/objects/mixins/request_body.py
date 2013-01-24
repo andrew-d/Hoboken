@@ -1,6 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from hoboken.objects.http import quote, unquote
+from hoboken.objects.http import quote, unquote, parse_options_header
 from hoboken.objects.util import cached_property, iter_close
 from hoboken.six import (
     binary_type,
@@ -65,7 +65,6 @@ CR = b'\r'[0]
 LF = b'\n'[0]
 COLON = b':'[0]
 SPACE = b' '[0]
-QUOTE = b'"'[0]
 HYPHEN = b'-'[0]
 AMPERSAND = b'&'[0]
 SEMICOLON = b';'[0]

@@ -4,6 +4,7 @@ import re
 from functools import wraps
 from collections import MutableMapping
 from hoboken.six import binary_type, PY3, iterkeys, iteritems, text_type
+from hoboken.objects.http import parse_options_header
 from hoboken.objects.datastructures import list_wrapper
 
 
@@ -219,7 +220,7 @@ class ResponseHeaders(MutableMapping):
 
     # Functions for multiple headers
     # --------------------------------------------------
-    def add(self, key, val):
+    def add(self, key, val, **_options):
         """
         Add a new header value to our list without removing existing values
         for this header.
