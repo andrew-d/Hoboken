@@ -3,7 +3,7 @@ import re
 
 from hoboken.objects.base import BaseRequest
 from hoboken.objects.util import *
-from hoboken.objects.http import quote, unquote
+from hoboken.objects.http import quote
 from hoboken.objects.headers import EnvironHeaders
 from hoboken.six import *
 from hoboken.objects.oproperty import oproperty, property_overriding

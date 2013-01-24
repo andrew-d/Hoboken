@@ -1,9 +1,8 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
-from functools import wraps
 from collections import MutableMapping
-from hoboken.six import binary_type, PY3, iterkeys, iteritems, text_type
+from hoboken.six import PY3, iterkeys, iteritems
 from hoboken.objects.http import parse_options_header
 from hoboken.objects.datastructures import list_wrapper
 

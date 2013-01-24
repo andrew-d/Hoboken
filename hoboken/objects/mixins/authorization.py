@@ -1,9 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 import re
-import base64
 import logging
-import binascii
 
 from hoboken.six import binary_type, iteritems
 

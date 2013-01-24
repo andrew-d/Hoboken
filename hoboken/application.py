@@ -5,7 +5,6 @@ from __future__ import with_statement, absolute_import, print_function
 import os
 import sys
 import re
-import urllib
 import logging
 import traceback
 try:

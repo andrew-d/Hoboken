@@ -3,14 +3,13 @@ from __future__ import with_statement, absolute_import
 
 # Stdlib dependencies
 import re
-import sys
 import logging
 
 # In-package dependencies
 from hoboken.exceptions import *
 
 # Compatibility.
-from hoboken.six import string_types, text_type, PY3
+from hoboken.six import string_types, text_type
 
 
 logger = logging.getLogger(__name__)

@@ -2,9 +2,8 @@ from __future__ import with_statement, absolute_import, print_function
 
 import logging
 
-from hoboken.objects.util import cached_property, iter_close
 from hoboken.objects.oproperty import oproperty, property_overriding
-from hoboken.six import advance_iterator, binary_type, text_type, callable, u
+from hoboken.six import advance_iterator, binary_type, text_type
 
 
 logger = logging.getLogger(__name__)

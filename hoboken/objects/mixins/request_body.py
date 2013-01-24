@@ -1,14 +1,9 @@
 from __future__ import with_statement, absolute_import, print_function
 
 from hoboken.objects.http import quote, unquote, parse_options_header
-from hoboken.objects.util import cached_property, iter_close
 from hoboken.six import (
     binary_type,
     text_type,
-    iteritems,
-    Iterator,
-    with_metaclass,
-    advance_iterator,
     PY3,
 )
 from hoboken.objects.datastructures import (
@@ -283,6 +278,10 @@ class File(object):
 
     @property
     def in_memory(self):
+        """
+        Whether or not this file object is currently stored in-memory or on-
+        disk.
+        """
         return self._in_memory
 
     def flush_to_disk(self):
@@ -300,7 +299,6 @@ class File(object):
 
         # Open a new file.
         new_file = self.get_disk_file()
-        # TODO: check for errors here.
 
         # Copy the file objects.
         shutil.copyfileobj(self._fileobj, new_file)
@@ -338,7 +336,6 @@ class File(object):
             if keep_extensions:
                 fname = fname + self._ext
 
-            # TODO: what do we do if we have an error?  For now, ignore it.
             path = os.path.join(file_dir, fname)
             try:
                 logger.info("Opening file: %r", path)
@@ -370,7 +367,7 @@ class File(object):
             logger.info("Creating a temporary file with options: %r", options)
             try:
                 tmp_file = tempfile.NamedTemporaryFile(**options)
-            except (IOError, OSError) as e:
+            except (IOError, OSError):
                 logger.exception("Error creating named temporary file")
                 raise FileError("Error creating named temporary file")
 

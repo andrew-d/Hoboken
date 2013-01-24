@@ -42,7 +42,6 @@ def unquote(val, encoding='utf-8'):
     if isinstance(val, text_type):
         val = val.encode(encoding)
 
-    chars = []
     if PY3:             # pragma: no cover
         def _unquoter(match_obj):
             enc = match_obj.group(0)

@@ -1,11 +1,10 @@
 import re
-import sys
 try:
     import json
 except ImportError:
     import simplejson as json
 
-from hoboken.six import PY3, string_types, binary_type, text_type, u, iteritems
+from hoboken.six import text_type, u, iteritems
 from hoboken.application import HobokenBaseApplication
 from hoboken.helpers import *
 

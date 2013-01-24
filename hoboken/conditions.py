@@ -1,7 +1,6 @@
 from __future__ import print_function
 import re
 import logging
-from collections import Iterable
 
 from hoboken.six import binary_type, text_type
 

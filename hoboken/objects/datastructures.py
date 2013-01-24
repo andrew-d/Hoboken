@@ -5,7 +5,6 @@ from functools import wraps
 from itertools import repeat
 from collections import MutableMapping, MutableSequence
 from hoboken.six import iteritems, PY3
-from hoboken.objects.util import missing
 
 # Note: much of the code in this module is inspired by code from Werkzeug
 # (https://github.com/mitsuhiko/werkzeug/) or Brownie
