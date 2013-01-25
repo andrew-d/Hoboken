@@ -1,13 +1,13 @@
 # Testing
 # --------------------------------------------------------------------------------
 test:
-	py.test -m "not slow_test" hoboken/tests
+	py.test -m "not slow_test" --timeout=30 hoboken/tests
 
 test_all:
-	py.test hoboken/tests
+	py.test --timeout=30 hoboken/tests
 
 cov:
-	py.test --cov-report term-missing --cov-config .coveragerc --cov hoboken hoboken/tests
+	py.test --cov-report term-missing --cov-config .coveragerc --cov hoboken --timeout=30 hoboken/tests
 
 tox:
 	tox

@@ -4,6 +4,8 @@ Shift==0.0.4
 # Testing help
 pytest
 pytest-cov
+pytest-timeout
+pytest-capturelog
 mock
 PyYAML
 pep8
