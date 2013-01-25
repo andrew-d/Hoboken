@@ -675,8 +675,12 @@ class TestFormParser(unittest.TestCase):
         self.make(boundary)
 
         # Now, we feed the parser with data.
-        processed = self.f.write(param['test'])
-        self.f.finalize()
+        exc = None
+        try:
+            processed = self.f.write(param['test'])
+            self.f.finalize()
+        except MultipartParseError as e:
+            exc = e
 
         # print(repr(param))
         # print("")
@@ -685,7 +689,8 @@ class TestFormParser(unittest.TestCase):
 
         # Do we expect an error?
         if 'error' in param['result']['expected']:
-            self.assertEqual(param['result']['expected']['error'], processed)
+            self.assertIsNotNone(exc)
+            self.assertEqual(param['result']['expected']['error'], exc.offset)
             return
 
         # No error!
@@ -881,13 +886,13 @@ class TestFormParser(unittest.TestCase):
     def test_bad_start_boundary(self):
         self.make(b'boundary')
         data = b'--boundary\rfoobar'
-        i = self.f.write(data)
-        self.assertNotEqual(i, len(data))
+        with self.assertRaises(MultipartParseError):
+            self.f.write(data)
 
         self.make(b'boundary')
         data = b'--boundaryfoobar'
-        i = self.f.write(data)
-        self.assertNotEqual(i, len(data))
+        with self.assertRaises(MultipartParseError):
+            i = self.f.write(data)
 
     def test_octet_stream(self):
         files = []

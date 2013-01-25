@@ -81,67 +81,56 @@ else:                           # pragma: no cover
     join_bytes = lambda b: b''.join(list(b))
 
 
-# These are regexes for parsing header values.
-SPECIAL_CHARS = re.escape(b'()<>@,;:\\"/[]?={} \t')
-QUOTED_STR = br'"(?:\\.|[^"])*"'
-VALUE_STR = br'(?:[^' + SPECIAL_CHARS + br']+|' + QUOTED_STR + br')'
-OPTION_RE_STR = (
-    br'(?:;|^)\s*([^' + SPECIAL_CHARS + br']+)\s*=\s*(' + VALUE_STR + br')'
-)
-OPTION_RE = re.compile(OPTION_RE_STR)
-
-
 class FormParserError(ValueError):
     """Base error class for our form parser."""
+    pass
+
+
+class ParseError(FormParserError):
+    """
+    This error (or a subclass) is raised when there is an error while parsing
+    something.
+    """
+
+    # This is the offset in the input data chunk (*NOT* the overall stream) in
+    # which the parse error occured.  Will be -1 if not specified.
+    offset = -1
+
+
+class MultipartParseError(ParseError):
+    """
+    This is a specific error that is raised when the MultipartParser detects
+    an error while parsing.
+    """
+    pass
+
+
+class QuerystringParseError(ParseError):
+    """
+    This is a specific error that is raised when the MultipartParser detects
+    an error while parsing.
+    """
+    pass
+
+
+class DecodeError(ParseError):
+    """
+    This exception is raised when there is a decoding error - for example with
+    the Base64Decoder or QuotedPrintableDecoder.
+    """
     pass
 
 
 # On Python 3.3, IOError is the same as OSError, so we don't want to inherit
 # from both of them.  We handle this case below.
 if IOError is not OSError:      # pragma: no cover
-    class FileError(IOError, OSError):
+    class FileError(FormParserError, IOError, OSError):
         """Exception class for problems with the File class."""
         pass
 else:                           # pragma: no cover
-    class FileError(OSError):
+    class FileError(FormParserError, OSError):
         """Exception class for problems with the File class."""
         pass
-
-
-def parse_options_header(value):
-    """
-    Parses a Content-Type header into a value in the following format:
-        (content_type, {parameters})
-    """
-    if not value:
-        return (b'', {})
-
-    # If we have no options, return the string as-is.
-    if b';' not in value:
-        return (value.lower().strip(), {})
-
-    # Split at the first semicolon, to get our value and then options.
-    ctype, rest = value.split(b';', 1)
-    options = {}
-
-    # Parse the options.
-    for match in OPTION_RE.finditer(rest):
-        key = match.group(1).lower()
-        value = match.group(2)
-        if value[0] == QUOTE and value[-1] == QUOTE:
-            # Unquote the value.
-            value = value[1:-1]
-            value = value.replace(b'\\\\', b'\\').replace(b'\\"', b'"')
-
-        # If the value is a filename, we need to fix a bug on IE6 that sends
-        # the full file path instead of the filename.
-        if key == b'filename':
-            if value[1:3] == b':\\' or value[:2] == b'\\\\':
-                value = value.split(b'\\')[-1]
-
-        options[key] = value
-
-    return ctype, options
 
 
 class Field(object):
@@ -517,17 +506,36 @@ class QuerystringParser(BaseParser):
 
         self.callbacks = callbacks
 
+        # Max-size stuff
+        self.max_size = max_size
+        self._current_size = 0
+
         # TODO: these currently don't do anything.  We should make them behave
         # like expected.
-        self.max_size = max_size
         self.keep_blank_values = keep_blank_values
         self.strict_parsing = strict_parsing
 
     def write(self, data):
+        # Handle sizing.
+        data_len = len(data)
+        if self._current_size + data_len > self.max_size:
+            # We truncate the length of data that we are to process.
+            data_len = self.max_size - self._current_size
+
+        l = 0
+        try:
+            l = self._internal_write(data, data_len)
+        finally:
+            self._current_size += l
+
+        return l
+
+    def _internal_write(self, data, length):
         state = self.state
+        strict_parsing = self.strict_parsing
 
         i = 0
-        while i < len(data):
+        while i < length:
             ch = data[i]
 
             # Depending on our state...
@@ -535,9 +543,16 @@ class QuerystringParser(BaseParser):
                 # Skip leading seperators.
                 # TODO: skip multiple ampersand chunks? e.g. "foo=bar&&&a=b"?
                 if ch == AMPERSAND or ch == SEMICOLON:
-                    logger.debug("Skipping leading ampersand/semicolon at %d",
-                                 i)
-                    pass
+                    # If we're parsing strictly, we disallow multiple blank chunks.
+                    if strict_parsing:
+                        e = QuerystringParseError(
+                            "Skipping leading ampersand/semicolon at %d" % i
+                        )
+                        e.offset = i
+                        raise e
+                    else:
+                        logger.debug("Skipping leading ampersand/semicolon "
+                                     "at %d", i)
                 else:
                     # Emit a field-start event, and go to that state.
                     self.callback('field_start')
@@ -560,8 +575,8 @@ class QuerystringParser(BaseParser):
                     state = STATE_FIELD_DATA
                 else:
                     # No equals sign found.  Just emit the rest as a name.
-                    self.callback('field_name', data, i, len(data))
-                    i = len(data)
+                    self.callback('field_name', data, i, length)
+                    i = length
 
             elif state == STATE_FIELD_DATA:
                 # Try finding either an ampersand or a semicolon after this
@@ -585,16 +600,20 @@ class QuerystringParser(BaseParser):
 
                 # Otherwise, emit the rest as data and finish.
                 else:
-                    self.callback('field_data', data, i, len(data))
-                    i = len(data)
+                    self.callback('field_data', data, i, length)
+                    i = length
 
             else:                   # pragma: no cover (error case)
-                logger.warn("Reached an unknown state %d at %d", state, i)
-                return i
+                msg = "Reached an unknown state %d at %d" % (state, i)
+                logger.warn(msg)
+                e = QuerystringParseError(msg)
+                e.offset = i
+                raise e
 
             i += 1
 
         self.state = state
+        return len(data)
 
     def finalize(self):
         # If we're currently in the middle of a field, we finish it.
@@ -725,17 +744,21 @@ class MultipartParser(BaseParser):
                 if index == len(boundary) - 2:
                     if c != CR:
                         # Error!
-                        logger.warn("Did not find CR at end of boundary (%d)",
-                                    i)
-                        return i
+                        msg = "Did not find CR at end of boundary (%d)" % (i,)
+                        logger.warn(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
 
                     index += 1
 
                 elif index == len(boundary) - 2 + 1:
                     if c != LF:
-                        logger.warn("Did not find LF at end of boundary (%d)",
-                                    i)
-                        return i
+                        msg = "Did not find LF at end of boundary (%d)" % (i,)
+                        logger.warn(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
 
                     # The index is now used for indexing into our boundary.
                     index = 0
@@ -751,9 +774,12 @@ class MultipartParser(BaseParser):
                     if c != boundary[index + 2]:
                         # print('start_boundary: expected %r, found %r' % (c,
                         #        boundary[index + 2]))
-                        logger.warn("Did not find boundary character %r at "
-                                    "index %d", c, index + 2)
-                        return i
+                        msg = "Did not find boundary character %r at index " \
+                                "%d" % (c, index + 2)
+                        logger.warn(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
 
                     # Increment index into boundary and continue.
                     index += 1
@@ -791,8 +817,11 @@ class MultipartParser(BaseParser):
                 elif c == COLON:
                     # A 0-length header is an error.
                     if index == 1:
-                        logger.warn("Found 0-length header at %d", i)
-                        return i
+                        msg = "Found 0-length header at %d" % (i,)
+                        logger.warn(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
 
                     # Call our callback with the header field.
                     data_callback('header_field')
@@ -805,9 +834,12 @@ class MultipartParser(BaseParser):
                     # a valid letter.  If not, it's an error.
                     cl = lower_char(c)
                     if cl < LOWER_A or cl > LOWER_Z:
-                        logger.warn("Found non-alphanumeric character %r in "
-                                    "header at %d", c, i)
-                        return i
+                        msg = "Found non-alphanumeric character %r in " \
+                                "header at %d" % (c, i)
+                        logger.warn(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
 
             elif state == STATE_HEADER_VALUE_START:
                 # Skip leading spaces.
@@ -833,9 +865,12 @@ class MultipartParser(BaseParser):
             elif state == STATE_HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    logger.warn("Did not find LF character at end of header "
-                                "(found %r)", c)
-                    return i
+                    msg = "Did not find LF character at end of header (found " \
+                            "%r)" % (c,)
+                    logger.warn(msg)
+                    e = MultipartParseError(msg)
+                    e.offset = i
+                    raise e
 
                 # Move back to the start of another header.  Note that if that
                 # state detects ANOTHER newline, it'll trigger the end of our
@@ -847,9 +882,11 @@ class MultipartParser(BaseParser):
                 # a CR at the beginning of a header, so our next character
                 # should be a LF, or it's an error.
                 if c != LF:
-                    logger.warn("Did not find LF at end of headers (found %r)",
-                                c)
-                    return i
+                    msg = "Did not find LF at end of headers (found %r)" % (c,)
+                    logger.warn(msg)
+                    e = MultipartParseError(msg)
+                    e.offset = i
+                    raise e
 
                 self.callback('headers_finished')
                 state = STATE_PART_DATA_START
@@ -1003,8 +1040,11 @@ class MultipartParser(BaseParser):
 
             else:                   # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
-                logger.warn("Reached an unknown state %d at %d", state, i)
-                return i
+                msg = "Reached an unknown state %d at %d" % (state, i)
+                logger.warn(msg)
+                e = MultipartParseError(msg)
+                e.offset = i
+                raise e
 
             # Move to the next byte.
             i += 1
@@ -1041,7 +1081,7 @@ class MultipartParser(BaseParser):
 
 class Base64Decoder(object):
     def __init__(self, underlying):
-        self.cache = b''
+        self.cache = bytearray()
         self.underlying = underlying
 
     def write(self, data):
@@ -1055,8 +1095,13 @@ class Base64Decoder(object):
 
         # Decode and write, if we have any.
         if len(val) > 0:
-            # TODO: somehow check the return value of this
-            self.underlying.write(base64.b64decode(val))
+            try:
+                decoded = base64.b64decode(val)
+            except TypeError:
+                raise DecodeError('There was an error raised while decoding '
+                                  'base64-encoded data.')
+
+            self.underlying.write(decoded)
 
         # Get the remaining bytes and save in our cache.
         remaining_len = len(data) % 4
@@ -1073,7 +1118,11 @@ class Base64Decoder(object):
             self.underlying.close()
 
     def finalize(self):
-        # TODO: handle remaining bytes in the cache?
+        if len(self.cache) > 0:
+            raise DecodeError('There are %d bytes remaining in the '
+                              'Base64Decoder cache when finalize() is called'
+                              % len(self.cache))
+
         if hasattr(self.underlying, 'finalize'):
             self.underlying.finalize()
 
