@@ -64,6 +64,9 @@ class TestField(unittest.TestCase):
         self.assertEqual(f.field_name, b'name')
         self.assertEqual(f.value, b'value')
 
+        f2 = Field.from_value(b'name', None)
+        self.assertEqual(f2.value, None)
+
     def test_equality(self):
         f1 = Field.from_value(b'name', b'value')
         f2 = Field.from_value(b'name', b'value')
@@ -74,6 +77,13 @@ class TestField(unittest.TestCase):
         f = Field.from_value(b'foo', b'bar')
         self.assertFalse(f == b'foo')
         self.assertFalse(b'foo' == f)
+
+    def test_set_none(self):
+        f = Field(b'foo')
+        self.assertEqual(f.value, b'')
+
+        f.set_none()
+        self.assertEqual(f.value, None)
 
 
 class TestFile(unittest.TestCase):
@@ -298,6 +308,9 @@ class TestQuerystringParser(unittest.TestCase):
             self.f = []
 
     def setUp(self):
+        self.reset()
+
+    def reset(self):
         self.f = []
 
         name_buffer = []
@@ -390,7 +403,67 @@ class TestQuerystringParser(unittest.TestCase):
             (b'asdf', b'baz')
         )
 
-    # TODO: test overlarge fields, blank values, and strict parsing
+    def test_too_large_field(self):
+        self.p.max_size = 15
+
+        # Note: len = 8
+        self.p.write(b"foo=bar&")
+        self.assert_fields((b'foo', b'bar'), finalize=False)
+
+        # Note: len = 8, only 7 bytes processed
+        self.p.write(b'a=123456')
+        self.assert_fields((b'a', b'12345'))
+
+    def test_invalid_max_size(self):
+        with self.assertRaises(ValueError):
+            p = QuerystringParser(max_size=-100)
+
+    def test_strict_parsing_pass(self):
+        data = b'foo=bar&another=asdf'
+        for first, last in split_all(data):
+            self.reset()
+            self.p.strict_parsing = True
+
+            print("%r / %r" % (first, last))
+
+            self.p.write(first)
+            self.p.write(last)
+            self.assert_fields((b'foo', b'bar'), (b'another', b'asdf'))
+
+    def test_strict_parsing_fail_double_sep(self):
+        data = b'foo=bar&&another=asdf'
+        for first, last in split_all(data):
+            self.reset()
+            self.p.strict_parsing = True
+
+            cnt = 0
+            with self.assertRaises(QuerystringParseError) as cm:
+                cnt += self.p.write(first)
+                cnt += self.p.write(last)
+                self.p.finalize()
+
+            # The offset should occur at 8 bytes into the data (as a whole),
+            # so we calculate the offset into the chunk.
+            self.assertEqual(cm.exception.offset, 8 - cnt)
+
+    def test_double_sep(self):
+        data = b'foo=bar&&another=asdf'
+        for first, last in split_all(data):
+            print(" %r / %r " % (first, last))
+            self.reset()
+
+            cnt = 0
+            cnt += self.p.write(first)
+            cnt += self.p.write(last)
+
+            self.assert_fields((b'foo', b'bar'), (b'another', b'asdf'))
+
+    def test_strict_parsing_fail_no_value(self):
+        self.p.strict_parsing = True
+        with self.assertRaises(QuerystringParseError) as cm:
+            self.p.write(b'foo=bar&blank&another=asdf')
+
+        self.assertEqual(cm.exception.offset, 8)
 
 
 class TestOctetStreamParser(unittest.TestCase):
@@ -474,6 +547,10 @@ class TestBase64Decoder(unittest.TestCase):
     def test_simple(self):
         self.d.write(b'Zm9vYmFy')
         self.assert_data(b'foobar')
+
+    def test_bad(self):
+        with self.assertRaises(DecodeError):
+            self.d.write(b'Zm9v!mFy')
 
     def test_split_properly(self):
         self.d.write(b'Zm9v')

@@ -1,6 +1,7 @@
 from __future__ import with_statement, absolute_import, print_function
 
 from hoboken.objects.http import quote, unquote, parse_options_header
+from hoboken.objects.util import missing
 from hoboken.six import (
     binary_type,
     text_type,
@@ -143,12 +144,15 @@ class Field(object):
         self._value = []
 
         # We cache the joined version of _value for speed.
-        self._cache = None
+        self._cache = missing
 
     @classmethod
     def from_value(klass, name, value):
         f = klass(name)
-        f.write(value)
+        if value is None:
+            f.set_none()
+        else:
+            f.write(value)
         f.finalize()
         return f
 
@@ -157,21 +161,32 @@ class Field(object):
 
     def on_data(self, data):
         self._value.append(data)
-        self._cache = None
+        self._cache = missing
         return len(data)
 
     def on_end(self):
-        self._cache = b''.join(self._value)
+        if self._cache is missing:
+            self._cache = b''.join(self._value)
 
     def finalize(self):
         self.on_end()
 
     def close(self):
         # Free our value array.
-        if self._cache is None:
+        if self._cache is missing:
             self._cache = b''.join(self._value)
 
         del self._value
+
+    def set_none(self):
+        """
+        Some fields in a querystring can possibly have a value of None - for
+        example, the string "foo&bar=&baz=asdf" will have a field with the
+        name "foo" and value None, one with name "bar" and value "", and one
+        with name "baz" and value "asdf".  Since the write() interface doesn't
+        support writing None, this function will set the field value to None.
+        """
+        self._cache = None
 
     @property
     def field_name(self):
@@ -179,7 +194,7 @@ class Field(object):
 
     @property
     def value(self):
-        if self._cache is None:
+        if self._cache is missing:
             self._cache = b''.join(self._value)
 
         return self._cache
@@ -497,22 +512,30 @@ class QuerystringParser(BaseParser):
         - on_field_data         *
         - on_field_end
         - on_end
+
+    Some details on how the strict_parsing deals with values:
+        - If a field has a value with an equal sign (e.g. "foo=bar", or
+          "foo="), it is always included.
+        - If a field has no equals sign (e.g. "...&name&..."), it will be
+          treated as an error if 'strict_parsing' is True, otherwise included.
     """
     SPLIT_RE = re.compile(b'[&;]')
 
-    def __init__(self, callbacks={}, keep_blank_values=False,
-                 strict_parsing=False, max_size=float('inf')):
+    def __init__(self, callbacks={}, strict_parsing=False,
+                 max_size=float('inf')):
         self.state = STATE_BEFORE_FIELD
+        self._found_sep = False
 
         self.callbacks = callbacks
 
         # Max-size stuff
+        if max_size < 1:
+            raise ValueError("max_size must be a positive number, not %r" %
+                             max_size)
         self.max_size = max_size
         self._current_size = 0
 
-        # TODO: these currently don't do anything.  We should make them behave
-        # like expected.
-        self.keep_blank_values = keep_blank_values
+        # Should parsing be strict?
         self.strict_parsing = strict_parsing
 
     def write(self, data):
@@ -520,6 +543,10 @@ class QuerystringParser(BaseParser):
         data_len = len(data)
         if self._current_size + data_len > self.max_size:
             # We truncate the length of data that we are to process.
+            logging.warn("Current size is %d (max %d), so truncating data "
+                         "length from %d to %d", self._current_size,
+                         self.max_size, data_len,
+                         self.max_size - self._current_size)
             data_len = self.max_size - self._current_size
 
         l = 0
@@ -533,6 +560,7 @@ class QuerystringParser(BaseParser):
     def _internal_write(self, data, length):
         state = self.state
         strict_parsing = self.strict_parsing
+        found_sep = self._found_sep
 
         i = 0
         while i < length:
@@ -540,30 +568,54 @@ class QuerystringParser(BaseParser):
 
             # Depending on our state...
             if state == STATE_BEFORE_FIELD:
-                # Skip leading seperators.
-                # TODO: skip multiple ampersand chunks? e.g. "foo=bar&&&a=b"?
+                # If the 'found_sep' flag is set, we've already encountered
+                # and skipped a single seperator.  If so, we check our strict
+                # parsing flag and decide what to do.  Otherwise, we haven't
+                # yet reached a seperator, and thus, if we do, we need to skip
+                # it as it will be the boundary between fields that's supposed
+                # to be there.
                 if ch == AMPERSAND or ch == SEMICOLON:
-                    # If we're parsing strictly, we disallow multiple blank chunks.
-                    if strict_parsing:
-                        e = QuerystringParseError(
-                            "Skipping leading ampersand/semicolon at %d" % i
-                        )
-                        e.offset = i
-                        raise e
+                    if found_sep:
+                        # If we're parsing strictly, we disallow blank chunks.
+                        if strict_parsing:
+                            e = QuerystringParseError(
+                                "Skipping duplicate ampersand/semicolon at "
+                                "%d" % i
+                            )
+                            e.offset = i
+                            raise e
+                        else:
+                            logger.debug("Skipping duplicate ampersand/"
+                                         "semicolon at %d", i)
                     else:
-                        logger.debug("Skipping leading ampersand/semicolon "
-                                     "at %d", i)
+                        # This case is when we're skipping the (first)
+                        # seperator between fields, so we just set our flag
+                        # and continue on.
+                        found_sep = True
                 else:
-                    # Emit a field-start event, and go to that state.
+                    # Emit a field-start event, and go to that state.  Also,
+                    # reset the "found_sep" flag, for the next time we get to
+                    # this state.
                     self.callback('field_start')
                     i -= 1
                     state = STATE_FIELD_NAME
+                    found_sep = False
 
             elif state == STATE_FIELD_NAME:
+                # Try and find a seperator - we ensure that, if we do, we only
+                # look for the equal sign before it.
+                sep_pos = data.find(b'&', i)
+                if sep_pos == -1:
+                    sep_pos = data.find(b';', i)
+
                 # See if we can find an equals sign in the remaining data.  If
                 # so, we can immedately emit the field name and jump to the
                 # data state.
-                equals_pos = data.find(b'=', i)
+                if sep_pos != -1:
+                    equals_pos = data.find(b'=', i, sep_pos)
+                else:
+                    equals_pos = data.find(b'=', i)
+
                 if equals_pos != -1:
                     # Emit this name.
                     self.callback('field_name', data, i, equals_pos)
@@ -574,9 +626,43 @@ class QuerystringParser(BaseParser):
                     i = equals_pos
                     state = STATE_FIELD_DATA
                 else:
-                    # No equals sign found.  Just emit the rest as a name.
-                    self.callback('field_name', data, i, length)
-                    i = length
+                    print("i = %d, sep_pos = %d" % (i, sep_pos))
+
+                    # No equals sign found.
+                    if not strict_parsing:
+                        # See also comments in the STATE_FIELD_DATA case below.
+                        # If we found the seperator, we emit the name and just
+                        # end - there's no data callback at all (not even with
+                        # a blank value).
+                        if sep_pos != -1:
+                            self.callback('field_name', data, i, sep_pos)
+                            self.callback('field_end')
+
+                            i = sep_pos - 1
+                            state = STATE_BEFORE_FIELD
+                        else:
+                            # Otherwise, no seperator in this block, so the
+                            # rest of this chunk must be a name.
+                            self.callback('field_name', data, i, length)
+                            i = length
+
+                    else:
+                        # We're parsing strictly.  If we find a seperator,
+                        # this is an error - we require an equals sign.
+                        if sep_pos != -1:
+                            e =  QuerystringParseError(
+                                "When strict_parsing is True, we require an "
+                                "equals sign in all field chunks. Did not "
+                                "find one in the chunk that starts at %d" %
+                                (i,)
+                            )
+                            e.offset = i
+                            raise e
+
+                        # No seperator in the rest of this chunk, so it's just
+                        # a field name.
+                        self.callback('field_name', data, i, length)
+                        i = length
 
             elif state == STATE_FIELD_DATA:
                 # Try finding either an ampersand or a semicolon after this
@@ -613,6 +699,7 @@ class QuerystringParser(BaseParser):
             i += 1
 
         self.state = state
+        self._found_sep = found_sep
         return len(data)
 
     def finalize(self):
@@ -1527,7 +1614,13 @@ class RequestBodyMixin(object):
         def on_field_end():
             # Create a field.
             field = Field(b''.join(name_buffer))
-            field.write(b''.join(data_buffer))
+
+            # Handle 'None' values.
+            if len(data_buffer) == 0:
+                field.set_none()
+            else:
+                field.write(b''.join(data_buffer))
+
             field.finalize()
 
             # Append to our list (which will be turned into a MultiDict later)
