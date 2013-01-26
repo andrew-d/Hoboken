@@ -400,6 +400,46 @@ class TestMiscellaneousMethods(HobokenTestCase):
         e = r.get_response(self.app)
         self.assertEqual(e.status_int, 500)
 
+    def test_threadlocals_from_other_threads(self):
+        completed = [False, False, False]
+
+        def test_func_getting():
+            self.assertIsNone(self.app.request)
+            self.assertIsNone(self.app.response)
+            self.assertIsNotNone(self.app.g)
+            completed[0] = True
+
+        def test_func_setting():
+            self.app.request = 1
+            self.app.response = 2
+            completed[1] = True
+
+        def test_func_deleting():
+            del self.app.request
+            del self.app.response
+            del self.app.g
+            completed[2] = True
+
+        self.app.g.foo = 123
+
+        threads = [
+            threading.Thread(target=test_func_getting),
+            threading.Thread(target=test_func_setting),
+            threading.Thread(target=test_func_deleting),
+        ]
+        for t in threads:
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        # This checks that our above threads don't clobber this thread's
+        # app.g object.
+        self.assertEqual(self.app.g.foo, 123)
+
+        for x in completed:
+            self.assertTrue(x)
+
 
 class TestConfig(HobokenTestCase):
     def test_can_get_set_values(self):

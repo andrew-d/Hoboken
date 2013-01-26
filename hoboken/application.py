@@ -324,7 +324,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     @g.deleter
     def g(self):
-        del self._locals.vars
         self._locals.vars = SimpleNamespace()
 
     def delegate(self, app, catch_exceptions=False):
