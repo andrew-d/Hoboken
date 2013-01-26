@@ -134,6 +134,14 @@ else:                           # pragma: no cover
         pass
 
 
+# We check which version of Python we're on to figure out what error we need
+# to catch for invalid Base64.
+if PY3:                         # pragma: no cover
+    Base64Error = binascii.Error
+else:                           # pragma: no cover
+    Base64Error = TypeError
+
+
 class Field(object):
     """
     Object that represents a form field.  You can subclass this to handle the
@@ -1182,7 +1190,7 @@ class Base64Decoder(object):
         if len(val) > 0:
             try:
                 decoded = base64.b64decode(val)
-            except TypeError:
+            except Base64Error:
                 raise DecodeError('There was an error raised while decoding '
                                   'base64-encoded data.')
 
