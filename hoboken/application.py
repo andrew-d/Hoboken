@@ -7,6 +7,7 @@ import sys
 import re
 import logging
 import traceback
+from datetime import datetime
 try:
     import threading
 except:                     # pragma: no cover
@@ -525,6 +526,9 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
             # Create our variables object.
             self._locals.vars = SimpleNamespace()
 
+            # Set default values on the response.
+            self._prepare_response()
+
             # Actually handle this request.
             self._handle_request()
 
@@ -543,6 +547,11 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
             # We also reset our request config.
             del self.g
+
+    def _prepare_response(self):
+        # We default to setting the current (UTC) date on the response.
+        if hasattr(self.response, 'date'):
+            self.response.date = datetime.utcnow()
 
     def _run_routes(self, method):
         # Since these are thread-locals, we grab them as locals.
