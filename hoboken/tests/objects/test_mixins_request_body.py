@@ -465,6 +465,14 @@ class TestQuerystringParser(unittest.TestCase):
 
         self.assertEqual(cm.exception.offset, 8)
 
+    def test_success_no_value(self):
+        self.p.write(b'foo=bar&blank&another=asdf')
+        self.assert_fields(
+            (b'foo', b'bar'),
+            (b'blank', b''),
+            (b'another', b'asdf')
+        )
+
 
 class TestOctetStreamParser(unittest.TestCase):
     def setUp(self):
@@ -586,6 +594,12 @@ class TestBase64Decoder(unittest.TestCase):
 
         f.close()
         parser.close.assert_called_once_with()
+
+    def test_bad_length(self):
+        self.d.write(b'Zm9vYmF')        # missing ending 'y'
+
+        with self.assertRaises(DecodeError):
+            self.d.finalize()
 
 
 class TestQuotedPrintableDecoder(unittest.TestCase):
@@ -1080,6 +1094,26 @@ class TestFormParser(unittest.TestCase):
         f.finalize()
         self.assert_file_data(files[0], b'Test')
 
+    def test_handles_None_fields(self):
+        fields = []
+        def on_field(f):
+            fields.append(f)
+        on_file = Mock()
+        on_end = Mock()
+
+        f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
+        f.write(b'foo=bar&another&baz=asdf')
+        f.finalize()
+
+        self.assertEqual(fields[0].field_name, b'foo')
+        self.assertEqual(fields[0].value, b'bar')
+
+        self.assertEqual(fields[1].field_name, b'another')
+        self.assertEqual(fields[1].value, None)
+
+        self.assertEqual(fields[2].field_name, b'baz')
+        self.assertEqual(fields[2].value, b'asdf')
+
 
 class TestRequestBodyMixin(unittest.TestCase):
     def setUp(self):
@@ -1175,6 +1209,16 @@ class TestRequestBodyMixin(unittest.TestCase):
             (b'foo', b'bar'),
             (b'foo', b'other'),
             (b'other', b'asdf'),
+        ])
+
+    def test_parse_querystring_with_None(self):
+        self.m.query_string = b'foo=bar&other&baz=asdf'
+        self.m.parse_querystring()
+
+        self.assert_fields(self.m.GET, [
+            (b'foo', b'bar'),
+            (b'baz', b'asdf'),
+            (b'other', None),
         ])
 
     def test_will_mix_querystring(self):

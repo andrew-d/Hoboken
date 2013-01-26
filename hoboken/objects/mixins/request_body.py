@@ -626,8 +626,6 @@ class QuerystringParser(BaseParser):
                     i = equals_pos
                     state = STATE_FIELD_DATA
                 else:
-                    print("i = %d, sep_pos = %d" % (i, sep_pos))
-
                     # No equals sign found.
                     if not strict_parsing:
                         # See also comments in the STATE_FIELD_DATA case below.
@@ -1351,6 +1349,13 @@ class FormParser(object):
 
             def on_field_end():
                 # Finalize and call callback.
+                if vars.f is None:
+                    # If we get here, it's because there was no field data.
+                    # We create a field, set it to None, and then continue.
+                    vars.f = FieldClass(b''.join(name_buffer))
+                    del name_buffer[:]
+                    vars.f.set_none()
+
                 vars.f.finalize()
                 on_field(vars.f)
                 vars.f = None
