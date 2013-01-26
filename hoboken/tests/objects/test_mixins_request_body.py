@@ -699,7 +699,7 @@ def split_all(val):
 
 @parametrize_class
 class TestFormParser(unittest.TestCase):
-    def make(self, boundary):
+    def make(self, boundary, config={}):
         self.ended = False
         self.files = []
         self.fields = []
@@ -714,7 +714,8 @@ class TestFormParser(unittest.TestCase):
             self.ended = True
 
         # Get a form-parser instance.
-        self.f = FormParser(b'multipart/form-data', on_field, on_file, on_end, boundary=boundary)
+        self.f = FormParser(b'multipart/form-data', on_field, on_file, on_end,
+                            boundary=boundary, config=config)
 
     def assert_file_data(self, f, data):
         o = f.file_object
@@ -1116,6 +1117,42 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(fields[2].field_name, b'baz')
         self.assertEqual(fields[2].value, b'asdf')
 
+    def test_max_size_multipart(self):
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        # Create form parser.
+        self.make(b'boundary')
+
+        # Set the maximum length that we can process to be halfway through the
+        # given data.
+        self.f.parser.max_size = len(test_data) / 2
+
+        i = self.f.write(test_data)
+        self.f.finalize()
+
+        # Assert we processed the correct amount.
+        self.assertEqual(i, len(test_data) / 2)
+
+    def test_max_size_form_parser(self):
+        # Load test data.
+        test_file = 'single_field_single_file.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        # Create form parser setting the maximum length that we can process to
+        # be halfway through the given data.
+        size = len(test_data) / 2
+        self.make(b'boundary', config={'MAX_BODY_SIZE': size})
+
+        i = self.f.write(test_data)
+        self.f.finalize()
+
+        # Assert we processed the correct amount.
+        self.assertEqual(i, len(test_data) / 2)
+
 
 class TestRequestBodyMixin(unittest.TestCase):
     def setUp(self):
@@ -1130,12 +1167,12 @@ class TestRequestBodyMixin(unittest.TestCase):
 
     def test_form_parser(self):
         self.m.headers[b'Content-Type'] = b'application/octet-stream'
-        self.m.config['MAX_FIELD_SIZE'] = 1234
+        self.m.config['MAX_BODY_SIZE'] = 1234
 
         f = self.m.form_parser(None, None)
         self.assertTrue(isinstance(f, FormParser))
         self.assertTrue(isinstance(f.parser, OctetStreamParser))
-        self.assertEqual(f.config.get('MAX_FIELD_SIZE'), 1234)
+        self.assertEqual(f.config.get('MAX_BODY_SIZE'), 1234)
 
     def test_form_parser_octet_stream(self):
         files = []

@@ -738,13 +738,18 @@ class MultipartParser(BaseParser):
         - on_end
     """
 
-    def __init__(self, boundary, callbacks={}):
+    def __init__(self, boundary, callbacks={}, max_size=float('inf')):
         # Initialize parser state.
         self.state = STATE_START
         self.index = self.flags = 0
 
-        # Save callbacks.
         self.callbacks = callbacks
+
+        if max_size < 1:
+            raise ValueError("max_size must be a positive number, not %r" %
+                             max_size)
+        self.max_size = max_size
+        self._current_size = 0
 
         # Setup marks.  These are used to track the state of data recieved.
         self.marks = {}
@@ -770,6 +775,25 @@ class MultipartParser(BaseParser):
         self.lookbehind = [NULL for x in range(len(boundary) + 8)]
 
     def write(self, data):
+        # Handle sizing.
+        data_len = len(data)
+        if self._current_size + data_len > self.max_size:
+            # We truncate the length of data that we are to process.
+            logging.warn("Current size is %d (max %d), so truncating data "
+                         "length from %d to %d", self._current_size,
+                         self.max_size, data_len,
+                         self.max_size - self._current_size)
+            data_len = self.max_size - self._current_size
+
+        l = 0
+        try:
+            l = self._internal_write(data, data_len)
+        finally:
+            self._current_size += l
+
+        return l
+
+    def _internal_write(self, data, length):
         # Get values from locals.
         boundary = self.boundary
 
@@ -803,7 +827,7 @@ class MultipartParser(BaseParser):
             # If we're getting remaining data, we ignore the current i value
             # and just call with the remaining data.
             if remaining:
-                self.callback(name, data, marked_index, len(data))
+                self.callback(name, data, marked_index, length)
                 self.marks[name] = 0
 
             # Otherwise, we call it from the mark to the current byte we're
@@ -813,7 +837,7 @@ class MultipartParser(BaseParser):
                 self.marks.pop(name, None)
 
         # For each byte...
-        while i < len(data):
+        while i < length:
             c = data[i]
 
             if state == STATE_START:
@@ -1007,7 +1031,7 @@ class MultipartParser(BaseParser):
                 # Set up variables.
                 boundary_length = len(boundary)
                 boundary_end = boundary_length - 1
-                data_length = len(data)
+                data_length = length
                 boundary_chars = self.boundary_chars
 
                 # If our index is 0, we're starting a new part, so start our
@@ -1161,7 +1185,7 @@ class MultipartParser(BaseParser):
 
         # Return our data length to indicate no errors, and that we processed
         # all of it.
-        return len(data)
+        return length
 
     def finalize(self):
         # TODO: verify that we're in the state STATE_END, otherwise throw an
@@ -1268,8 +1292,7 @@ class FormParser(object):
     # This is the default configuration for our form parser.
     # Note: all file paths should be in bytes.
     DEFAULT_CONFIG = {
-        'MAX_FIELD_SIZE': 1024,
-        'MAX_FILE_SIZE': 10 * 1024 * 1024,
+        'MAX_BODY_SIZE': 1024,
         'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,
         'UPLOAD_DIR': None,
         'UPLOAD_KEEP_FILENAME': False,
@@ -1384,7 +1407,7 @@ class FormParser(object):
             # Instantiate parser.
             parser = QuerystringParser(
                 callbacks=callbacks,
-                max_size=self.config['MAX_FIELD_SIZE']
+                max_size=self.config['MAX_BODY_SIZE']
             )
 
         elif content_type == b'multipart/form-data':
@@ -1498,7 +1521,8 @@ class FormParser(object):
             }
 
             # Instantiate a multipart parser.
-            parser = MultipartParser(boundary, callbacks)
+            parser = MultipartParser(boundary, callbacks,
+                                     max_size=self.config['MAX_BODY_SIZE'])
 
         else:
             logger.warn("Unknown Content-Type: %r", content_type)
