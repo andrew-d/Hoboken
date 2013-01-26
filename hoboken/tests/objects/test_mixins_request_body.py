@@ -538,6 +538,19 @@ class TestOctetStreamParser(unittest.TestCase):
         self.assert_data(b'foobarbaz')
         self.assert_finished()
 
+    def test_max_size(self):
+        self.p.max_size = 5
+
+        self.p.write(b'0123456789')
+        self.p.finalize()
+
+        self.assert_data(b'01234')
+        self.assert_finished()
+
+    def test_invalid_max_size(self):
+        with self.assertRaises(ValueError):
+            q = OctetStreamParser(max_size='foo')
+
 
 class TestBase64Decoder(unittest.TestCase):
     # Note: base64('foobar') == 'Zm9vYmFy'
@@ -1152,6 +1165,26 @@ class TestFormParser(unittest.TestCase):
 
         # Assert we processed the correct amount.
         self.assertEqual(i, len(test_data) / 2)
+
+    def test_octet_stream_max_size(self):
+        files = []
+        def on_file(f):
+            files.append(f)
+        on_field = Mock()
+        on_end = Mock()
+
+        f = FormParser(b'application/octet-stream', on_field, on_file,
+                       on_end=on_end, file_name=b'foo.txt',
+                       config={'MAX_BODY_SIZE': 10})
+
+        f.write(b'0123456789012345689')
+        f.finalize()
+
+        self.assert_file_data(files[0], b'0123456789')
+
+    def test_invalid_max_size_multipart(self):
+        with self.assertRaises(ValueError):
+            q = MultipartParser(b'bound', max_size='foo')
 
 
 class TestRequestBodyMixin(unittest.TestCase):

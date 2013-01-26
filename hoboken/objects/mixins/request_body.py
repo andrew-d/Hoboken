@@ -27,6 +27,7 @@ import logging
 import binascii
 import tempfile
 from io import BytesIO
+from numbers import Number
 
 # Get logger for this module.
 logger = logging.getLogger(__name__)
@@ -489,18 +490,35 @@ class OctetStreamParser(BaseParser):
         - on_data       (with data parameters)
         - on_end
     """
-    def __init__(self, callbacks={}):
+    def __init__(self, callbacks={}, max_size=float('inf')):
         self.callbacks = callbacks
         self._started = False
+
+        if not isinstance(max_size, Number) or max_size < 1:
+            raise ValueError("max_size must be a positive number, not %r" %
+                             max_size)
+        self.max_size = max_size
+        self._current_size = 0
 
     def write(self, data):
         if not self._started:
             self.callback('start')
             self._started = True
 
-        # Just call the data callback as-is.
-        if len(data) > 0:
-            self.callback('data', data, 0, len(data))
+        # Truncate data length.
+        data_len = len(data)
+        if self._current_size + data_len > self.max_size:
+            # We truncate the length of data that we are to process.
+            new_size = int(self.max_size - self._current_size)
+            logging.warn("Current size is %d (max %d), so truncating data "
+                         "length from %d to %d", self._current_size,
+                         self.max_size, data_len, new_size)
+            data_len = new_size
+
+        # Increment size, then callback, in case there's an exception.
+        self._current_size += data_len
+        self.callback('data', data, 0, data_len)
+        return data_len
 
     def finalize(self):
         self.callback('end')
@@ -537,7 +555,7 @@ class QuerystringParser(BaseParser):
         self.callbacks = callbacks
 
         # Max-size stuff
-        if max_size < 1:
+        if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" %
                              max_size)
         self.max_size = max_size
@@ -551,11 +569,11 @@ class QuerystringParser(BaseParser):
         data_len = len(data)
         if self._current_size + data_len > self.max_size:
             # We truncate the length of data that we are to process.
+            new_size = int(self.max_size - self._current_size)
             logging.warn("Current size is %d (max %d), so truncating data "
                          "length from %d to %d", self._current_size,
-                         self.max_size, data_len,
-                         self.max_size - self._current_size)
-            data_len = self.max_size - self._current_size
+                         self.max_size, data_len, new_size)
+            data_len = new_size
 
         l = 0
         try:
@@ -745,7 +763,7 @@ class MultipartParser(BaseParser):
 
         self.callbacks = callbacks
 
-        if max_size < 1:
+        if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" %
                              max_size)
         self.max_size = max_size
@@ -779,11 +797,11 @@ class MultipartParser(BaseParser):
         data_len = len(data)
         if self._current_size + data_len > self.max_size:
             # We truncate the length of data that we are to process.
+            new_size = int(self.max_size - self._current_size)
             logging.warn("Current size is %d (max %d), so truncating data "
                          "length from %d to %d", self._current_size,
-                         self.max_size, data_len,
-                         self.max_size - self._current_size)
-            data_len = self.max_size - self._current_size
+                         self.max_size, data_len, new_size)
+            data_len = new_size
 
         l = 0
         try:
@@ -1356,7 +1374,8 @@ class FormParser(object):
             }
 
             # Instantiate an octet-stream parser
-            parser = OctetStreamParser(callbacks)
+            parser = OctetStreamParser(callbacks,
+                                       max_size=self.config['MAX_BODY_SIZE'])
 
         elif (content_type == b'application/x-www-form-urlencoded' or
               content_type == b'application/x-url-encoded'):
