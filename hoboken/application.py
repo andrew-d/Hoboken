@@ -206,6 +206,15 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
     def __init__(self, name, config={}):
         self.name = name
 
+        # Set up threadlocal storage.  We use this so we can process multiple
+        # requests at the same time from one app.
+        # NOTE: this needs to be done before logging, since InjectingFilter
+        # will inject the request/response objects into a log message.
+        self._locals = threading.local()
+        self._locals.request = None
+        self._locals.response = None
+        self._locals.vars = SimpleNamespace()
+
         # If we're missing the root dir, we try and determine them here.
         app_file = config.get('APPLICATION_FILE')
         if app_file is None:
@@ -256,13 +265,6 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
         # Create logger.
         self.logger = self.create_logger()
 
-        # Set up threadlocal storage.  We use this so we can process multiple
-        # requests at the same time from one app.
-        self._locals = threading.local()
-        self._locals.request = None
-        self._locals.response = None
-        self._locals.vars = SimpleNamespace()
-
         # Create a lock which we might use to serialize requests.  Originally,
         # this was only created if the appropriate config value was set, but
         # this caused problems if the config value was then set after the
@@ -291,7 +293,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     @property
     def request(self):
-        return self._locals.request
+        return self._locals.__dict__.get('request')
 
     @request.setter
     def request(self, val):
@@ -303,7 +305,7 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     @property
     def response(self):
-        return self._locals.response
+        return self._locals.__dict__.get('response')
 
     @response.setter
     def response(self, val):
@@ -315,7 +317,10 @@ class HobokenBaseApplication(with_metaclass(HobokenMetaclass)):
 
     @property
     def g(self):
-        return self._locals.vars
+        v = self._locals.__dict__.get('vars')
+        if v is None:       # pragma: no cover
+            v = self._locals.vars = SimpleNamespace()
+        return v
 
     @g.deleter
     def g(self):
